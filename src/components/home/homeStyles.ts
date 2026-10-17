@@ -546,5 +546,69 @@ export const HOME_STYLES = `
     .home-pricing-preview__eyebrow { text-align: left; }
   }
 
+  /* Homepage simplification: natural flow on every device, swipeable cards on mobile. */
+  .home-hero-experience { padding-top: var(--site-header-height, 64px); }
+  .home-hero-experience > .home-hero { min-height: clamp(440px, 48vw, 580px); }
+  .home-hero__inner { padding-top: 62px; padding-bottom: 42px; }
+  .home-hero__eyebrow { margin-bottom: 20px; }
+  .home-hero__heading { margin-bottom: 20px; }
+  .home-hero__description { margin-bottom: 24px; }
+  .home-hero__supporting { margin-top: 18px; }
+  .home-insights { background: #EDE4D7; }
+  .home-insights > .home-revenue { padding-bottom: 28px; }
+  .home-insights > .home-heatmap { padding-top: 28px; }
+  .home-features__swipe-hint, .home-audience__swipe-hint, .home-pricing-preview__swipe-hint { display: none; }
+
+  @media (max-width: 767px) {
+    .home-hero-experience > .home-hero { min-height: 0; }
+    .home-hero__inner { padding: 52px 16px 36px; }
+    .home-hero__eyebrow { margin-bottom: 18px; }
+    .home-hero__heading { font-size: clamp(2.35rem, 10vw, 3.3rem); margin-bottom: 18px; }
+    .home-hero__description { font-size: 15px; line-height: 1.65; margin-bottom: 22px; }
+    .home-hero__supporting { font-size: 12px; margin-top: 16px; }
+    .home-proof-ticker { padding-block: 10px !important; }
+    .home-features__header { text-align: left; margin: 0 0 24px; }
+    .home-features__header > p:last-child { margin-left: 0; }
+    .home-features__grid, .home-audience__visuals, .home-pricing-preview__grid {
+      display: flex !important; flex-wrap: nowrap !important; gap: 14px !important;
+      overflow-x: auto !important; overflow-y: hidden !important;
+      margin-inline: -16px !important; padding: 0 16px 14px !important;
+      scroll-snap-type: x mandatory; scroll-padding-inline: 16px;
+      -webkit-overflow-scrolling: touch; overscroll-behavior-inline: contain;
+      scrollbar-width: none; touch-action: pan-x pan-y;
+    }
+    .home-features__grid::-webkit-scrollbar, .home-audience__visuals::-webkit-scrollbar, .home-pricing-preview__grid::-webkit-scrollbar { display: none; }
+    .home-features__card {
+      flex: 0 0 min(82vw, 360px) !important; width: min(82vw, 360px) !important; min-width: 0 !important;
+      padding: 18px !important; border: 1px solid rgba(126,96,58,.22); border-radius: 14px;
+      background: #FAF7F1; scroll-snap-align: start; scroll-snap-stop: always;
+      transform: none; box-shadow: 0 4px 20px rgba(66,48,27,.04);
+    }
+    .home-features__card:hover { transform: none; }
+    .home-features__visual { min-height: 112px; margin: 14px 0 16px; }
+    .home-features__swipe-hint, .home-audience__swipe-hint, .home-pricing-preview__swipe-hint {
+      display: block; margin: 12px 0 0; color: #74695C; font-size: 12px; line-height: 1.5;
+    }
+    .home-audience__inner { grid-template-columns: minmax(0,1fr); gap: 22px; }
+    .home-audience__visual { flex: 0 0 min(72vw, 280px); min-width: 0; min-height: 170px; margin-top: 0 !important; scroll-snap-align: start; }
+    .home-audience__visuals { margin-inline: -16px; }
+    .home-pricing-preview__heading { text-align: left; margin-bottom: 24px; }
+    .home-pricing-preview__grid { align-items: stretch; }
+    .home-pricing-preview__plan {
+      flex: 0 0 min(78vw, 300px) !important; width: min(78vw, 300px) !important;
+      box-sizing: border-box; scroll-snap-align: start; scroll-snap-stop: always;
+    }
+    .home-pricing-preview__footer { text-align: left; }
+    .home-revenue, .home-heatmap { padding-top: 36px !important; padding-bottom: 36px !important; }
+    .home-insights > .home-revenue { padding-bottom: 16px !important; }
+    .home-insights > .home-heatmap { padding-top: 16px !important; }
+    .home-heatmap > div > div:first-child { text-align: left !important; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .home-features__card, .home-audience__visual, .home-pricing-preview__plan {
+      scroll-behavior: auto !important; transition-duration: 0.01ms !important;
+    }
+  }
+
 
 `;

@@ -20,7 +20,7 @@ export const HomePricingPreview = () => {
           <h2>A plan for where your business is today.</h2>
           <p>Start with what you need. Add more as your business grows.</p>
         </div>
-        <div className={`home-pricing-preview__grid${isMobile ? " is-mobile" : ""}`}>
+        <div className={`home-pricing-preview__grid${isMobile ? " is-mobile" : ""}`} role="region" aria-label="NextSlot pricing plans" tabIndex={0}>
           {PLANS.map((plan) => (
             <article className={`home-pricing-preview__plan${plan.available ? "" : " is-coming-soon"}`} key={plan.name}>
               <h3>{plan.name}</h3>
@@ -35,6 +35,7 @@ export const HomePricingPreview = () => {
             </article>
           ))}
         </div>
+        <p className="home-pricing-preview__swipe-hint">Swipe to compare plans</p>
         <div className="home-pricing-preview__footer">
           <Link to="/pricing" className="marketing-cta marketing-cta--secondary">Compare plans</Link>
         </div>

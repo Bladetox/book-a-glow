@@ -19,7 +19,7 @@ export const FeaturesSection = () => {
           <h2>From every booking to a <span>clearer business.</span></h2>
           <p>Record what happens. Understand what it means. Focus on what matters to you.</p>
         </header>
-        <div className="home-features__grid">
+        <div className="home-features__grid" role="region" aria-label="Three stages of how NextSlot works" tabIndex={0}>
           {GROUPS.map(group => <article className="home-features__card" key={group.stage}>
             <div className="home-features__stage"><span>{group.number}</span><span>{group.stage}</span></div>
             <div className={`home-features__visual home-features__visual--${group.stage.toLowerCase()}`} role="img" aria-label={`${group.stage} visual placeholder`}>
@@ -30,6 +30,7 @@ export const FeaturesSection = () => {
             <p>{group.description}</p>
           </article>)}
         </div>
+        <p className="home-features__swipe-hint">Swipe to explore all three stages</p>
       </div>
     </section>
   );
