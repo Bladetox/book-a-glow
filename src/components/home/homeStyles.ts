@@ -701,4 +701,75 @@ export const HOME_STYLES = `
     .home-audience__visual { min-height: 170px; }
   }
 
+
+  /* One shared responsive spacing rhythm for every homepage section. */
+  .home-audience,
+  .home-features,
+  .home-insights > .home-revenue,
+  .home-insights > .home-heatmap,
+  .home-pricing-preview,
+  .home-cta {
+    padding-block: clamp(40px, 5vw, 64px) !important;
+  }
+  .home-audience,
+  .home-features,
+  .home-insights,
+  #results,
+  .home-pricing-preview,
+  .home-cta { box-sizing: border-box; }
+  .home-audience { background: #F5F0E7 !important; }
+  .home-features { background: #EDE4D7 !important; }
+  .home-insights { background: #F0E7DA !important; }
+  #results { background: #E8D6B9 !important; }
+  .home-pricing-preview { background: #F5F0E7 !important; }
+  .home-cta { background: #EDE4D7 !important; }
+  .home-audience__inner,
+  .home-features__inner,
+  .home-pricing-preview__inner {
+    width: 100%;
+    box-sizing: border-box;
+  }
+  .home-pricing-preview__plan {
+    display: flex !important;
+    flex-direction: column !important;
+    min-height: 100%;
+    box-sizing: border-box;
+  }
+  .home-pricing-preview__plan-top span:last-child {
+    color: #74695C !important;
+    font-size: 10px !important;
+    letter-spacing: .07em !important;
+  }
+  .home-pricing-preview__trial {
+    margin: auto 0 0 !important;
+    padding-top: 20px;
+    color: #51483D !important;
+    font-size: 12px;
+    line-height: 1.5;
+    font-weight: 700 !important;
+    text-align: left;
+  }
+  .home-pricing-preview__plan-studio .home-pricing-preview__trial,
+  .home-pricing-preview__plan.plan-studio .home-pricing-preview__trial {
+    text-align: center;
+  }
+  /* Green is the demand scale; lighter green means more activity. */
+  .home-heatmap { background: #F0E7DA !important; }
+  .home-heatmap .home-heatmap__grid-cell { background: inherit; }
+  @media (max-width: 767px) {
+    .home-audience,
+    .home-features,
+    .home-insights > .home-revenue,
+    .home-insights > .home-heatmap,
+    #results,
+    .home-pricing-preview,
+    .home-cta {
+      padding-block: 40px !important;
+    }
+    .home-insights > .home-revenue { padding-bottom: 24px !important; }
+    .home-insights > .home-heatmap { padding-top: 24px !important; }
+    .home-pricing-preview__plan { min-height: 100%; }
+    .home-pricing-preview__trial { text-align: left; }
+    .home-pricing-preview__plan.plan-studio .home-pricing-preview__trial { text-align: center; }
+  }
 `;
