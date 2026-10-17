@@ -828,4 +828,58 @@ export const HOME_STYLES = `
     .home-features__visual { aspect-ratio: 4 / 3; min-height: 0; }
     .home-audience__visual { aspect-ratio: 4 / 5; min-height: 0; }
   }
+  /* Final responsive polish: consistent gutters scale with viewport width without stretching content. */
+  .home-audience,
+  .home-features,
+  .home-insights > .home-revenue,
+  .home-insights > .home-heatmap,
+  #results,
+  .home-pricing-preview,
+  .home-cta {
+    padding-inline: clamp(20px, 4vw, 64px) !important;
+  }
+  .home-audience__inner,
+  .home-features__inner,
+  .home-pricing-preview__inner,
+  .home-insights > .home-revenue > div,
+  .home-insights > .home-heatmap > div {
+    width: min(1440px, 100%) !important;
+    margin-inline: auto !important;
+  }
+  .home-features__visual {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+  }
+  .home-features__visual--see {
+    aspect-ratio: 4 / 3;
+  }
+  .home-features__visual--see img {
+    object-fit: contain;
+    padding: clamp(8px, 1.5vw, 18px);
+  }
+  .home-features__image-note {
+    position: absolute;
+    z-index: 3;
+    top: 8px;
+    right: 10px;
+    color: #94672F;
+    font-size: 15px;
+    line-height: 1;
+    font-weight: 700;
+    pointer-events: none;
+  }
+  @media (max-width: 767px) {
+    .home-audience,
+    .home-features,
+    .home-insights > .home-revenue,
+    .home-insights > .home-heatmap,
+    #results,
+    .home-pricing-preview,
+    .home-cta {
+      padding-inline: 20px !important;
+    }
+    .home-features__visual,
+    .home-features__visual--see { aspect-ratio: 4 / 3; }
+    .home-features__visual--see img { padding: 10px; }
+  }
 `;
