@@ -17,7 +17,7 @@ export const HeroSection = () => {
             <h1 className="home-hero__heading">Record. <span>Understand.</span> Grow.</h1>
             <p className="home-hero__description">NextSlot brings your bookings, payments, clients and business activity into one place, so you can see what is happening and make better decisions about what comes next.</p>
             <div className="home-hero__actions">
-              <PrimaryCTA to="/#who-its-for">See how it works</PrimaryCTA>
+              <PrimaryCTA to="/#how-nextslot-works">See how it works</PrimaryCTA>
               <p className="home-hero__supporting">Built for independent service businesses · Proudly made in Cape Town, South Africa.</p>
             </div>
           </div>
