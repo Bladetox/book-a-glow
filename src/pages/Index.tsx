@@ -61,7 +61,7 @@ const Index = () => {
     } as React.CSSProperties}>
       <style>{HOME_STYLES}</style>
       <style>{`html.marketing-page, html.marketing-page body { scrollbar-width: none; -ms-overflow-style: none; overflow-x: clip; } html.marketing-page::-webkit-scrollbar, html.marketing-page body::-webkit-scrollbar { display: none; width: 0; height: 0; }`}</style>
-      <SiteHeader />
+      <SiteHeader journeyMode={destinationSelected} />
       <main>
         <div className="home-hero-experience"><HeroSection /><ProofTicker /></div>
         <div className={`home-journey-reveal${journeyStarted ? " is-active" : ""}`} aria-hidden={!journeyStarted} inert={!journeyStarted}>
