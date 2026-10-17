@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Menu, X } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { PrimaryCTA } from "@/components/home/PrimaryCTA";
@@ -13,7 +13,63 @@ const navLinks = [
 
 const SiteHeader = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
   const { pathname } = useLocation();
+
+  useEffect(() => {
+    if (!isMenuOpen) return;
+    const menu = mobileMenuRef.current;
+    const trigger = menuButtonRef.current;
+    if (!menu || !trigger) return;
+
+    const scrollY = window.scrollY;
+    const previousBodyStyles = {
+      position: document.body.style.position,
+      top: document.body.style.top,
+      left: document.body.style.left,
+      right: document.body.style.right,
+      width: document.body.style.width,
+    };
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.left = "0";
+    document.body.style.right = "0";
+    document.body.style.width = "100%";
+
+    const focusable = () => Array.from(menu.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )).filter((element) => element.getAttribute("aria-hidden") !== "true");
+    window.requestAnimationFrame(() => focusable()[0]?.focus());
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setIsMenuOpen(false);
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const items = focusable();
+      if (!items.length) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (event.shiftKey && (document.activeElement === first || !menu.contains(document.activeElement))) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (document.activeElement === last || !menu.contains(document.activeElement))) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      Object.assign(document.body.style, previousBodyStyles);
+      window.scrollTo(0, scrollY);
+      trigger.focus();
+    };
+  }, [isMenuOpen]);
   const isActive = (to: string) => { const path = to.split("#")[0]; return pathname === path || pathname.startsWith(path + "/"); };
 
   return (
@@ -37,11 +93,11 @@ const SiteHeader = () => {
             <PrimaryCTA to="/onboarding">Start for free</PrimaryCTA>
           </div>
 
-          <button className="site-header__menu-button md:hidden p-2 rounded-lg" onClick={() => setIsMenuOpen(!isMenuOpen)} aria-label={isMenuOpen ? "Close menu" : "Open menu"}>{isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}</button>
+          <button ref={menuButtonRef} type="button" className="site-header__menu-button md:hidden p-2 rounded-lg" onClick={() => setIsMenuOpen(!isMenuOpen)} aria-label={isMenuOpen ? "Close menu" : "Open menu"} aria-expanded={isMenuOpen} aria-controls="nextslot-mobile-menu">{isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}</button>
         </div>
 
         {isMenuOpen && (
-          <div className="site-header__mobile-menu md:hidden py-4 animate-fade-in">
+          <div ref={mobileMenuRef} id="nextslot-mobile-menu" role="dialog" aria-modal="true" aria-label="Site navigation" className="site-header__mobile-menu md:hidden py-4 animate-fade-in" onClick={(event) => { if (event.target === event.currentTarget) setIsMenuOpen(false); }}>
             <nav className="flex flex-col gap-1 mb-4" aria-label="Mobile navigation">
               {navLinks.map(({ to, label }) => <Link key={to} to={to} className="site-header__mobile-link px-3 py-2.5 rounded-lg text-sm font-medium" onClick={() => setIsMenuOpen(false)}>{label}</Link>)}
               <Link to="/login" className="site-header__mobile-link px-3 py-2.5 rounded-lg text-sm font-medium" onClick={() => setIsMenuOpen(false)}>Login</Link>
