@@ -97,7 +97,7 @@ const About = () => {
                 width: "100%",
                 padding: "20px 22px",
                 borderRadius: 12,
-                background: "rgba(245,240,231,0.78)",
+                background: "rgba(245,240,231,0.62)",
                 border: `1px solid ${C.border2}`,
                 boxShadow: "0 4px 20px rgba(66,48,27,0.06)",
               } : {
@@ -107,7 +107,7 @@ const About = () => {
                 width: 190,
                 padding: "18px 20px",
                 borderRadius: 12,
-                background: "rgba(245,240,231,0.77)",
+                background: "rgba(245,240,231,0.62)",
                 border: `1px solid ${C.border2}`,
                 boxShadow: "0 4px 20px rgba(66,48,27,0.04)",
               }}>
@@ -260,7 +260,7 @@ const About = () => {
               boxShadow: "0 4px 20px rgba(66,48,27,0.04)",
             }}>
               <img
-                src={beauticianImage}
+                src={sunlitStudioImage}
                 alt="Independent service professional"
                 style={{ width: "100%", height: "100%", minHeight: isMobile ? 260 : 360, objectFit: "cover", display: "block" }}
               />
