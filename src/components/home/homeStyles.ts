@@ -882,4 +882,74 @@ export const HOME_STYLES = `
     .home-features__visual--see { aspect-ratio: 4 / 3; }
     .home-features__visual--see img { padding: 10px; }
   }
+  /* One consistent gutter token across breakpoints; the inner wrapper controls line length. */
+  .home-audience,
+  .home-features,
+  .home-insights > .home-revenue,
+  .home-insights > .home-heatmap,
+  #results,
+  .home-pricing-preview,
+  .home-cta {
+    padding-inline: 24px !important;
+    box-sizing: border-box !important;
+  }
+  .home-audience__inner,
+  .home-features__inner,
+  .home-pricing-preview__inner,
+  .home-insights > .home-revenue > div,
+  .home-insights > .home-heatmap > div {
+    width: 100% !important;
+    max-width: 1200px !important;
+    margin-inline: auto !important;
+    box-sizing: border-box !important;
+  }
+  .home-features__visual,
+  .home-features__visual--see {
+    width: 100% !important;
+    aspect-ratio: 4 / 3 !important;
+    height: auto !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    position: relative !important;
+  }
+  .home-features__visual--see img {
+    display: block !important;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    object-position: center !important;
+    padding: 0 !important;
+  }
+  .home-features__image-note {
+    position: absolute !important;
+    z-index: 3 !important;
+    top: 10px !important;
+    right: 12px !important;
+    color: #94672F !important;
+    font-size: 18px !important;
+    line-height: 1 !important;
+    font-weight: 700 !important;
+    pointer-events: none !important;
+  }
+  .home-features__footnote {
+    margin: 16px 0 0 !important;
+    color: #74695C !important;
+    font-size: 12px !important;
+    line-height: 1.5 !important;
+    text-align: center !important;
+  }
+  .home-features__footnote span { color: #94672F !important; font-weight: 700 !important; }
+  @media (max-width: 767px) {
+    .home-audience,
+    .home-features,
+    .home-insights > .home-revenue,
+    .home-insights > .home-heatmap,
+    #results,
+    .home-pricing-preview,
+    .home-cta { padding-inline: 24px !important; }
+    .home-features__visual,
+    .home-features__visual--see { aspect-ratio: 4 / 3 !important; }
+  }
+
 `;
