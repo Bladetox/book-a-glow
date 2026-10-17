@@ -48,7 +48,7 @@ export const FeaturesSection = () => {
           {GROUPS.map(group => <article className="home-features__card" key={group.stage}>
             <div className="home-features__stage"><span>{group.stage}</span></div>
             <div className={`home-features__visual home-features__visual--${group.stage.toLowerCase()} home-features__visual--image`}>
-              {group.stage === "Capture" && <span className="home-features__image-note" title="Starter workflow">＊</span>}
+              {group.stage === "Capture" && <span className="home-features__image-note" aria-hidden="true">*</span>}
               <img
                 src={group.image}
                 alt={group.alt}
@@ -63,6 +63,7 @@ export const FeaturesSection = () => {
         </div>
         <CarouselDots trackId="home-features-track" count={GROUPS.length} label="How NextSlot works" />
         <p className="home-features__swipe-hint">Swipe to explore all three stages</p>
+        <p className="home-features__footnote"><span aria-hidden="true">*</span> Starter plan workflow.</p>
       </div>
     </section>
   );
