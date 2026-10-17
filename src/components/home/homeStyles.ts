@@ -674,5 +674,31 @@ export const HOME_STYLES = `
     .home-pricing-preview__plan, .home-features__card, .home-carousel-dots button { transition: none !important; }
   }
 
+  /* Distinct section treatment: dark heatmap, stepped pricing tones, and raised audience cards. */
+  .home-audience__visual {
+    border: 1px solid rgba(126,96,58,.22);
+    border-radius: 18px;
+    box-shadow: 0 12px 28px rgba(66,48,27,.10), 0 2px 6px rgba(66,48,27,.04);
+  }
+  .home-pricing-preview__plan.plan-starter { background: #F8F4ED !important; border-top: 3px solid #D7C2A2 !important; }
+  .home-pricing-preview__plan.plan-flow { background: #F0E3CF !important; border-top: 3px solid #C6A16D !important; }
+  .home-pricing-preview__plan.plan-professional { background: #E8D6B9 !important; border-top: 3px solid #B88B52 !important; }
+  .home-pricing-preview__plan.plan-studio { background: #DCD0BE !important; border-top: 3px solid #74695C !important; }
+  .home-pricing-preview__plan.plan-studio .home-pricing-preview__trial {
+    margin-top: auto;
+    padding-top: 24px;
+    color: #51483D;
+    text-align: center;
+    font-weight: 700;
+  }
+  .home-pricing-preview__plan.plan-studio .home-pricing-preview__audience { margin-bottom: 0; }
+  .home-pricing-preview__plan.plan-studio .home-pricing-preview__rule { background: linear-gradient(90deg,#74695C,#D7C2A2); }
+  @media (max-width: 767px) {
+    .home-pricing-preview__plan.plan-starter { background: #F8F4ED !important; }
+    .home-pricing-preview__plan.plan-flow { background: #F0E3CF !important; }
+    .home-pricing-preview__plan.plan-professional { background: #E8D6B9 !important; }
+    .home-pricing-preview__plan.plan-studio { background: #DCD0BE !important; }
+    .home-audience__visual { min-height: 170px; }
+  }
 
 `;
