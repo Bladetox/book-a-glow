@@ -4,7 +4,7 @@ export const C = {
   border: "rgba(126,96,58,0.16)", border2: "rgba(126,96,58,0.24)",
   text: "#000000", muted: "#51483D", faint: "#74695C",
   gold: "#B88B52", goldDim: "#9C713D", em: "#287A58",
-  emDim: "rgba(40,122,88,0.18)", red: "#B33A32", blue: "#356B9A", amber: "#9C713D",
+  emDim: "rgba(40,122,88,0.18)", emMid: "#62A47F", emLight: "#B8DEC7", emDeep: "#1D5A40", red: "#B33A32", blue: "#356B9A", amber: "#9C713D",
 } as const;
 export const FONT_DISPLAY = "'Montserrat', sans-serif";
 export const FONT_BODY = "'Inter', sans-serif";
