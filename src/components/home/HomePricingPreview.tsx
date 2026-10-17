@@ -7,7 +7,7 @@ const PLANS = [
   { name: "Starter", price: "R99", trial: "7-day free trial", headline: "Make it official", features: ["Move bookings out of your DMs", "A professional booking page", "Instant payments without EFT chasing"], available: true, audience: "For the solo owner ready to look and feel established", tone: "starter" },
   { name: "Flow", price: "R399", trial: "30-day free trial", headline: "Secure your time", features: ["Automated online payments", "Automated booking confirmation", "Own your client relationships"], available: true, audience: "For the owner who understands time = money", tone: "flow" },
   { name: "Professional", price: "R699", trial: "30-day free trial", headline: "Grow with confidence", features: ["Unlock your growth advisor, Nexty", "Automatic call-out fee calculation", "Custom domain"], available: true, audience: "For the established owner ready to grow with clarity", tone: "professional" },
-  { name: "Studio", price: "R899", trial: null, headline: "Financial oversight for your shared space", features: ["One shared location", "Three staff included", "A clearer view of the whole business"], available: false, audience: "For space owners who need oversight, not more admin", tone: "studio" },
+  { name: "Studio", price: "R899", trial: null, headline: "Financial oversight for your shared space", features: ["One shared location", "Revenue and operating costs in one view", "Clearer visibility across day-to-day operations"], available: false, audience: "For space owners who need oversight, not more admin", tone: "studio" },
 ];
 
 export const HomePricingPreview = () => {
@@ -23,7 +23,7 @@ export const HomePricingPreview = () => {
         <div id="home-pricing-track" className={"home-pricing-preview__grid" + (isMobile ? " is-mobile" : "")} role="region" aria-label="NextSlot pricing plans" tabIndex={0}>
           {PLANS.map((plan) => (
             <article className={"home-pricing-preview__plan plan-" + plan.tone + (plan.available ? "" : " is-coming-soon")} key={plan.name}>
-              <div className="home-pricing-preview__plan-top"><span>{plan.name}</span><span>{plan.available ? "Available now" : "Coming soon"}</span></div>
+              <div className="home-pricing-preview__plan-top"><span>{plan.name}</span></div>
               <p className="home-pricing-preview__price">{plan.price}<span> / month</span></p>
               <h3>{plan.headline}</h3>
               <ul className="home-pricing-preview__features">{plan.features.map(feature => <li key={feature}>{feature}</li>)}</ul>
