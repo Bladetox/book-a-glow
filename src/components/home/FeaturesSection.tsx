@@ -48,6 +48,7 @@ export const FeaturesSection = () => {
           {GROUPS.map(group => <article className="home-features__card" key={group.stage}>
             <div className="home-features__stage"><span>{group.stage}</span></div>
             <div className={`home-features__visual home-features__visual--${group.stage.toLowerCase()} home-features__visual--image`}>
+              {group.stage === "Capture" && <span className="home-features__image-note" title="Starter workflow">＊</span>}
               <img
                 src={group.image}
                 alt={group.alt}
