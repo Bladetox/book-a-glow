@@ -22,6 +22,12 @@ export const HomeJourneyNav = ({ enabled }: HomeJourneyNavProps) => {
   );
 
   useEffect(() => {
+    const reopenSelector = () => setHasChosenDestination(false);
+    window.addEventListener("nextslot:journey-start", reopenSelector);
+    return () => window.removeEventListener("nextslot:journey-start", reopenSelector);
+  }, []);
+
+  useEffect(() => {
     const media = window.matchMedia("(max-width: 767px)");
     const update = () => setIsMobile(media.matches);
     update(); media.addEventListener("change", update);
