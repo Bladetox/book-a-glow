@@ -707,6 +707,7 @@ export const HOME_STYLES = `
   .home-features,
   .home-insights > .home-revenue,
   .home-insights > .home-heatmap,
+  #results,
   .home-pricing-preview,
   .home-cta {
     padding-block: clamp(40px, 5vw, 64px) !important;
