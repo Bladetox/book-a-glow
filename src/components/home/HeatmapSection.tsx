@@ -46,7 +46,7 @@ export const HeatmapSection = () => {
           <article className="home-heatmap__nexty">
             <div className="home-heatmap__nexty-top">
               <div className="home-heatmap__orb"><Orb /></div>
-              <div>
+              <div className="home-heatmap__nexty-copy">
                 <p className="home-heatmap__kicker">YOUR GROWTH ADVISOR</p>
                 <h3><span>Nexty</span> is your growth advisor.</h3>
                 <p className="home-heatmap__lead">Nexty analyses your bookings and suggests steps to help your business grow.</p>
