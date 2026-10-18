@@ -697,7 +697,6 @@ export const HOME_STYLES = `
   /* One shared responsive spacing rhythm for every homepage section. */
   .home-audience,
   .home-features,
-  .home-insights,
   #results,
   .home-pricing-preview,
   .home-cta {
@@ -705,7 +704,6 @@ export const HOME_STYLES = `
   }
   .home-audience,
   .home-features,
-  .home-insights,
   #results,
   .home-pricing-preview,
   .home-cta { box-sizing: border-box; }
@@ -749,13 +747,11 @@ export const HOME_STYLES = `
   @media (max-width: 767px) {
     .home-audience,
     .home-features,
-    .home-insights > .home-revenue,
     #results,
     .home-pricing-preview,
     .home-cta {
       padding-block: 40px !important;
     }
-    .home-insights > .home-revenue { padding-bottom: 24px !important; }
     .home-pricing-preview__plan { min-height: 100%; }
     .home-pricing-preview__trial { text-align: left; }
     .home-pricing-preview__plan.plan-studio .home-pricing-preview__trial { text-align: center; }
@@ -818,7 +814,6 @@ export const HOME_STYLES = `
   /* Final responsive polish: consistent gutters scale with viewport width without stretching content. */
   .home-audience,
   .home-features,
-  .home-insights,
   #results,
   .home-pricing-preview,
   .home-cta {
@@ -856,7 +851,6 @@ export const HOME_STYLES = `
   @media (max-width: 767px) {
     .home-audience,
     .home-features,
-    .home-insights > .home-revenue,
     #results,
     .home-pricing-preview,
     .home-cta {
@@ -869,7 +863,6 @@ export const HOME_STYLES = `
   /* One consistent gutter token across breakpoints; the inner wrapper controls line length. */
   .home-audience,
   .home-features,
-  .home-insights,
   #results,
   .home-pricing-preview,
   .home-cta {
@@ -924,7 +917,6 @@ export const HOME_STYLES = `
   @media (max-width: 767px) {
     .home-audience,
     .home-features,
-    .home-insights > .home-revenue,
     #results,
     .home-pricing-preview,
     .home-cta { padding-inline: 24px !important; }
@@ -934,22 +926,7 @@ export const HOME_STYLES = `
 
 
   /* Nexty card styling is separate from the insights layout. */
-  .home-insights .home-heatmap__nexty {
-    background: transparent !important; border: 0 !important; border-radius: 0 !important;
-    box-shadow: none !important; padding: 0 !important;
-  }
-  .home-insights .home-heatmap__orb {
-    overflow: visible !important; background: transparent !important;
-    border: 0 !important; box-shadow: none !important;
-  }
-  .home-insights .home-heatmap__nexty-top h3 { color: #000000 !important; }
-  .home-insights .home-heatmap__nexty-top h3 span { color: #B88B52 !important; }
-  .home-insights .home-heatmap__story {
-    gap: clamp(24px, 3vw, 44px) !important; align-items: center !important;
-  }
   @media (max-width: 767px) {
-    .home-insights .home-heatmap__story { gap: 20px !important; }
-    .home-insights .home-heatmap__nexty { padding: 0 !important; }
   }
 
 `;
