@@ -85,16 +85,16 @@
 
 .home-dashboard-preview {
   --dashboard-scale: 0.6;
-  width: calc(402px * var(--dashboard-scale));
+  width: 241.2px;
   max-width: 100%;
-  height: calc(874px * var(--dashboard-scale));
+  height: 524.4px;
   margin-inline: auto;
   overflow: visible;
   box-sizing: border-box;
 }
 .home-dashboard-preview__viewport {
-  width: calc(402px * var(--dashboard-scale));
-  height: calc(874px * var(--dashboard-scale));
+  width: 241.2px;
+  height: 524.4px;
   overflow: visible;
 }
 .home-dashboard-preview__frame {
@@ -320,10 +320,26 @@
   .home-insights .home-dashboard-preview { --dashboard-scale: 0.6; }
 }
 @media (min-width: 768px) and (max-width: 1200px) {
-  .home-insights .home-dashboard-preview { --dashboard-scale: 0.5; }
+  .home-insights .home-dashboard-preview {
+    --dashboard-scale: 0.5;
+    width: 201px;
+    height: 437px;
+  }
+  .home-insights .home-dashboard-preview__viewport {
+    width: 201px;
+    height: 437px;
+  }
 }
 @media (max-width: 767px) {
-  .home-insights .home-dashboard-preview { --dashboard-scale: 0.25; }
+  .home-insights .home-dashboard-preview {
+    --dashboard-scale: 0.25;
+    width: 100.5px;
+    height: 218.5px;
+  }
+  .home-insights .home-dashboard-preview__viewport {
+    width: 100.5px;
+    height: 218.5px;
+  }
 }
 
 
