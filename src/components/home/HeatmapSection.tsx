@@ -1,4 +1,4 @@
-import { C, FONT_BODY, FONT_DISPLAY, BP } from "./tokens";
+import { C, BP } from "./tokens";
 import { useWindowWidth } from "./useWindowWidth";
 import { Eyebrow } from "./Eyebrow";
 import { Orb } from "./Orb";
@@ -52,10 +52,11 @@ export const HeatmapSection = () => {
             </div>
             <div className="home-heatmap__legend"><span><i className="is-low" />Fewer bookings</span><span><i className="is-high" />More bookings</span></div>
             <p className="home-heatmap__peak">Saturday at 11am is the busiest illustrated slot, averaging 18 bookings.</p>
+          </div>
         </div>
 
         <div className="home-heatmap__story">
-                    <article className="home-heatmap__nexty">
+          <article className="home-heatmap__nexty">
             <div className="home-heatmap__nexty-top">
               <div className="home-heatmap__orb"><Orb scale={isMobile ? 0.62 : 0.78} /></div>
               <div>
