@@ -758,3 +758,108 @@ html.marketing-page::-webkit-scrollbar, html.marketing-page *::-webkit-scrollbar
   }
 }
 .home-pricing-preview__gold { color: #94672F; }
+
+
+/* Nexty growth opportunity preview in the homepage How It Works card. */
+.home-features__visual--nexty {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: clamp(12px, 1.6vw, 20px) !important;
+  background: radial-gradient(ellipse at 82% 14%, rgba(184,139,82,.18), transparent 42%), #F0E6D7 !important;
+}
+.home-features__growth-insight {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 380px;
+  box-sizing: border-box;
+  padding: clamp(12px, 1.5vw, 18px);
+  border: 1px solid rgba(126,96,58,.22);
+  border-radius: 12px;
+  background: #FFFDFA;
+  box-shadow: 0 8px 22px rgba(66,48,27,.09);
+  text-align: left;
+}
+.home-features__growth-insight-header {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  margin-bottom: 14px;
+}
+.home-features__growth-orb {
+  position: relative;
+  display: block;
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  overflow: hidden;
+  border-radius: 50%;
+  background: #F5EBDD;
+}
+.home-features__growth-orb .nexty-orb {
+  transform: translate(-50%, -50%) scale(.28) !important;
+}
+.home-features__growth-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.home-features__growth-identity strong {
+  color: #191714;
+  font: 700 12px/1.2 'Montserrat', sans-serif;
+}
+.home-features__growth-identity > span {
+  color: #74695C;
+  font: 600 8px/1.3 'Inter', sans-serif;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.home-features__growth-sparkle {
+  margin-left: auto;
+  color: #94672F;
+  font-size: 18px;
+}
+.home-features__growth-message {
+  padding: 12px;
+  border: 1px solid rgba(126,96,58,.16);
+  border-left: 3px solid #94672F;
+  border-radius: 8px;
+  background: #F8F4ED;
+}
+.home-features__growth-message-title {
+  display: block;
+  margin-bottom: 7px;
+  color: #191714;
+  font: 700 clamp(11px, 1vw, 13px)/1.35 'Montserrat', sans-serif;
+}
+.home-features__growth-message p {
+  margin: 0 !important;
+  color: #51483D !important;
+  font: 400 clamp(9px, .9vw, 11px)/1.55 'Inter', sans-serif !important;
+}
+.home-features__growth-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 12px;
+  color: #94672F;
+  font: 600 10px/1.4 'Inter', sans-serif;
+}
+.home-features__growth-disclaimer {
+  display: block;
+  margin-top: 10px;
+  color: #74695C;
+  font: 400 8px/1.3 'Inter', sans-serif;
+  text-align: right;
+}
+@media (max-width: 767px) {
+  .home-features__visual--nexty { padding: 12px !important; }
+  .home-features__growth-insight { padding: 12px; }
+  .home-features__growth-message { padding: 10px; }
+  .home-features__growth-message-title { font-size: 12px; }
+  .home-features__growth-message p { font-size: 10px !important; }
+}
