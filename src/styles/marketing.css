@@ -248,8 +248,8 @@
   .demo-tab-switcher { display: flex; flex-direction: column; width: 100%; }
   .demo-tab-button { border-right: 0; border-bottom: 1px solid rgba(126, 96, 58, 0.24); justify-content: center; }
   .demo-tab-button:last-child { border-bottom: 0; }
-  .speech-bubble { padding: 16px; }
-  .speech-bubble__message { font-size: 12px; }
+  .marketing-homepage .speech-bubble { padding: 16px; }
+  .marketing-homepage .speech-bubble__message { font-size: 12px; }
 }
 
 .home-features, .home-revenue, .home-comparison, .home-case-study, .home-proof, .home-cta, .home-about { padding: 64px 40px 68px; overflow: hidden; }
@@ -495,7 +495,7 @@ html.marketing-page::-webkit-scrollbar, html.marketing-page *::-webkit-scrollbar
 .home-heatmap__nexty-top .home-heatmap__lead {
   margin-inline: auto;
 }
-.home-heatmap__nexty .speech-bubble {
+.marketing-homepage .home-heatmap__nexty .speech-bubble {
   width: 100%;
   box-sizing: border-box;
   text-align: left;
