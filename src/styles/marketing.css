@@ -732,3 +732,29 @@ html.marketing-page::-webkit-scrollbar, html.marketing-page *::-webkit-scrollbar
   line-height: 1.7 !important;
 }
 
+
+/* Mobile audience cards: preserve horizontal swipe inside the clipped section. */
+@media (max-width: 767px) {
+  .marketing-homepage main .home-audience__visuals {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    justify-content: flex-start !important;
+    width: calc(100% + 48px) !important;
+    max-width: none !important;
+    margin-inline: -24px !important;
+    padding: 0 24px 16px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    touch-action: pan-x pan-y;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+  .marketing-homepage main .home-audience__visual {
+    flex: 0 0 min(72vw, 280px) !important;
+    width: min(72vw, 280px) !important;
+    min-width: min(72vw, 280px) !important;
+  }
+}
+.home-pricing-preview__gold { color: #94672F; }
