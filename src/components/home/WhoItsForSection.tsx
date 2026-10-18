@@ -45,7 +45,7 @@ export const WhoItsForSection = () => {
         <div className="home-audience__copy">
           <p className="home-audience__eyebrow">Who it's for</p>
           <h2>Built for <span style={{ color: "#94672F" }}>independent</span> service businesses.</h2>
-          <p>Beauty, barber, photography, tattoo, wellness and more. If you take bookings, NextSlot is for you.</p>
+          <p>From beauty and barbering to consulting, photography and tattooing, NextSlot helps you manage bookings. Work on the move? It automatically calculates your call-out fee, too.</p>
         </div>
         <div id="home-audience-track" className="home-audience__visuals" role="region" aria-label="Examples of independent service businesses" tabIndex={0}>
           {audienceCards.map((card) => (
