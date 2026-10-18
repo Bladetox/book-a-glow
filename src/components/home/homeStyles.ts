@@ -750,14 +750,12 @@ export const HOME_STYLES = `
     .home-audience,
     .home-features,
     .home-insights > .home-revenue,
-    .home-insights > .home-heatmap,
     #results,
     .home-pricing-preview,
     .home-cta {
       padding-block: 40px !important;
     }
     .home-insights > .home-revenue { padding-bottom: 24px !important; }
-    .home-insights > .home-heatmap { padding-top: 24px !important; }
     .home-pricing-preview__plan { min-height: 100%; }
     .home-pricing-preview__trial { text-align: left; }
     .home-pricing-preview__plan.plan-studio .home-pricing-preview__trial { text-align: center; }
@@ -859,7 +857,6 @@ export const HOME_STYLES = `
     .home-audience,
     .home-features,
     .home-insights > .home-revenue,
-    .home-insights > .home-heatmap,
     #results,
     .home-pricing-preview,
     .home-cta {
@@ -928,7 +925,6 @@ export const HOME_STYLES = `
     .home-audience,
     .home-features,
     .home-insights > .home-revenue,
-    .home-insights > .home-heatmap,
     #results,
     .home-pricing-preview,
     .home-cta { padding-inline: 24px !important; }
