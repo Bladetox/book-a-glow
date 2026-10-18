@@ -907,3 +907,36 @@ html.marketing-page::-webkit-scrollbar, html.marketing-page *::-webkit-scrollbar
   .demo-stage { border-radius: 16px; }
   .demo-progress { font-size: 10px; gap: 6px; }
 }
+
+/* 
+  OVERRIDE: Fixes the grid overflow on desktop 
+  and ensures padding matches other sections
+*/
+.home-audience {
+  padding: 64px 40px 68px; /* Ensures desktop padding */
+  overflow: hidden;        /* Prevents horizontal scroll */
+}
+
+.home-audience__visuals {
+  /* Forces the 3 columns to shrink and fit the container */
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important; 
+  min-width: 0;
+}
+
+/* Restore your mobile padding and layout just in case */
+@media (max-width: 1023px) {
+  .home-audience {
+    padding: 48px 24px 52px;
+  }
+}
+
+@media (max-width: 767px) {
+  .home-audience {
+    padding: 40px 16px 44px;
+  }
+  .home-audience__visuals {
+    display: flex !important;
+    flex-direction: column; /* Or flex-row with overflow-x: auto */
+    gap: 16px;
+  }
+}
