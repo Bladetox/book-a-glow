@@ -1,5 +1,4 @@
-import { C, BP } from "./tokens";
-import { useWindowWidth } from "./useWindowWidth";
+import { C } from "./tokens";
 import { Eyebrow } from "./Eyebrow";
 import { Orb } from "./Orb";
 import { SpeechBubble } from "./SpeechBubble";
@@ -18,9 +17,6 @@ const heatColor = (v: number) => v < 4 ? C.emLight : v < 8 ? C.emMid : v < 12 ? 
 const TIME_LABELS = ["9am", "11am", "1pm", "3pm", "5pm"];
 
 export const HeatmapSection = () => {
-  const width = useWindowWidth();
-  const isMobile = width < BP;
-
   return (
     <section className="home-heatmap" aria-labelledby="home-insight-heading">
       <div className="home-heatmap__inner">
@@ -58,7 +54,7 @@ export const HeatmapSection = () => {
         <div className="home-heatmap__story">
           <article className="home-heatmap__nexty">
             <div className="home-heatmap__nexty-top">
-              <div className="home-heatmap__orb"><Orb scale={isMobile ? 0.62 : 0.78} /></div>
+              <div className="home-heatmap__orb"><Orb /></div>
               <div>
                 <p className="home-heatmap__kicker">YOUR GROWTH ADVISOR</p>
                 <h3><span>Nexty</span> is your growth advisor.</h3>
