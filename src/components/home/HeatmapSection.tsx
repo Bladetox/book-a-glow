@@ -35,7 +35,7 @@ export const HeatmapSection = () => {
               <div className="home-heatmap__orb"><Orb scale={isMobile ? 0.62 : 0.78} /></div>
               <div>
                 <p className="home-heatmap__kicker">YOUR GROWTH ADVISOR</p>
-                <h3>Meet Nexty.</h3>
+                <h3><span>Nexty</span> is your growth advisor.</h3>
                 <p className="home-heatmap__lead">Not just another dashboard. A clearer next step.</p>
               </div>
             </div>
