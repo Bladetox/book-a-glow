@@ -256,3 +256,31 @@
     padding: 40px 16px;
   }
 }
+
+
+/* Unified insights layout: one centred narrative and one centred visual group. */
+.home-insights .home-heatmap__header {
+  text-align: center !important;
+}
+.home-insights .home-heatmap__visual-row {
+  justify-content: center;
+  margin-inline: auto;
+}
+.home-insights .home-heatmap__dashboard,
+.home-insights .home-heatmap__evidence {
+  justify-self: stretch;
+}
+@media (max-width: 767px) {
+  .home-insights .home-heatmap__header {
+    text-align: center !important;
+  }
+  .home-insights .home-heatmap__visual-row {
+    width: min(100%, 520px);
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+    margin-top: 28px;
+  }
+  .home-insights .home-heatmap__subheading {
+    margin-top: 24px;
+  }
+}
