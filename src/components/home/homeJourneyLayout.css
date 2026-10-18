@@ -200,3 +200,9 @@
   }
   .home-insights .home-heatmap__nexty { padding: 24px 0; }
 }
+
+/* The heatmap section owns the orb's positioning context and clips decorative layers. */
+.home-insights .home-heatmap__orb {
+  position: relative;
+  isolation: isolate;
+}
