@@ -204,6 +204,9 @@
 /* The heatmap section owns the orb's positioning context and clips decorative layers. */
 .home-insights .home-heatmap__orb {
   position: relative;
+  width: 80px;
+  height: 80px;
+  flex: 0 0 80px;
   isolation: isolate;
 }
 
