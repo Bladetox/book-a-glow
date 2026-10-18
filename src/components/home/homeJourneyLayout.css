@@ -20,9 +20,13 @@
   padding: 64px 40px !important;
   margin: 0 !important;
 }
-.home-insights > .home-revenue { padding-bottom: 32px !important; }
+.home-insights > .home-revenue { padding-bottom: 8px !important; }
 .home-insights > .home-heatmap { padding-top: 32px !important; }
 .home-insights .home-heatmap__inner { width: min(1120px, 100%); margin-inline: auto; }
+.home-insights .home-revenue > div > div { display: flow-root; }
+.home-insights .home-revenue__dashboard { display: flow-root; min-height: 0; margin-top: 28px; padding-bottom: 44px; }
+.home-insights .home-revenue__heading { max-width: 760px; }
+.home-insights .home-revenue > div > div > .home-revenue__dashboard { clear: both; }
 .home-insights .home-heatmap__header { max-width: 660px; margin: 0 auto 36px; text-align: center; }
 .home-insights .home-heatmap__header h2 { margin: 0 0 14px; color: #000; font: 800 clamp(30px, 3.5vw, 44px)/1.08 'Montserrat', sans-serif; letter-spacing: -.03em; text-wrap: balance; }
 .home-insights .home-heatmap__header h2 span { color: #94672F; }
@@ -67,7 +71,9 @@
   .home-hero-experience > .home-hero { min-height: 0; }
   .home-insights > .home-revenue,
   .home-insights > .home-heatmap { padding: 40px 16px !important; }
-  .home-insights > .home-revenue { padding-bottom: 20px !important; }
+  .home-insights > .home-revenue { padding-bottom: 0 !important; }
+  .home-insights .home-revenue__dashboard { margin-top: 24px; padding-bottom: 36px; }
+  .home-insights .home-revenue__dashboard > div { margin-left: auto !important; margin-right: auto !important; float: none !important; }
   .home-insights > .home-heatmap { padding-top: 20px !important; }
   .home-insights .home-heatmap__header { margin-bottom: 24px; text-align: left; }
   .home-insights .home-heatmap__nexty { padding: 20px 16px; }
