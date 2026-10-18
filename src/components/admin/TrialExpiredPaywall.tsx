@@ -111,7 +111,7 @@ const TrialExpiredPaywall = ({ onSignOut }: Props) => {
   if (selected) {
     const tier = tiers.find(t => t.planKey === selected)!;
     return (
-      <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center px-4">
+      <div className="min-h-dvh bg-[#0a0a0a] flex items-center justify-center px-4">
         <div className="max-w-md w-full text-center flex flex-col items-center gap-6">
           {/* Icon */}
           <div
@@ -170,7 +170,7 @@ const TrialExpiredPaywall = ({ onSignOut }: Props) => {
 
   // ── Main paywall ─────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#0a0a0a] overflow-y-auto">
+    <div className="min-h-dvh bg-[#0a0a0a] overflow-y-auto">
       <div className="max-w-5xl mx-auto px-4 py-12 sm:py-16">
 
         {/* Header */}

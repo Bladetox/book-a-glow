@@ -3041,6 +3041,14 @@ export type Database = {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
       }
+      sa_delete_tenant: {
+        Args: {
+          p_confirm: string
+          p_delete_owner_login?: boolean
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
       mark_platform_invoice_paid: {
         Args: {
           p_invoice_id: string

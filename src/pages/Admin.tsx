@@ -14,6 +14,7 @@ import { useSupabaseBookings } from "@/hooks/useSupabaseBookings";
 import { NotificationBell } from "@/components/admin/NotificationBell";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { useLocation } from "react-router-dom";
+import { useShellBackground } from "@/hooks/useShellBackground";
 
 const AdminBookings         = lazy(() => import("@/components/admin/AdminBookings"));
 const AdminCalendar         = lazy(() => import("@/components/admin/AdminCalendar"));
@@ -45,7 +46,7 @@ class AdminErrorBoundary extends Component<
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen bg-black flex items-center justify-center p-6">
+        <div className="min-h-dvh bg-black flex items-center justify-center p-6">
           <div className="max-w-md w-full bg-red-500/10 border border-red-500/20 rounded-2xl p-6 text-center">
             <AlertTriangle className="w-10 h-10 text-red-500 mx-auto mb-4" />
             <h2 className="text-white font-semibold mb-2">Something went wrong</h2>
@@ -198,7 +199,7 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
 
   if (flagsLoading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="min-h-dvh bg-black flex items-center justify-center">
         <Loader2 className="w-6 h-6 text-white/20 animate-spin" />
       </div>
     );
@@ -218,7 +219,10 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
         {/* Arrears banner — shown below the top header, above content */}
         {isArrears && <ArrearsBanner />}
 
-        <header className="h-16 border-b border-black bg-black flex items-center justify-between px-4 lg:px-8 flex-shrink-0 relative z-30">
+        <header
+          className="border-b border-black bg-black flex items-center justify-between px-4 lg:px-8 flex-shrink-0 relative z-30"
+          style={{ height: "calc(4rem + env(safe-area-inset-top, 0px))", paddingTop: "env(safe-area-inset-top, 0px)" }}
+        >
           {/* Left: hamburger (mobile only) + view title */}
           <div className="flex items-center gap-3 min-w-0">
             <button
@@ -292,6 +296,7 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
 };
 
 const Admin = () => {
+  useShellBackground("#000000");
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -309,7 +314,7 @@ const Admin = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="min-h-dvh bg-black flex items-center justify-center">
         <Loader2 className="w-6 h-6 text-white/20 animate-spin" />
       </div>
     );
@@ -324,7 +329,7 @@ const Admin = () => {
       {({ tenant, subscription, loading: tenantLoading }) => {
         if (tenantLoading) {
           return (
-            <div className="min-h-screen bg-black flex items-center justify-center">
+            <div className="min-h-dvh bg-black flex items-center justify-center">
               <Loader2 className="w-6 h-6 text-white/20 animate-spin" />
             </div>
           );
