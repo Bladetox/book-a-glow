@@ -963,7 +963,8 @@ export const HOME_STYLES = `
     overflow: visible !important; background: transparent !important;
     border: 0 !important; box-shadow: none !important;
   }
-  .home-insights .home-heatmap__nexty-top h3 { color: #B88B52 !important; }
+  .home-insights .home-heatmap__nexty-top h3 { color: #000000 !important; }
+  .home-insights .home-heatmap__nexty-top h3 span { color: #B88B52 !important; }
   .home-insights .home-heatmap__story {
     gap: clamp(24px, 3vw, 44px) !important; align-items: center !important;
   }
