@@ -25,7 +25,7 @@ const tools: Tool[] = [
     name: "Vula",
     tagline: "Find South African business funding you actually qualify for.",
     description:
-      "A free directory of verified grants, loans, and support programmes for South African SMEs. Filter by business stage; informal, registered, or looking to formalise. Funders include Yoco Capital, Lula, Merchant Capital, and more.",
+      "A free directory of verified grants, loans, and support programmes for South African SMEs. Filter by business stage; informal, registered, or looking to formalise.",
     cta: "Find Funding",
     url: "https://vula-lac.vercel.app/",
     tag: "Free tool",
@@ -45,7 +45,7 @@ const tools: Tool[] = [
     name: "TARA-S",
     tagline: "Built for beauty and wellness clients who reschedule around their cycle.",
     description:
-      "TARA-S was built after noticing that clients of PhenomeBeauty, a mobile beauty therapist in Cape Town, kept rescheduling because their periods arrived unexpectedly. The tool tracks each client's cycle and surfaces a booking link at exactly the right window. Free, available in English, Afrikaans, isiZulu, and isiXhosa.",
+      "TARA-S was built after noticing that clients of PhenomeBeauty, a mobile beauty therapist in Cape Town, kept rescheduling because their periods arrived unexpectedly. Free, available in English, Afrikaans, isiZulu, and isiXhosa.",
     cta: "Give This to Your Clients",
     url: "https://tara-s.vercel.app/",
     tag: "Free tool",
@@ -489,7 +489,7 @@ const Resources = () => {
                   Articles
                 </p>
                 <h2 style={MK.h2}>
-                  For business owners who think ahead.
+                  For business owners who <span style={MK.accent}>think ahead.</span>
                 </h2>
               </div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -742,7 +742,7 @@ const Resources = () => {
           <div className="resources-story-inner">
             <article className="resources-story-block resources-story-idea">
               <p className="resources-story-eyebrow">The Idea Behind NextSlot</p>
-              <h2>I didn't want to build just another booking app.</h2>
+              <h2>I didn't want to build <span style={MK.accent}>just another booking app.</span></h2>
               <p>
                 I've always been interested in one simple question: why does something have to be
                 done a certain way?
