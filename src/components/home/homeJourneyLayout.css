@@ -165,7 +165,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  height: clamp(18px, 2.5vw, 32px);
+  height: auto;
+  aspect-ratio: 2.5 / 1;
+  min-height: 0;
   border-radius: clamp(3px, 0.5vw, 6px);
   font: 700 clamp(7px, 0.8vw, 10px)/1 'Inter', sans-serif;
 }
@@ -305,15 +307,6 @@
     padding: 8px;
     border-radius: 10px;
   }
-  .home-insights .home-heatmap__times,
-  .home-insights .home-heatmap__row {
-    grid-template-columns: clamp(14px, 4vw, 22px) repeat(5, minmax(0, 1fr));
-    gap: 2px;
-  }
-  .home-insights .home-heatmap__cell {
-    height: clamp(14px, 4vw, 24px);
-    border-radius: 3px;
-  }
 }
 
 @media (min-width: 1201px) {
@@ -388,17 +381,25 @@
   .home-insights .home-heatmap__dashboard,
   .home-insights .home-heatmap__evidence { min-width: 0 !important; }
   .home-insights .home-heatmap__evidence { padding: 8px !important; }
-  .home-insights .home-heatmap__times,
-  .home-insights .home-heatmap__row {
-    grid-template-columns: clamp(14px, 4vw, 22px) repeat(5, minmax(0, 1fr)) !important;
-    gap: 2px !important;
-  }
-  .home-insights .home-heatmap__cell {
-    height: clamp(14px, 4vw, 24px) !important;
-  }
 }
 
 /* Data intensity is semantic; geometry remains owned by the heatmap layout rules. */
+.home-insights .home-heatmap__cell.is-low { background: #B8DEC7; color: #17251D; }
+.home-insights .home-heatmap__cell.is-medium { background: #62A47F; color: #17251D; }
+.home-insights .home-heatmap__cell.is-high { background: #287A58; color: #FFFFFF; }
+.home-insights .home-heatmap__cell.is-peak { background: #1D5A40; color: #FFFFFF; }
+
+/* Fixed heatmap proportions at every breakpoint; no mobile-only cell geometry. */
+.home-insights .home-heatmap__times,
+.home-insights .home-heatmap__row {
+  grid-template-columns: clamp(20px, 2vw, 34px) repeat(5, minmax(0, 1fr)) !important;
+  gap: clamp(2px, 0.5vw, 6px) !important;
+}
+.home-insights .home-heatmap__cell {
+  height: auto !important;
+  aspect-ratio: 2.5 / 1 !important;
+  min-height: 0 !important;
+}
 .home-insights .home-heatmap__cell.is-low { background: #B8DEC7; color: #17251D; }
 .home-insights .home-heatmap__cell.is-medium { background: #62A47F; color: #17251D; }
 .home-insights .home-heatmap__cell.is-high { background: #287A58; color: #FFFFFF; }
