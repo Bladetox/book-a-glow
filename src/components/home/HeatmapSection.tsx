@@ -1,4 +1,3 @@
-import { C } from "./tokens";
 import { Eyebrow } from "./Eyebrow";
 import { Orb } from "./Orb";
 import { SpeechBubble } from "./SpeechBubble";
