@@ -397,3 +397,9 @@
     height: clamp(14px, 4vw, 24px) !important;
   }
 }
+
+/* Data intensity is semantic; geometry remains owned by the heatmap layout rules. */
+.home-insights .home-heatmap__cell.is-low { background: #B8DEC7; color: #17251D; }
+.home-insights .home-heatmap__cell.is-medium { background: #63A889; color: #17251D; }
+.home-insights .home-heatmap__cell.is-high { background: #27835F; color: #FFFFFF; }
+.home-insights .home-heatmap__cell.is-peak { background: #1D5A40; color: #FFFFFF; }
