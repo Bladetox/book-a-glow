@@ -3,6 +3,7 @@ import { useWindowWidth } from "./useWindowWidth";
 import { Eyebrow } from "./Eyebrow";
 import { Orb } from "./Orb";
 import { SpeechBubble } from "./SpeechBubble";
+import FigmaDashboardPreview from "./FigmaDashboardPreview";
 
 const HEAT_ROWS = [
   { day: "Mon", slots: [6, 9, 5, 7, 4] },
@@ -29,27 +30,10 @@ export const HeatmapSection = () => {
           <p>Your booking history shows what is happening. Nexty helps you decide what to do next.</p>
         </header>
 
-        <div className="home-heatmap__story">
-          <article className="home-heatmap__nexty">
-            <div className="home-heatmap__nexty-top">
-              <div className="home-heatmap__orb"><Orb scale={isMobile ? 0.62 : 0.78} /></div>
-              <div>
-                <p className="home-heatmap__kicker">YOUR GROWTH ADVISOR</p>
-                <h3><span>Nexty</span> is your growth advisor.</h3>
-                <p className="home-heatmap__lead">Not just another dashboard. A clearer next step.</p>
-              </div>
-            </div>
-            <SpeechBubble
-              type="growth"
-              speaker="Nexty"
-              label="Growth opportunity"
-              message="Tuesday afternoons sit empty most weeks. A mid-week offer could help fill those gaps."
-              action="See the gap"
-              delay={0}
-            />
-            <p className="home-heatmap__support">This recommendation is grounded in the booking patterns shown here.</p>
-          </article>
-
+        <div className="home-heatmap__visual-row">
+          <div className="home-heatmap__dashboard">
+            <FigmaDashboardPreview />
+          </div>
           <div className="home-heatmap__evidence">
             <div className="home-heatmap__evidence-heading">
               <span>THE SIGNAL</span>
@@ -68,7 +52,28 @@ export const HeatmapSection = () => {
             </div>
             <div className="home-heatmap__legend"><span><i className="is-low" />Fewer bookings</span><span><i className="is-high" />More bookings</span></div>
             <p className="home-heatmap__peak">Saturday at 11am is the busiest illustrated slot, averaging 18 bookings.</p>
-          </div>
+        </div>
+
+        <div className="home-heatmap__story">
+                    <article className="home-heatmap__nexty">
+            <div className="home-heatmap__nexty-top">
+              <div className="home-heatmap__orb"><Orb scale={isMobile ? 0.62 : 0.78} /></div>
+              <div>
+                <p className="home-heatmap__kicker">YOUR GROWTH ADVISOR</p>
+                <h3><span>Nexty</span> is your growth advisor.</h3>
+                <p className="home-heatmap__lead">Not just another dashboard. A clearer next step.</p>
+              </div>
+            </div>
+            <SpeechBubble
+              type="growth"
+              speaker="Nexty"
+              label="Growth opportunity"
+              message="Tuesday afternoons sit empty most weeks. A mid-week offer could help fill those gaps."
+              action="See the gap"
+              delay={0}
+            />
+            <p className="home-heatmap__support">This recommendation is grounded in the booking patterns shown here.</p>
+          </article>
         </div>
       </div>
     </section>
