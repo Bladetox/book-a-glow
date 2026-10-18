@@ -4,6 +4,7 @@ import barberProfessional from "../../assets/professional-barber-client-service.
 import creativeProfessional from "../../assets/professional-photographer-at-work.webp";
 import consultingProfessional from "../../assets/consulting.webp";
 import tattooArtist from "../../assets/tools-tattoo-artist-at-work.webp";
+import massageTherapist from "../../assets/scene-beauty-treatment-room-aspiration.webp";
 
 const audienceCards = [
   {
@@ -36,6 +37,12 @@ const audienceCards = [
     alt: "Tattoo artist working carefully on a client's tattoo",
     position: "center",
   },
+  {
+    label: "Massage Therapist",
+    image: massageTherapist,
+    alt: "A calm massage treatment room prepared for a client",
+    position: "center",
+  },
 ];
 
 export const WhoItsForSection = () => {
@@ -61,7 +68,7 @@ export const WhoItsForSection = () => {
             </figure>
           ))}
         </div>
-        <CarouselDots trackId="home-audience-track" count={5} label="Business types" />
+        <CarouselDots trackId="home-audience-track" count={6} label="Business types" />
         <p className="home-audience__swipe-hint">Swipe to explore more business types</p>
       </div>
     </section>
