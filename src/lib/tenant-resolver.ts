@@ -2,19 +2,18 @@
  * Resolves the tenant slug from the current hostname.
  *
  * Resolution order:
- *   1. ?tenant=xxx query param (dev/preview ONLY — blocked on production domains)
- *   2. Bare localhost → marketing site
- *   3. Lovable preview environment → marketing site
- *   4. Custom domain lookup (e.g. bookings.phenomebeauty.co.za → looked up in tenants.custom_domain)
- *   5. Subdomain of known NextSlot domains (phenomebeauty.nextslot.co.za → "phenomebeauty")
- *   6. null → show marketing site
+ *   1. ?tenant=xxx query param (dev/preview ONLY, blocked on production domains)
+ *   2. Bare localhost -> marketing site
+ *   3. Lovable preview environment -> marketing site
+ *   4. Vercel preview environment -> marketing site
+ *   5. Custom domain lookup (e.g. bookings.phenomebeauty.co.za -> looked up in tenants.custom_domain)
+ *   6. Subdomain of known NextSlot domains (phenomebeauty.nextslot.co.za -> "phenomebeauty")
+ *   7. null -> show marketing site
  */
 
 const MAIN_DOMAINS = ["nextslot.co.za", "nextslot.app"];
 const LOVABLE_DOMAINS = ["lovable.app", "lovableproject.com"];
-
-// UUID pattern for Lovable preview subdomains
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const VERCEL_DOMAIN = "vercel.app";
 
 export interface TenantResolution {
   /** The tenant slug/id, or null for marketing site */
@@ -23,19 +22,19 @@ export interface TenantResolution {
   isCustomDomain: boolean;
   /** The full custom domain hostname if applicable */
   customDomainHost: string | null;
-  /** Whether we're in a Lovable preview environment */
+  /** Whether we're in a preview environment */
   isPreviewEnvironment: boolean;
 }
 
 export function resolveTenantSync(): TenantResolution {
   const hostname = window.location.hostname;
 
-  // Determine if we are on a production NextSlot domain — if so, block dev overrides
+  // Determine if we are on a production NextSlot domain. If so, block dev overrides.
   const isProductionDomain = MAIN_DOMAINS.some(
     (d) => hostname === d || hostname === `www.${d}`
   );
 
-  // 1. Query param override — dev/preview ONLY, never honoured on production domains
+  // 1. Query param override: dev/preview only, never honoured on production domains.
   if (!isProductionDomain) {
     const params = new URLSearchParams(window.location.search);
     const tenantParam = params.get("tenant");
@@ -44,12 +43,12 @@ export function resolveTenantSync(): TenantResolution {
     }
   }
 
-  // 2. Bare localhost → show marketing site (use ?tenant=xxx to test tenant mode)
+  // 2. Bare localhost -> show marketing site (use ?tenant=xxx to test tenant mode).
   if (hostname === "localhost" || hostname === "127.0.0.1") {
     return { slug: null, isCustomDomain: false, customDomainHost: null, isPreviewEnvironment: true };
   }
 
-  // 3. Lovable preview environments → show marketing site
+  // 3. Lovable preview environments -> show marketing site.
   for (const domain of LOVABLE_DOMAINS) {
     if (hostname === domain || hostname === `www.${domain}`) {
       return { slug: null, isCustomDomain: false, customDomainHost: null, isPreviewEnvironment: true };
@@ -60,7 +59,13 @@ export function resolveTenantSync(): TenantResolution {
     }
   }
 
-  // 4. Check against known NextSlot domains
+  // 4. Vercel preview deployments -> show marketing site.
+  // Vercel preview hostnames are not customer custom domains.
+  if (hostname === VERCEL_DOMAIN || hostname.endsWith(`.${VERCEL_DOMAIN}`)) {
+    return { slug: null, isCustomDomain: false, customDomainHost: null, isPreviewEnvironment: true };
+  }
+
+  // 5. Check against known NextSlot domains.
   for (const domain of MAIN_DOMAINS) {
     if (hostname === domain || hostname === `www.${domain}`) {
       return { slug: null, isCustomDomain: false, customDomainHost: null, isPreviewEnvironment: false };
@@ -76,13 +81,15 @@ export function resolveTenantSync(): TenantResolution {
     }
   }
 
-  // 5. Dev: "<slug>.localhost"
+  // 6. Dev: "<slug>.localhost".
   if (hostname.endsWith(".localhost")) {
     const subdomain = hostname.slice(0, -".localhost".length);
-    if (subdomain) return { slug: subdomain, isCustomDomain: false, customDomainHost: null, isPreviewEnvironment: true };
+    if (subdomain) {
+      return { slug: subdomain, isCustomDomain: false, customDomainHost: null, isPreviewEnvironment: true };
+    }
   }
 
-  // 6. Unknown hostname → could be a custom domain, flag for async lookup
+  // 7. Unknown hostname -> could be a custom domain, flag for async lookup.
   return { slug: null, isCustomDomain: true, customDomainHost: hostname, isPreviewEnvironment: false };
 }
 
@@ -98,7 +105,7 @@ export function isCustomDomainHost(): string | null {
   return resolution.isCustomDomain ? resolution.customDomainHost : null;
 }
 
-// ── Edge function utilities ─────────────────────────────────────────────────
+// Edge function utilities
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY as string;

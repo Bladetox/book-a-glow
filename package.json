@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && node scripts/generate-seo-pages.mjs",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
@@ -96,5 +96,12 @@
     "vite": "^5.4.19",
     "vitest": "^3.2.4",
     "terser": "^5.39.0"
+  },
+  "allowScripts": {
+    "@swc/core@1.13.2": true,
+    "core-js@3.50.0": true,
+    "esbuild@0.21.5": true,
+    "esbuild@0.25.0": true,
+    "tesseract.js@5.1.1": true
   }
 }

@@ -3,9 +3,11 @@ import { ReactNode } from "react";
 interface DeviceFrameProps {
   children: ReactNode;
   interactive?: boolean;
+  /** Children fill the screen edge-to-edge (used for iframe embeds that manage their own scrolling). */
+  fill?: boolean;
 }
 
-export const LaptopFrame = ({ children, interactive = true }: DeviceFrameProps) => (
+export const LaptopFrame = ({ children, interactive = true, fill = false }: DeviceFrameProps) => (
   <div
     className="relative mx-auto w-full"
     style={{ filter: "drop-shadow(0 20px 40px rgba(0,0,0,0.25)) drop-shadow(0 8px 16px rgba(0,0,0,0.15))" }}
@@ -17,12 +19,14 @@ export const LaptopFrame = ({ children, interactive = true }: DeviceFrameProps) 
         </div>
       </div>
       <div
-        className={`rounded-[3px] overflow-hidden bg-[hsl(0,0%,4%)] ${!interactive ? "pointer-events-none select-none" : ""}`}
+        className={`rounded-[3px] overflow-hidden bg-[hsl(0,0%,4%)] ${fill ? "relative" : ""} ${!interactive ? "pointer-events-none select-none" : ""}`}
         style={{ aspectRatio: "16 / 10" }}
       >
+        {fill ? <div className="absolute inset-0">{children}</div> : (
         <div className="w-full h-full overflow-y-auto overflow-x-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
           {children}
         </div>
+        )}
       </div>
     </div>
     <div className="h-[3px] bg-[#1d1d1d] border-x-[2px] border-[#2a2a2a]" />
@@ -33,7 +37,7 @@ export const LaptopFrame = ({ children, interactive = true }: DeviceFrameProps) 
   </div>
 );
 
-export const MobileFrame = ({ children, interactive = true }: DeviceFrameProps) => (
+export const MobileFrame = ({ children, interactive = true, fill = false }: DeviceFrameProps) => (
   <div
     className="relative mx-auto w-full overflow-hidden rounded-[22%/8%] bg-black"
   >
@@ -57,9 +61,13 @@ export const MobileFrame = ({ children, interactive = true }: DeviceFrameProps) 
         <div
           className={`absolute inset-0 flex flex-col overflow-hidden bg-[hsl(0,0%,4%)] ${!interactive ? "pointer-events-none select-none" : ""}`}
         >
-          <div className="flex-1 overflow-y-auto overflow-x-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-            {children}
-          </div>
+          {fill ? (
+            <div className="relative flex-1 min-h-0">{children}</div>
+          ) : (
+            <div className="flex-1 overflow-y-auto overflow-x-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+              {children}
+            </div>
+          )}
         </div>
 
         {/* Home indicator */}

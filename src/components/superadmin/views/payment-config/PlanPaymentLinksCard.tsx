@@ -5,7 +5,7 @@ const PLANS = [
   { plan: "Starter",      amount: "R99/mo" },
   { plan: "Flow",         amount: "R399/mo" },
   { plan: "Professional", amount: "R699/mo" },
-  { plan: "Studio",       amount: "R1299/mo" },
+  { plan: "Studio",       amount: "R999/mo" },
 ];
 
 // ─── Static reference card only — actual pricing is resolved dynamically ────

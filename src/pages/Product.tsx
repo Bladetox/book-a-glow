@@ -4,6 +4,7 @@ import DashboardPreview from "@/components/site/DashboardPreview";
 import MobileDashboardPreview from "@/components/site/MobileDashboardPreview";
 import { LaptopFrame, MobileFrame } from "@/components/site/DeviceFrames";
 import { Link } from "react-router-dom";
+import { PrimaryCTA } from "@/components/home/PrimaryCTA";
 import {
   CalendarDays, Users, LayoutDashboard, Clock, BarChart3, Shield, ArrowRight,
   Package, Star, Link2, Gem, Bell, TrendingUp, MapPin,
@@ -226,38 +227,28 @@ const Product = () => (
         </div>
       </section>
 
-      <section style={{ background: "hsl(220 20% 8%)" }} className="py-20 md:py-28 text-center">
+      <section className="product-cta-section py-20 md:py-28 text-center">
         <div className="max-w-xl mx-auto px-4 space-y-6">
-          <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-white">
+          <h2 className="product-cta-section__heading text-3xl md:text-4xl font-semibold tracking-tight">
             Your business deserves a system that works as hard as you do.
           </h2>
-          <p style={{ color: "hsl(0 0% 100% / 0.55)" }} className="text-base leading-relaxed">
+          <p className="product-cta-section__copy text-base leading-relaxed">
             Everything in one place. Nothing you have to chase. Try NextSlot free for 30 days.
           </p>
           <div className="flex flex-col items-center gap-3 pt-2">
-            <Link
-              to="/onboarding"
-              className="group inline-flex items-center justify-center gap-2 text-sm font-semibold px-8 py-4 rounded-[10px] transition-all duration-200 shadow-[0_4px_20px_-4px_hsl(var(--accent)/0.45)] hover:scale-[1.02]"
-              style={{
-                background: "hsl(var(--foreground))",
-                color: "hsl(var(--background))",
-              }}
-            >
+            <PrimaryCTA to="/onboarding">
               Create Your Booking Page
-              <ArrowRight className="h-4 w-4 group-hover:translate-x-0.5 transition-transform" />
-            </Link>
+              <ArrowRight className="marketing-cta__arrow" aria-hidden="true" />
+            </PrimaryCTA>
             <Link
               to="/demo"
-              className="inline-flex items-center gap-1.5 text-sm font-medium transition-colors"
-              style={{ color: "hsl(0 0% 100% / 0.40)" }}
-              onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.color = "hsl(0 0% 100% / 0.75)"; }}
-              onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.color = "hsl(0 0% 100% / 0.40)"; }}
+              className="product-cta-section__demo-link inline-flex items-center gap-1.5 text-sm font-medium transition-colors"
             >
               Or explore the live demo first
               <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
-          <p className="text-xs" style={{ color: "hsl(0 0% 100% / 0.25)" }}>
+          <p className="product-cta-section__fine-print text-xs">
             No payment required. Free for 30 days. Cancel anytime.
           </p>
         </div>

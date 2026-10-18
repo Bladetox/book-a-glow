@@ -115,14 +115,19 @@ export default defineConfig(({ mode }) => ({
       output: {
         manualChunks: (id) => {
           if (!id.includes("node_modules")) return;
-          if (id.includes("framer-motion"))           return "framer";
-          if (id.includes("lucide-react"))             return "icons";
-          if (id.includes("@radix-ui"))               return "radix";
-          if (id.includes("@supabase"))               return "supabase";
-          if (id.includes("@tanstack"))               return "query";
+          // Isolate heavyweight libraries with clear dependency boundaries.
+          // Leave React and unclassified packages to Rollup default graph analysis.
+          if (id.includes("framer-motion")) return "framer";
+          if (id.includes("lucide-react")) return "icons";
+          if (id.includes("@radix-ui")) return "radix";
+          if (id.includes("@supabase")) return "supabase";
+          if (id.includes("@tanstack")) return "query";
           if (id.includes("recharts") || id.includes("d3-")) return "charts";
           if (id.includes("date-fns") || id.includes("dayjs")) return "dates";
-          return "vendor";
+          if (id.includes("pdfjs-dist")) return "pdf";
+          if (id.includes("tesseract.js") || id.includes("tesseract")) return "ocr";
+          if (id.includes("react-hook-form") || id.includes("@hookform")) return "forms";
+          return;
         },
       },
     },

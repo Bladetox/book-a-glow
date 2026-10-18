@@ -21,12 +21,7 @@ export const ComparisonSection = () => {
   const isMobile = width < BP;
 
   return (
-    <section style={{
-      background: C.s1,
-      borderTop: `1px solid ${C.border}`,
-      borderBottom: `1px solid ${C.border}`,
-      padding: isMobile ? "64px 24px" : "100px 40px",
-    }}>
+    <section className="home-comparison">
       <div style={{ maxWidth: 860, margin: "0 auto" }}>
         <div style={{ textAlign: "center", marginBottom: isMobile ? 36 : 52 }}>
           <Eyebrow text="How we compare" />

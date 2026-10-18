@@ -5,11 +5,10 @@ import MarketingLayout from "@/components/site/MarketingLayout";
 import { Link } from "react-router-dom";
 import { Check, Minus, ChevronDown, ChevronUp, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { C, FONT_BODY, FONT_DISPLAY } from "@/components/home/tokens";
+import { C, FONT_BODY, FONT_DISPLAY, MK, SECTION } from "@/components/home/tokens";
+import { PrimaryCTA } from "@/components/home/PrimaryCTA";
 import waIcon from "@/assets/whatsapp.png";
 
-const CTA_BG     = "radial-gradient(ellipse at 20% 35%, rgba(255,242,185,0.55) 0%, transparent 55%), radial-gradient(ellipse at 50% 50%, #D4A574 0%, #B8915F 52%, #7a4200 100%)";
-const CTA_SHADOW = "inset -2px -3px 8px rgba(0,0,0,0.45), inset 2px 2px 6px rgba(255,235,160,0.18), 0 4px 18px rgba(184,145,95,0.35), 0 1px 6px rgba(0,0,0,0.5)";
 
 // ─── Keyframes + IntersectionObserver reverse-scroll (desktop + mobile) ────────
 //
@@ -188,18 +187,18 @@ const tiers = [
       {
         label: "Core",
         features: [
-          "Ditch the pen and diary - Automated bookings",
-          "No manual chasing EFT - PayShap clears instantly in your bank account",
-          "No back-and-forth WhatsApp chats - Confirm the booking with one click",
-          "Email notifications and WhatsApp templates - One click away",
-          "Essential dashboard - Less noise, just the basics you need",
+          "Ditch the pen and diary: automated bookings",
+          "No manual EFT chasing: PayShap clears instantly in your bank account",
+          "No back-and-forth WhatsApp chats: confirm the booking with one click",
+          "Email notifications and WhatsApp templates, one click away",
+          "Essential dashboard: less noise, just the basics you need",
         ],
       },
       {
         label: "Clients",
         features: [
-          "4 Step, easy booking",
-          "Pay, add your booked date to your calendar, and go on with your day",
+          "4-step, easy booking",
+          "Pay, add the date to your calendar and get on with your day",
           "No app download or sign-in required",
         ],
       },
@@ -219,7 +218,7 @@ const tiers = [
       {
         label: "Everything in Starter, plus",
         features: [
-          "Yoco, Ikhokha and Payfast payments",
+          "Yoco, iKhokha and PayFast payments",
           "Deposit collection with balance tracking",
           "Custom Terms and Conditions at checkout",
           "Client blocking with reason attached",
@@ -258,20 +257,20 @@ const tiers = [
   },
   {
     name: "Studio",
-    price: "R1299",
+    price: "R999",
     period: "/ month",
-    description: "Built for teams. Runs like a system.",
-    subline: "1 location \u00b7 3 staff included \u00b7 R89 per additional staff member",
+    description: "A shared space for independent service providers, with clear operational oversight and no interference in how they run their businesses.",
+    subline: "For space owners hosting independent service providers.",
     trialDays: 30,
     comingSoon: true,
     groups: [
       {
         label: "Everything in Professional, plus",
         features: [
-          "Stock and inventory management with low-stock alerts",
-          "Barcode and manual stock scanning",
-          "Nexty AI insights for loyalty and business growth",
-          "Advanced analytics suite",
+          "Automated invoicing for independent service providers",
+          "Structured dispute resolution with a documented history",
+          "Operational oversight across the shared space",
+          "Visibility into business activity while providers remain independent",
         ],
       },
     ],
@@ -317,8 +316,8 @@ const comparisonSections: FeatureSection[] = [
       { label: "PayShap instant EFT",                                starter: true,  flow: false, professional: false, studio: false },
       { label: "PayShap real-time verification queue",               starter: true,  flow: false, professional: false, studio: false },
       { label: "Yoco payments",                                      starter: false, flow: true,  professional: true,  studio: true  },
-      { label: "Ikhokha payments",                                   starter: false, flow: true,  professional: true,  studio: true  },
-      { label: "Payfast payments",                                   starter: false, flow: true,  professional: true,  studio: true  },
+      { label: "iKhokha payments",                                   starter: false, flow: true,  professional: true,  studio: true  },
+      { label: "PayFast payments",                                   starter: false, flow: true,  professional: true,  studio: true  },
       { label: "Deposit vs. balance tracking per booking",           starter: true,  flow: true,  professional: true,  studio: true  },
       { label: "Payment records (per-booking history)",              starter: true,  flow: true,  professional: true,  studio: true  },
     ],
@@ -540,7 +539,6 @@ const PricingHero = ({
       style={{
         position: "relative",
         width: "100%",
-        minHeight: 640,
         overflow: "hidden",
       }}
     >
@@ -560,7 +558,7 @@ const PricingHero = ({
         }} />
         <div style={{
           position: "absolute", inset: 0,
-          backgroundImage: `linear-gradient(rgba(212,165,116,0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(212,165,116,0.045) 1px, transparent 1px)`,
+          backgroundImage: `linear-gradient(rgba(184,139,82,0.045) 1px, transparent 1px), linear-gradient(90deg, rgba(184,139,82,0.045) 1px, transparent 1px)`,
           backgroundSize: "44px 44px",
           mixBlendMode: "color-dodge" as const,
           WebkitMaskImage: "radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%)",
@@ -585,28 +583,17 @@ const PricingHero = ({
           flexDirection: "column" as const,
           alignItems: "center",
           textAlign: "center" as const,
-          paddingTop: 104,
-          paddingBottom: 64,
+          paddingTop: 120,
+          paddingBottom: 56,
           paddingLeft: 24,
           paddingRight: 24,
         }}
       >
-        <p
-          className="hero-text-layer"
-          style={{
-            fontFamily: FONT_BODY,
-            fontSize: 11,
-            fontWeight: 700,
-            letterSpacing: "0.14em",
-            textTransform: "uppercase" as const,
-            color: C.gold,
-            margin: "0 0 10px 0",
-          }}
-        >
+        <p className="hero-text-layer" style={{ ...MK.eyebrow, margin: "0 0 10px" }}>
           What it costs
         </p>
 
-        <span
+        <h1
           className="hero-scale-layer"
           style={{
             fontFamily: FONT_DISPLAY,
@@ -617,11 +604,12 @@ const PricingHero = ({
             letterSpacing: "-0.03em",
             userSelect: "none" as const,
             display: "block",
-            textShadow: "0 0 120px rgba(212,165,116,0.18)",
+            textShadow: "0 0 120px rgba(184,139,82,0.18)",
+            margin: 0,
           }}
         >
-          R99
-        </span>
+          R99<span className="sr-only"> per month, Starter plan</span>
+        </h1>
 
         <div
           className="hero-text-layer"
@@ -691,33 +679,15 @@ const PricingHero = ({
             <div style={{
               display: "inline-flex", alignItems: "center", justifyContent: "center",
               fontSize: 14, fontWeight: 600, fontFamily: FONT_BODY,
-              padding: "13px 28px", borderRadius: 10,
-              background: "rgba(212,165,116,0.10)",
-              border: "1px solid rgba(212,165,116,0.25)",
+              padding: "13px 28px", borderRadius: 12,
+              background: "rgba(184,139,82,0.10)",
+              border: "1px solid rgba(184,139,82,0.25)",
               color: C.text,
             }}>
               You are on the {manageTierMeta?.label ?? "Starter"} plan
             </div>
           ) : (
-            <Link
-              to="/onboarding"
-              style={{
-                background: CTA_BG,
-                boxShadow: CTA_SHADOW,
-                color: "#080808",
-                fontFamily: FONT_BODY,
-                fontSize: 14,
-                fontWeight: 700,
-                padding: "13px 32px",
-                borderRadius: 10,
-                textDecoration: "none",
-                display: "inline-flex",
-                alignItems: "center",
-                minHeight: 48,
-              }}
-            >
-              Start Free Trial
-            </Link>
+            <PrimaryCTA to="/onboarding">Start Free Trial</PrimaryCTA>
           )}
 
           {/* 7-day trial badge */}
@@ -728,9 +698,9 @@ const PricingHero = ({
               gap: 6,
               marginTop: 12,
               padding: "5px 14px",
-              borderRadius: 100,
-              background: "rgba(212,165,116,0.08)",
-              border: "1px solid rgba(212,165,116,0.20)",
+              borderRadius: 12,
+              background: "rgba(184,139,82,0.08)",
+              border: "1px solid rgba(184,139,82,0.20)",
               fontFamily: FONT_BODY,
               fontSize: 11,
               fontWeight: 600,
@@ -746,7 +716,6 @@ const PricingHero = ({
             fontSize: 12,
             color: C.faint,
             fontFamily: FONT_BODY,
-            fontStyle: "italic",
             margin: "10px 0 0 0",
             letterSpacing: "0.01em",
           }}>
@@ -861,24 +830,9 @@ const Pricing = () => {
           padding: "0 24px",
         }}
       >
-        {/* "Plans" (gold, same clamp size) above descriptive line */}
-        <div style={{ marginBottom: 40, textAlign: "center", paddingTop: 48 }}>
-          <h2 style={{
-            fontFamily: FONT_DISPLAY,
-            fontSize: "clamp(36px, 5vw, 64px)",
-            fontWeight: 700,
-            color: C.gold,
-            lineHeight: 1.05,
-            margin: "0 0 10px 0",
-          }}>
-            Plans
-          </h2>
-          <p style={{
-            fontSize: 13, fontWeight: 500, letterSpacing: "0.01em",
-            color: C.muted, margin: 0, fontFamily: FONT_BODY,
-          }}>
-            Pick the plan that fits where you are.
-          </p>
+        <div style={{ marginBottom: 40, textAlign: "center", paddingTop: 8 }}>
+          <p style={MK.eyebrow}>Plans</p>
+          <h2 style={{ ...MK.h2, margin: 0 }}>Pick the plan that fits where you are.</h2>
         </div>
 
         {pricingMode === "manage" && manageNotice && (
@@ -903,25 +857,25 @@ const Pricing = () => {
               <div
                 key={tier.name}
                 style={{
-                  background: tier.featured ? "rgba(212,165,116,0.06)" : C.s1,
-                  border: tier.featured ? "1.5px solid rgba(212,165,116,0.55)" : `1px solid ${C.border2}`,
-                  borderRadius: 20,
+                  background: tier.featured ? "rgba(184,139,82,0.06)" : C.s1,
+                  border: tier.featured ? "1.5px solid rgba(184,139,82,0.55)" : `1px solid ${C.border2}`,
+                  borderRadius: 12,
                   padding: "32px 28px",
                   position: "relative",
                   overflow: "hidden",
                   display: "flex",
                   flexDirection: "column",
-                  boxShadow: tier.featured ? "0 8px 40px -8px rgba(212,165,116,0.20)" : "none",
+                  boxShadow: tier.featured ? "0 8px 30px rgba(66,48,27,0.08)" : "none",
                 }}
               >
                 {tier.featured && (
                   <div style={{
                     position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)",
                     display: "inline-flex", alignItems: "center", gap: 5,
-                    background: CTA_BG,
-                    borderRadius: "0 0 10px 10px",
+                    background: C.gold,
+                    borderRadius: "0 0 8px 8px",
                     padding: "4px 14px",
-                    fontSize: 10, fontWeight: 700, color: "#080808",
+                    fontSize: 10, fontWeight: 700, color: "#FFFFFF",
                     letterSpacing: "0.08em", textTransform: "uppercase" as const,
                     fontFamily: FONT_BODY,
                   }}>
@@ -936,15 +890,15 @@ const Pricing = () => {
                       display: "inline-flex", alignItems: "center", gap: 6,
                       fontSize: 10, fontWeight: 700, letterSpacing: "0.09em",
                       textTransform: "uppercase" as const,
-                      padding: "3px 10px", borderRadius: 100, marginBottom: 10,
-                      background: "rgba(212,165,116,0.08)",
-                      border: "1px solid rgba(212,165,116,0.20)",
+                      padding: "3px 10px", borderRadius: 12, marginBottom: 10,
+                      background: "rgba(184,139,82,0.08)",
+                      border: "1px solid rgba(184,139,82,0.20)",
                       color: C.gold, fontFamily: FONT_BODY,
                     }}>
                       Coming Soon
                     </div>
                   )}
-                  <h3 style={{ fontFamily: FONT_DISPLAY, fontSize: 17, fontWeight: 700, color: C.text, marginBottom: 4 }}>{tier.name}</h3>
+                  <h3 style={{ ...MK.h3, marginBottom: 4 }}>{tier.name}</h3>
                   <div style={{ marginBottom: 6 }}>
                     <span style={{ fontFamily: FONT_DISPLAY, fontSize: 28, fontWeight: 700, color: C.text }}>{tier.price}</span>
                     <span style={{ fontSize: 13, color: C.muted, fontFamily: FONT_BODY }}>{tier.period}</span>
@@ -978,25 +932,9 @@ const Pricing = () => {
                   <>
                     <button
                       type="button"
+                      className={`marketing-cta pricing-plan-cta${isCurrent ? " is-current" : ""}`}
                       disabled={isCurrent || !!submittingPlan || tier.comingSoon}
                       onClick={() => !tier.comingSoon && handlePlanChange(tierPlan)}
-                      style={isCurrent ? {
-                        width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: 13, fontWeight: 600, fontFamily: FONT_BODY,
-                        padding: "12px 20px", borderRadius: 10, cursor: "not-allowed",
-                        background: "rgba(212,165,116,0.08)", color: C.text,
-                        border: "1px solid rgba(212,165,116,0.20)", opacity: 0.6,
-                      } : tier.featured ? {
-                        width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: 13, fontWeight: 700, fontFamily: FONT_BODY,
-                        padding: "13px 20px", borderRadius: 10, cursor: tier.comingSoon ? "not-allowed" : "pointer",
-                        background: CTA_BG, boxShadow: CTA_SHADOW, color: "#080808", border: "none", opacity: tier.comingSoon ? 0.5 : 1,
-                      } : {
-                        width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: 13, fontWeight: 600, fontFamily: FONT_BODY,
-                        padding: "12px 20px", borderRadius: 10, cursor: tier.comingSoon ? "not-allowed" : "pointer",
-                        background: "transparent", color: C.muted, border: `1px solid ${C.border2}`, opacity: tier.comingSoon ? 0.5 : 1,
-                      }}
                     >
                       {isBusy ? "Saving..." : ctaLabel}
                     </button>
@@ -1007,37 +945,16 @@ const Pricing = () => {
                 ) : (
                   <>
                     {tier.comingSoon ? (
-                      <div style={{
-                        width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: 13, fontWeight: 600, fontFamily: FONT_BODY,
-                        padding: "12px 20px", borderRadius: 10,
-                        background: "rgba(212,165,116,0.06)", color: C.muted,
-                        border: `1px solid ${C.border}`,
-                      }}>
+                      <div className="marketing-cta pricing-plan-cta is-coming-soon" aria-disabled="true">
                         Coming Soon
                       </div>
                     ) : (
-                      <Link
-                        to="/onboarding"
-                        style={tier.featured ? {
-                          width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
-                          fontSize: 13, fontWeight: 700, fontFamily: FONT_BODY,
-                          padding: "13px 20px", borderRadius: 10,
-                          background: CTA_BG, boxShadow: CTA_SHADOW, color: "#080808",
-                          textDecoration: "none",
-                        } : {
-                          width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
-                          fontSize: 13, fontWeight: 600, fontFamily: FONT_BODY,
-                          padding: "12px 20px", borderRadius: 10,
-                          background: "transparent", color: C.muted,
-                          border: `1px solid ${C.border2}`, textDecoration: "none",
-                        }}
-                      >
+                      <Link to="/onboarding" className="marketing-cta pricing-plan-cta">
                         {tier.cta}
                       </Link>
                     )}
                     <p style={{ textAlign: "center", fontSize: 11, color: C.faint, marginTop: 8, fontFamily: FONT_BODY }}>
-                      {tier.comingSoon ? "Notify me when available." : `Free for ${tier.trialDays} days. No payment required.`}
+                      {tier.comingSoon ? "" : `Free for ${tier.trialDays} days. No payment required.`}
                     </p>
                   </>
                 )}
@@ -1048,18 +965,18 @@ const Pricing = () => {
       </div>
 
       {/* ── 3. WHAT YOUR 30 DAYS BUILDS ─────────────────────────────────── */}
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "60px 24px 0", position: "relative", zIndex: 1, background: C.bg }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "64px 24px 0", position: "relative", zIndex: 1, background: C.bg }}>
         <section>
           <div style={{
             maxWidth: 1100, margin: "0 auto",
             background: C.s1,
-            border: "1px solid rgba(212,165,116,0.22)",
-            borderRadius: 20, padding: "40px 40px",
+            border: `1px solid ${C.border2}`,
+            borderRadius: 12, padding: "40px 40px",
           }}>
-            <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase" as const, color: C.gold, marginBottom: 10, fontFamily: FONT_BODY }}>
+            <p style={MK.eyebrow}>
               What your 30 days builds
             </p>
-            <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: 26, fontWeight: 700, color: C.text, marginBottom: 10 }}>
+            <h2 style={MK.h2}>
               Your data. Your strategy.
             </h2>
             <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.75, marginBottom: 24, maxWidth: 580, fontFamily: FONT_BODY }}>
@@ -1078,14 +995,14 @@ const Pricing = () => {
       </div>
 
       {/* ── 4. FULL FEATURE COMPARISON (COLLAPSED) ──────────────────────── */}
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "48px 24px 0", position: "relative", zIndex: 1, background: C.bg }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "40px 24px 0", position: "relative", zIndex: 1, background: C.bg }}>
         <button
           type="button"
           onClick={() => setShowComparison((v) => !v)}
           style={{
             display: "flex", alignItems: "center", gap: 8, margin: "0 auto",
             background: "transparent", border: `1px solid ${C.border2}`,
-            borderRadius: 10, padding: "10px 20px",
+            borderRadius: 12, padding: "10px 20px",
             fontSize: 13, fontWeight: 600, color: C.muted,
             fontFamily: FONT_BODY, cursor: "pointer",
           }}
@@ -1135,34 +1052,29 @@ const Pricing = () => {
       )}
 
       {/* ── 5. FAQ ──────────────────────────────────────────────────────── */}
-      <div id="faq" style={{ maxWidth: 760, margin: "0 auto", padding: "72px 24px 0", position: "relative", zIndex: 1, background: C.bg }}>
-        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase" as const, color: C.gold, marginBottom: 10, fontFamily: FONT_BODY, textAlign: "center" }}>
+      <div id="faq" style={{ maxWidth: 760, margin: "0 auto", padding: "64px 24px 0", position: "relative", zIndex: 1, background: C.bg }}>
+        <p style={{ ...MK.eyebrow, textAlign: "center" }}>
           FAQ
         </p>
-        <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: "clamp(22px,2.4vw,30px)", fontWeight: 700, color: C.text, lineHeight: 1.2, marginBottom: 36, textAlign: "center" }}>
+        <h2 style={{ ...MK.h2, marginBottom: 32, textAlign: "center" }}>
           Common questions.
         </h2>
-        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           {faqs.map((faq, idx) => (
             <div
               key={faq.q}
               style={{
                 borderRadius: 12,
-                border: `1px solid ${openFaq === idx ? "rgba(212,165,116,0.35)" : C.border}`,
-                background: openFaq === idx ? "rgba(212,165,116,0.04)" : "transparent",
+                border: `1px solid ${openFaq === idx ? "rgba(184,139,82,0.35)" : C.border}`,
+                background: openFaq === idx ? "rgba(184,139,82,0.04)" : "transparent",
                 overflow: "hidden",
-                marginBottom: 4,
                 transition: "border-color 0.15s",
               }}
             >
               <button
                 type="button"
+                className="pricing-faq-trigger"
                 onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
-                style={{
-                  width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
-                  padding: "16px 20px", background: "transparent", border: "none", cursor: "pointer",
-                  textAlign: "left",
-                }}
               >
                 <span style={{ fontSize: 14, fontWeight: 600, color: C.text, fontFamily: FONT_BODY, lineHeight: 1.4 }}>{faq.q}</span>
                 {openFaq === idx
@@ -1170,8 +1082,8 @@ const Pricing = () => {
                   : <ChevronDown style={{ height: 16, width: 16, color: C.muted, flexShrink: 0 }} />}
               </button>
               {openFaq === idx && (
-                <div style={{ padding: "0 20px 18px" }}>
-                  <p style={{ fontSize: 13, color: C.muted, lineHeight: 1.75, fontFamily: FONT_BODY }}>{faq.a}</p>
+                <div className="pricing-faq-answer" style={{ padding: "0 20px 20px" }}>
+                  <p style={{ fontSize: 14, color: C.muted, lineHeight: 1.7, fontFamily: FONT_BODY }}>{faq.a}</p>
                 </div>
               )}
             </div>
@@ -1180,37 +1092,15 @@ const Pricing = () => {
       </div>
 
       {/* ── 6. READY TO START CTA ───────────────────────────────────────── */}
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "72px 24px 80px", position: "relative", zIndex: 1, background: C.bg }}>
-        <div style={{
-          borderRadius: 24, padding: "56px 48px",
-          background: C.s1,
-          border: "1px solid rgba(212,165,116,0.25)",
-          boxShadow: "0 8px 40px -8px rgba(0,0,0,0.5)",
-          textAlign: "center",
-        }}>
-          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.09em", textTransform: "uppercase" as const, color: C.gold, marginBottom: 16, fontFamily: FONT_BODY }}>
-            Ready to start?
-          </p>
-          <h2 style={{ fontFamily: FONT_DISPLAY, fontSize: "clamp(24px,2.8vw,36px)", fontWeight: 700, color: C.text, lineHeight: 1.15, marginBottom: 16 }}>
-            Your booking page is 10 minutes away.
-          </h2>
-          <p style={{ fontSize: 15, color: C.muted, lineHeight: 1.7, maxWidth: 480, margin: "0 auto 32px", fontFamily: FONT_BODY }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "64px 24px 68px", position: "relative", zIndex: 1, background: C.bg }}>
+        <div style={{ ...MK.panel, padding: "56px 48px" }}>
+          <p style={MK.eyebrow}>Ready to start?</p>
+          <h2 style={MK.h2}>Your booking page is 10 minutes away.</h2>
+          <p style={{ ...MK.body, maxWidth: 480, margin: "0 auto 32px" }}>
             No payment required. No technical setup. Just your services, your availability, and your booking link ready to share.
           </p>
           {pricingMode === "signup" && (
-            <Link
-              to="/onboarding"
-              style={{
-                display: "inline-flex", alignItems: "center",
-                background: CTA_BG, boxShadow: CTA_SHADOW,
-                color: "#080808", fontFamily: FONT_BODY,
-                fontSize: 14, fontWeight: 700,
-                padding: "14px 32px", borderRadius: 10,
-                textDecoration: "none",
-              }}
-            >
-              Create Your Booking Page
-            </Link>
+            <PrimaryCTA to="/onboarding">Create Your Booking Page</PrimaryCTA>
           )}
         </div>
       </div>

@@ -1,0 +1,136 @@
+/* Nexty orb presentation is owned here, not by JSX inline styles. */
+.nexty-orb {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 1;
+  display: flex;
+  width: 80px;
+  height: 80px;
+  align-items: center;
+  justify-content: center;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  isolation: isolate;
+}
+
+.nexty-orb__aura {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: orbAuraPulse ease-in-out infinite;
+}
+.nexty-orb__aura--inner {
+  width: 240px;
+  height: 240px;
+  background: radial-gradient(circle, rgba(212,165,116,.14) 0%, transparent 65%);
+  animation-duration: 3.5s;
+}
+.nexty-orb__aura--middle {
+  width: 380px;
+  height: 380px;
+  background: radial-gradient(circle, rgba(212,165,116,.05) 0%, transparent 60%);
+  animation-duration: 5.2s;
+  animation-delay: .9s;
+}
+.nexty-orb__aura--outer {
+  width: 520px;
+  height: 520px;
+  background: radial-gradient(circle, rgba(52,211,153,.03) 0%, transparent 55%);
+  animation-duration: 7s;
+  animation-delay: 1.8s;
+}
+
+.nexty-orb__ring {
+  position: absolute;
+  border: 1.5px solid transparent;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.nexty-orb__ring--outer {
+  width: 190px;
+  height: 190px;
+  border-top-color: rgba(212,165,116,.9);
+  border-right-color: rgba(212,165,116,.28);
+  border-bottom-color: rgba(212,165,116,.04);
+  border-left-color: rgba(212,165,116,.28);
+  filter: drop-shadow(0 0 5px rgba(212,165,116,.55));
+  animation: orbSpinA 2.8s linear infinite;
+}
+.nexty-orb__ring--inner {
+  width: 145px;
+  height: 145px;
+  border-width: 1px;
+  border-top-color: rgba(212,165,116,.45);
+  border-right-color: rgba(212,165,116,.1);
+  border-left-color: rgba(212,165,116,.1);
+  animation: orbSpinB 4.2s linear infinite;
+}
+
+.nexty-orb__core {
+  position: relative;
+  display: flex;
+  width: 80px;
+  height: 80px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 30% 26%, rgba(255,242,185,.92) 0%, transparent 36%),
+    radial-gradient(circle at 50% 50%, #D4A574 0%, #B8915F 48%, #7a4200 100%);
+  box-shadow:
+    inset -3px -5px 12px rgba(0,0,0,.6),
+    inset 3px 3px 8px rgba(255,235,160,.22),
+    0 8px 32px rgba(184,145,95,.7),
+    0 2px 10px rgba(0,0,0,.65);
+  animation: orbBreathe 4s ease-in-out infinite;
+}
+.nexty-orb__highlight {
+  position: absolute;
+  top: 13px;
+  left: 15px;
+  width: 22px;
+  height: 13px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(255,255,255,.52) 0%, transparent 72%);
+  transform: rotate(-22deg);
+}
+.nexty-orb__wordmark {
+  position: relative;
+  z-index: 1;
+  color: #080808;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 9px;
+  letter-spacing: .04em;
+}
+
+.nexty-orb__particle {
+  position: absolute;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #B88B52;
+  box-shadow: 0 0 10px rgba(212,165,116,.9);
+}
+.nexty-orb__particle--one {
+  --orb-tx: 93px;
+  animation: dotOrbitA 2.8s linear infinite;
+}
+.nexty-orb__particle--two {
+  --orb-tx: 71px;
+  animation: dotOrbitBm 4.2s linear infinite;
+}
+.nexty-orb__particle--three {
+  --orb-tx: 93px;
+  animation: dotOrbitC 3.4s linear infinite 1.1s;
+}
+
+
+@media (prefers-reduced-motion: reduce) {
+  .nexty-orb__aura,
+  .nexty-orb__ring,
+  .nexty-orb__core,
+  .nexty-orb__particle {
+    animation: none !important;
+  }
+}

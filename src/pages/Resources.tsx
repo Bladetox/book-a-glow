@@ -1,16 +1,11 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import { ArrowRight, ArrowUpRight, Clock, ExternalLink } from "lucide-react";
+import { ArrowUpRight, Clock, ExternalLink } from "lucide-react";
 import SiteHeader from "@/components/site/SiteHeader";
 import SiteFooter from "@/components/site/SiteFooter";
 import MarketingLayout from "@/components/site/MarketingLayout";
-import { C, FONT_BODY, FONT_DISPLAY } from "@/components/home/tokens";
-
-/* ─── constants ─────────────────────────────────────────────────── */
-const CTA_BG =
-  "radial-gradient(ellipse at 20% 35%, rgba(255,242,185,0.55) 0%, transparent 55%), radial-gradient(ellipse at 50% 50%, #D4A574 0%, #B8915F 52%, #7a4200 100%)";
-const CTA_SHADOW =
-  "inset -2px -3px 8px rgba(0,0,0,0.45), inset 2px 2px 6px rgba(255,235,160,0.18), 0 4px 18px rgba(184,145,95,0.35), 0 1px 6px rgba(0,0,0,0.5)";
+import { C, FONT_BODY, FONT_DISPLAY, MK, SECTION } from "@/components/home/tokens";
+import { PrimaryCTA } from "@/components/home/PrimaryCTA";
+import tiktokIcon from "@/assets/tiktok_1.png";
 
 /* ─── tool data ─────────────────────────────────────────────────── */
 type Tool = {
@@ -30,7 +25,7 @@ const tools: Tool[] = [
     name: "Vula",
     tagline: "Find South African business funding you actually qualify for.",
     description:
-      "A free directory of verified grants, loans, and support programmes for South African SMEs. Filter by business stage; informal, registered, or looking to formalise. Funders include Yoco Capital, Lula, Merchant Capital, and more.",
+      "A free directory of verified grants, loans, and support programmes for South African SMEs. Filter by business stage; informal, registered, or looking to formalise.",
     cta: "Find Funding",
     url: "https://vula-lac.vercel.app/",
     tag: "Free tool",
@@ -50,7 +45,7 @@ const tools: Tool[] = [
     name: "TARA-S",
     tagline: "Built for beauty and wellness clients who reschedule around their cycle.",
     description:
-      "TARA-S was built after noticing that clients of PhenomeBeauty, a mobile beauty therapist in Cape Town, kept rescheduling because their periods arrived unexpectedly. The tool tracks each client's cycle and surfaces a booking link at exactly the right window. Free, available in English, Afrikaans, isiZulu, and isiXhosa.",
+      "TARA-S was built after noticing that clients of PhenomeBeauty, a mobile beauty therapist in Cape Town, kept rescheduling because their periods arrived unexpectedly. Free, available in English, Afrikaans, isiZulu, and isiXhosa.",
     cta: "Give This to Your Clients",
     url: "https://tara-s.vercel.app/",
     tag: "Free tool",
@@ -135,10 +130,10 @@ const CategoryChip = ({
     style={{
       display: "inline-flex",
       alignItems: "center",
-      borderRadius: 100,
+      borderRadius: 12,
       fontWeight: 600,
-      border: `1px solid rgba(212,165,116,0.30)`,
-      background: `rgba(212,165,116,${categoryOpacity[category]})`,
+      border: `1px solid rgba(184,139,82,0.30)`,
+      background: `rgba(184,139,82,${categoryOpacity[category]})`,
       color: C.text,
       padding: small ? "2px 8px" : "2px 10px",
       fontSize: small ? 10 : 11,
@@ -158,15 +153,15 @@ const FallbackBand = ({ tall = false }: { tall?: boolean }) => (
       alignItems: "center",
       justifyContent: "center",
       height: tall ? 176 : 128,
-      background: `linear-gradient(135deg, rgba(212,165,116,0.18) 0%, ${C.s2} 100%)`,
-      borderBottom: `1px solid rgba(212,165,116,0.12)`,
+      background: `linear-gradient(135deg, rgba(184,139,82,0.18) 0%, ${C.s2} 100%)`,
+      borderBottom: `1px solid rgba(184,139,82,0.12)`,
     }}
   >
     <span
       style={{
         fontSize: 30,
         fontWeight: 600,
-        color: "rgba(212,165,116,0.25)",
+        color: "rgba(184,139,82,0.25)",
         fontFamily: FONT_DISPLAY,
       }}
     >
@@ -192,7 +187,7 @@ const CoverImage = ({
         flexShrink: 0,
         overflow: "hidden",
         height: tall ? 176 : 128,
-        borderBottom: `1px solid rgba(212,165,116,0.12)`,
+        borderBottom: `1px solid rgba(184,139,82,0.12)`,
       }}
     >
       <img
@@ -237,9 +232,9 @@ const Resources = () => {
           display: grid;
           grid-template-columns: 1fr 1fr;
           gap: 0;
-          border-radius: 20px;
+          border-radius: 2px;
           overflow: hidden;
-          border: 1px solid rgba(212,165,116,0.22);
+          border: 1px solid rgba(184,139,82,0.22);
           text-decoration: none;
           margin-bottom: 32px;
           transition: border-color 0.2s;
@@ -291,68 +286,15 @@ const Resources = () => {
       <main>
 
         {/* ── HERO ─────────────────────────────────────────────────── */}
-        <section
-          style={{
-            position: "relative",
-            overflow: "hidden",
-            background: C.s1,
-            borderBottom: `1px solid rgba(212,165,116,0.12)`,
-          }}
-        >
-          <div
-            style={{
-              pointerEvents: "none",
-              position: "absolute",
-              inset: 0,
-              background:
-                "radial-gradient(ellipse 80% 60% at 50% 0%, rgba(212,165,116,0.07) 0%, transparent 70%)",
-            }}
-          />
-          <div
-            style={{
-              maxWidth: 760,
-              margin: "0 auto",
-              padding: "72px 24px 64px",
-              position: "relative",
-              zIndex: 1,
-            }}
-          >
-            <p
-              style={{
-                fontSize: 11,
-                fontWeight: 700,
-                letterSpacing: "0.09em",
-                textTransform: "uppercase",
-                color: C.gold,
-                marginBottom: 16,
-                fontFamily: FONT_BODY,
-              }}
-            >
-              Resources
-            </p>
-            <h1
-              style={{
-                fontFamily: FONT_DISPLAY,
-                fontSize: "clamp(28px, 3.2vw, 44px)",
-                fontWeight: 700,
-                color: C.text,
-                lineHeight: 1.1,
-                marginBottom: 16,
-              }}
-            >
+        <section style={{ background: C.bg, padding: "clamp(96px, 12vw, 120px) 24px 56px" }}>
+          <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+            <p style={MK.eyebrow}>Resources</p>
+            <h1 style={MK.h1}>
               Free tools and thinking
               <br />
-              <span style={{ color: C.gold, fontStyle: "italic" }}>for SA business owners.</span>
+              <span style={MK.accent}>for SA business owners.</span>
             </h1>
-            <p
-              style={{
-                fontSize: 15,
-                color: C.muted,
-                lineHeight: 1.75,
-                maxWidth: 520,
-                fontFamily: FONT_BODY,
-              }}
-            >
+            <p style={{ ...MK.lead, maxWidth: 560 }}>
               Everything here is free. No sign-up walls. No upsells. Just tools and articles built
               to help service businesses in South Africa make better decisions.
             </p>
@@ -360,32 +302,14 @@ const Resources = () => {
         </section>
 
         {/* ── FREE TOOLS ───────────────────────────────────────────── */}
-        <section style={{ padding: "64px 24px" }}>
+        <section style={{ padding: SECTION.desktop }}>
           <div style={{ maxWidth: 1100, margin: "0 auto" }}>
             <div style={{ marginBottom: 32 }}>
-              <p
-                style={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  letterSpacing: "0.09em",
-                  textTransform: "uppercase",
-                  color: C.gold,
-                  marginBottom: 8,
-                  fontFamily: FONT_BODY,
-                }}
-              >
+              <p style={MK.eyebrow}>
                 Free Tools
               </p>
-              <h2
-                style={{
-                  fontFamily: FONT_DISPLAY,
-                  fontSize: "clamp(20px, 2.2vw, 28px)",
-                  fontWeight: 700,
-                  color: C.text,
-                  lineHeight: 1.2,
-                }}
-              >
-                Built to solve real problems.
+              <h2 style={MK.h2}>
+                Built to solve <span style={MK.accent}>real challenges.</span>
               </h2>
             </div>
 
@@ -396,9 +320,9 @@ const Resources = () => {
                   style={{
                     display: "flex",
                     flexDirection: "column",
-                    borderRadius: 16,
-                    background: C.s2,
-                    border: `1px solid rgba(212,165,116,0.20)`,
+                    borderRadius: 12,
+                    background: C.s1,
+                    border: `1px solid rgba(184,139,82,0.20)`,
                     overflow: "hidden",
                     position: "relative",
                   }}
@@ -412,7 +336,7 @@ const Resources = () => {
                       width: 120,
                       height: 120,
                       borderRadius: "50%",
-                      background: "radial-gradient(circle, rgba(212,165,116,0.10) 0%, transparent 70%)",
+                      background: "radial-gradient(circle, rgba(184,139,82,0.10) 0%, transparent 70%)",
                     }}
                   />
                   <div style={{ padding: "28px 28px 0", position: "relative" }}>
@@ -442,9 +366,9 @@ const Resources = () => {
                           fontWeight: 600,
                           color: C.muted,
                           fontFamily: FONT_BODY,
-                          background: "rgba(212,165,116,0.08)",
-                          border: "1px solid rgba(212,165,116,0.18)",
-                          borderRadius: 100,
+                          background: "rgba(184,139,82,0.08)",
+                          border: "1px solid rgba(184,139,82,0.18)",
+                          borderRadius: 12,
                           padding: "2px 8px",
                         }}
                       >
@@ -492,7 +416,6 @@ const Resources = () => {
                           fontSize: 12,
                           color: C.gold,
                           fontFamily: FONT_BODY,
-                          fontStyle: "italic",
                           lineHeight: 1.5,
                           marginTop: 4,
                         }}
@@ -520,22 +443,22 @@ const Resources = () => {
                         fontWeight: 700,
                         fontFamily: FONT_BODY,
                         color: C.text,
-                        background: "rgba(212,165,116,0.10)",
-                        border: "1px solid rgba(212,165,116,0.35)",
-                        borderRadius: 10,
+                        background: "rgba(184,139,82,0.10)",
+                        border: "1px solid rgba(184,139,82,0.35)",
+                        borderRadius: 12,
                         padding: "10px 18px",
                         textDecoration: "none",
                         transition: "background 0.15s, border-color 0.15s",
                       }}
                       onMouseEnter={(e) => {
                         const el = e.currentTarget as HTMLElement;
-                        el.style.background = "rgba(212,165,116,0.18)";
-                        el.style.borderColor = "rgba(212,165,116,0.55)";
+                        el.style.background = "rgba(184,139,82,0.18)";
+                        el.style.borderColor = "rgba(184,139,82,0.55)";
                       }}
                       onMouseLeave={(e) => {
                         const el = e.currentTarget as HTMLElement;
-                        el.style.background = "rgba(212,165,116,0.10)";
-                        el.style.borderColor = "rgba(212,165,116,0.35)";
+                        el.style.background = "rgba(184,139,82,0.10)";
+                        el.style.borderColor = "rgba(184,139,82,0.35)";
                       }}
                     >
                       {tool.cta}
@@ -548,17 +471,8 @@ const Resources = () => {
           </div>
         </section>
 
-        <div
-          style={{
-            height: 1,
-            background:
-              "linear-gradient(90deg, transparent, rgba(212,165,116,0.4), transparent)",
-            margin: "0 24px",
-          }}
-        />
-
         {/* ── ARTICLES ─────────────────────────────────────────────── */}
-        <section style={{ background: C.s1, padding: "64px 24px" }}>
+        <section style={{ background: C.s1, padding: SECTION.desktop, borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}` }}>
           <div style={{ maxWidth: 1100, margin: "0 auto" }}>
             <div
               style={{
@@ -571,29 +485,11 @@ const Resources = () => {
               }}
             >
               <div>
-                <p
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 700,
-                    letterSpacing: "0.09em",
-                    textTransform: "uppercase",
-                    color: C.gold,
-                    marginBottom: 8,
-                    fontFamily: FONT_BODY,
-                  }}
-                >
+                <p style={MK.eyebrow}>
                   Articles
                 </p>
-                <h2
-                  style={{
-                    fontFamily: FONT_DISPLAY,
-                    fontSize: "clamp(20px, 2.2vw, 28px)",
-                    fontWeight: 700,
-                    color: C.text,
-                    lineHeight: 1.15,
-                  }}
-                >
-                  For business owners who think ahead.
+                <h2 style={MK.h2}>
+                  For business owners who <span style={MK.accent}>think ahead.</span>
                 </h2>
               </div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -603,19 +499,19 @@ const Resources = () => {
                     onClick={() => setActiveCategory(cat)}
                     style={{
                       padding: "6px 16px",
-                      borderRadius: 100,
+                      borderRadius: 12,
                       fontSize: 11,
                       fontWeight: 600,
                       fontFamily: FONT_BODY,
                       cursor: "pointer",
                       border: `1px solid ${
                         activeCategory === cat
-                          ? "rgba(212,165,116,0.60)"
-                          : "rgba(212,165,116,0.20)"
+                          ? "rgba(184,139,82,0.60)"
+                          : "rgba(184,139,82,0.20)"
                       }`,
                       background:
                         activeCategory === cat
-                          ? "rgba(212,165,116,0.14)"
+                          ? "rgba(184,139,82,0.14)"
                           : "transparent",
                       color: activeCategory === cat ? C.text : C.muted,
                       transition: "all 0.15s",
@@ -641,10 +537,10 @@ const Resources = () => {
                   textDecoration: "none",
                 }}
                 onMouseEnter={(e) => {
-                  (e.currentTarget as HTMLElement).style.borderColor = "rgba(212,165,116,0.50)";
+                  (e.currentTarget as HTMLElement).style.borderColor = "rgba(184,139,82,0.50)";
                 }}
                 onMouseLeave={(e) => {
-                  (e.currentTarget as HTMLElement).style.borderColor = "rgba(212,165,116,0.22)";
+                  (e.currentTarget as HTMLElement).style.borderColor = "rgba(184,139,82,0.22)";
                 }}
               >
                 <div className="resources-featured-image">
@@ -737,18 +633,18 @@ const Resources = () => {
                     style={{
                       display: "flex",
                       flexDirection: "column",
-                      borderRadius: 16,
+                      borderRadius: 12,
                       overflow: "hidden",
-                      border: `1px solid rgba(212,165,116,0.18)`,
+                      border: `1px solid rgba(184,139,82,0.18)`,
                       background: C.s2,
                       textDecoration: "none",
                       transition: "border-color 0.2s",
                     }}
                     onMouseEnter={(e) => {
-                      (e.currentTarget as HTMLElement).style.borderColor = "rgba(212,165,116,0.45)";
+                      (e.currentTarget as HTMLElement).style.borderColor = "rgba(184,139,82,0.45)";
                     }}
                     onMouseLeave={(e) => {
-                      (e.currentTarget as HTMLElement).style.borderColor = "rgba(212,165,116,0.18)";
+                      (e.currentTarget as HTMLElement).style.borderColor = "rgba(184,139,82,0.18)";
                     }}
                   >
                     <CoverImage src={article.image} alt={article.title} />
@@ -840,77 +736,112 @@ const Resources = () => {
           </div>
         </section>
 
+
+        {/* ── FOUNDER STORY ────────────────────────────────────────── */}
+        <section className="resources-founder-story" aria-label="The story behind NextSlot">
+          <div className="resources-story-inner">
+            <article className="resources-story-block resources-story-idea">
+              <p className="resources-story-eyebrow">The Idea Behind NextSlot</p>
+              <h2>I didn't want to build <span style={MK.accent}>just another booking app.</span></h2>
+              <p>
+                I've always been interested in one simple question: why does something have to be
+                done a certain way?
+              </p>
+              <p>
+                Independent service providers have spent years developing their craft. Running a
+                business adds another layer of responsibility: managing bookings, payments, client
+                relationships and the many decisions that come with keeping everything moving.
+              </p>
+              <p>
+                I wanted to bring those moving parts together, giving business owners a clearer
+                picture of what's happening in their businesses.
+              </p>
+              <blockquote className="resources-story-quote resources-story-vision">
+                <p><strong>However, I believed there was an opportunity to go further.</strong></p>
+              </blockquote>
+              <p>
+                A booking app can manage appointments. A dashboard can show you the numbers. I wanted
+                to explore what becomes possible when that information starts telling a more useful
+                story.
+              </p>
+              <p>
+                That's where Nexty comes in. Nexty is NextSlot's growth advisor, designed to help
+                business owners recognise patterns, identify potential opportunities and understand
+                where they could improve. From spotting quieter periods to understanding client
+                behaviour, the aim is to turn business activity into insights that can inform what
+                happens next.
+              </p>
+              <blockquote className="resources-story-quote resources-story-founder-quote">
+                <p>Knowing what happened is valuable. Understanding what you could do with that knowledge is where new possibilities begin.</p>
+              </blockquote>
+              <p>
+                NextSlot is built around a simple belief: technology should give you more control
+                over your business, helping you spend less energy piecing together your operations
+                and more time making informed decisions about what comes next.
+              </p>
+            </article>
+
+            <article className="resources-story-block resources-story-founder">
+              <p className="resources-story-eyebrow">The Founder</p>
+              <div className="resources-founder-profile">
+                <img
+                  className="resources-founder-photo"
+                  src="https://iili.io/C9Ktrhu.jpg"
+                  alt="Arshad Segal, Founder of NextSlot"
+                  width={72}
+                  height={72}
+                  loading="lazy"
+                  decoding="async"
+                />
+                <div>
+                  <h3 className="resources-founder-name">Arshad Segal</h3>
+                  <p className="resources-founder-role">Founder of NextSlot</p>
+                </div>
+              </div>
+              <p>
+                I'm drawn to ideas that connect creativity, technology and human behaviour. I
+                question why things work the way they do, look for the systems behind everyday
+                challenges, and believe useful ideas should lead to practical action.
+              </p>
+              <p>
+                That thinking also shapes my personal project, Just Start: a space for creativity,
+                entrepreneurship and the courage to begin.
+              </p>
+              <a
+                className="resources-just-start-card"
+                href="https://www.tiktok.com/@chasing_dweams?_r=1&_t=ZS-94gSp7To9iS"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <span className="resources-just-start-glow" aria-hidden="true" />
+                <span className="resources-just-start-copy">
+                  <span className="resources-story-eyebrow">Personal brand / TikTok</span>
+                  <span className="resources-just-start-title">Just Start.</span>
+                  <span className="resources-just-start-description">
+                    Creativity, entrepreneurship, and the courage to begin. Follow the journey on
+                    TikTok.
+                  </span>
+                  <span className="resources-just-start-handle">@chasing_dweams</span>
+                </span>
+                <span className="resources-tiktok-link">
+                  <img src={tiktokIcon} alt="TikTok" width={26} height={26} loading="lazy" decoding="async" />
+                  Watch on TikTok
+                </span>
+              </a>
+            </article>
+          </div>
+        </section>
+
         {/* ── CTA BANNER ───────────────────────────────────────────── */}
-        <section style={{ padding: "80px 24px" }}>
-          <div
-            style={{
-              maxWidth: 760,
-              margin: "0 auto",
-              borderRadius: 24,
-              padding: "clamp(32px, 6vw, 56px) clamp(24px, 5vw, 48px)",
-              background: C.s1,
-              border: `1px solid rgba(212,165,116,0.25)`,
-              boxShadow: "0 8px 40px -8px rgba(0,0,0,0.5)",
-              textAlign: "center",
-            }}
-          >
-            <p
-              style={{
-                fontSize: 11,
-                fontWeight: 700,
-                letterSpacing: "0.09em",
-                textTransform: "uppercase",
-                color: C.gold,
-                marginBottom: 16,
-                fontFamily: FONT_BODY,
-              }}
-            >
-              Ready to start?
-            </p>
-            <h2
-              style={{
-                fontFamily: FONT_DISPLAY,
-                fontSize: "clamp(24px,2.8vw,36px)",
-                fontWeight: 700,
-                color: C.text,
-                lineHeight: 1.15,
-                marginBottom: 16,
-              }}
-            >
-              Your booking page is 10 minutes away.
-            </h2>
-            <p
-              style={{
-                fontSize: 15,
-                color: C.muted,
-                lineHeight: 1.7,
-                maxWidth: 480,
-                margin: "0 auto 32px",
-                fontFamily: FONT_BODY,
-              }}
-            >
+        <section style={{ padding: SECTION.desktop }}>
+          <div style={{ ...MK.panel, maxWidth: 760, margin: "0 auto", padding: "clamp(32px, 6vw, 56px) clamp(24px, 5vw, 48px)" }}>
+            <p style={MK.eyebrow}>Ready to start?</p>
+            <h2 style={MK.h2}>Your booking page is 10 minutes away.</h2>
+            <p style={{ ...MK.body, maxWidth: 480, margin: "0 auto 32px" }}>
               No payment required. No technical setup. Just your services, your availability,
               and your booking link ready to share.
             </p>
-            <Link
-              to="/onboarding"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 8,
-                background: CTA_BG,
-                boxShadow: CTA_SHADOW,
-                color: "#080808",
-                fontFamily: FONT_BODY,
-                fontSize: 14,
-                fontWeight: 700,
-                padding: "14px 32px",
-                borderRadius: 10,
-                textDecoration: "none",
-              }}
-            >
-              Create Your Booking Page
-            </Link>
+            <PrimaryCTA to="/onboarding">Create Your Booking Page</PrimaryCTA>
           </div>
         </section>
 

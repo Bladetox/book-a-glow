@@ -8,7 +8,7 @@ export const ProactiveAlertsSection = () => {
   const isMobile = width < BP;
 
   return (
-    <section style={{ background: C.bg, padding: isMobile ? "64px 24px" : "96px 24px" }}>
+    <section className="home-alerts">
       <div style={{ maxWidth: 1120, margin: "0 auto", textAlign: "center" }}>
         <Eyebrow text="Proactive Alerts" />
         <h2 style={{
@@ -19,7 +19,7 @@ export const ProactiveAlertsSection = () => {
         }}>
           If it&apos;s costing<br /><span style={{ color: C.gold }}>you money</span>, it should not be hiding.
         </h2>
-        <p style={{ fontSize: 16, color: C.muted, maxWidth: 680, margin: "0 auto 48px", lineHeight: 1.7 }}>
+        <p style={{ fontSize: 16, color: C.muted, maxWidth: 680, margin: "0 auto 28px", lineHeight: 1.7 }}>
           Stop hunting for problems. NextSlot finds the high-cost ones and puts them in front of you, ranked by rand value, before they compound.
         </p>
         <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(2,1fr)", gap: 16, textAlign: "left" }}>

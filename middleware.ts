@@ -11,16 +11,12 @@ const MAIN_DOMAINS = ["nextslot.co.za", "nextslot.app"];
 // NOTE: we must intercept ALL requests on tenant subdomains — not just
 // text/html — because crawlers (WhatsApp, iMessage, Slack) omit Accept.
 //
-// NOTE ON RUNTIME: This middleware fetches its own origin at "/" to obtain
-// index.html for patching. Same-origin fetch() from Edge middleware
-// bypasses the middleware layer. From Node.js middleware, the same fetch
-// re-enters the middleware and creates an infinite loop (508
-// INFINITE_LOOP_DETECTED). Vercel has deprecated the Edge runtime and emits
-// a build warning; migrating to Node would require replacing the self-fetch
-// with a build-time HTML template or a module-scope cache. That is a
-// separate engineering task, not a one-line runtime flag.
+// The build script emits this immutable app-shell template to dist. The
+// matcher excludes it so the internal fetch cannot recursively invoke this
+// middleware when running on Node.js.
 export const config = {
-  matcher: "/((?!_vercel|_next/static|_next/image|assets|robots|sitemap|placeholder).*)",
+  runtime: "nodejs",
+  matcher: "/((?!_vercel|_next/static|_next/image|assets|robots|sitemap|placeholder|tenant-index-template\\.html).*)",
 };
 
 /** Resolve tenant slug from hostname, or null for marketing domains. */
@@ -58,6 +54,16 @@ async function fetchTenant(
   }
 }
 
+/** Continue the original request through Vercel's routing layer.
+ * Fetching the incoming URL from middleware re-enters the same route and can
+ * trigger Vercel's 508 INFINITE_LOOP_DETECTED protection.
+ */
+function nextResponse(): Response {
+  return new Response(null, {
+    headers: { "x-middleware-next": "1" },
+  });
+}
+
 export default async function middleware(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const hostname = url.hostname;
@@ -66,7 +72,7 @@ export default async function middleware(request: Request): Promise<Response> {
   const tenantSlug = resolveTenantSlug(hostname);
 
   // Not a tenant subdomain → marketing site, pass through untouched
-  if (!tenantSlug) return fetch(request);
+  if (!tenantSlug) return nextResponse();
 
   // ── Static assets — pass through (JS/CSS bundles, images etc.) ──────────
   // Extended to cover png/jpg/jpeg/svg/xml/txt/webmanifest, which were
@@ -75,7 +81,7 @@ export default async function middleware(request: Request): Promise<Response> {
   // those requests returned HTML instead of the image, PWA installation
   // would fail on those tenants.
   const isAsset = /\.(?:js|css|woff2?|ttf|otf|eot|map|json|webp|avif|gif|mp4|webm|ico|png|jpe?g|svg|xml|txt|webmanifest)$/.test(path);
-  if (isAsset) return fetch(request);
+  if (isAsset) return nextResponse();
 
   // ── Favicon / apple-touch-icon → redirect to tenant logo ────────────
   const isFavicon =
@@ -89,7 +95,7 @@ export default async function middleware(request: Request): Promise<Response> {
     if (tenant?.logoUrl) {
       return Response.redirect(tenant.logoUrl, 302);
     }
-    return fetch(request);
+    return nextResponse();
   }
 
   // ── PWA manifest ─────────────────────────────────────────────────
@@ -99,7 +105,7 @@ export default async function middleware(request: Request): Promise<Response> {
     path === "/manifest.webmanifest";
 
   const tenant = await fetchTenant(tenantSlug);
-  if (!tenant) return fetch(request);
+  if (!tenant) return nextResponse();
 
   const { name, logoUrl } = tenant;
   const title = `${name} | Book Online`;
@@ -145,11 +151,11 @@ export default async function middleware(request: Request): Promise<Response> {
     });
   }
 
-  // ── All other requests → serve patched index.html ─────────────────────
-  // Fetch the raw index.html from Vercel's origin, bypassing edge cache.
-  // We add a unique cache-buster so Vercel doesn't serve us a stale copy.
+  // ── All other requests → serve patched app-shell HTML ─────────────────
+  // Fetch the build-time template from a path excluded by the middleware
+  // matcher. This avoids recursive self-fetches on the Node.js runtime.
   const indexUrl = new URL(request.url);
-  indexUrl.pathname = "/";
+  indexUrl.pathname = "/tenant-index-template.html";
   indexUrl.search = `?__cb=${Date.now()}`;
 
   const htmlRes = await fetch(indexUrl.toString(), {
@@ -159,7 +165,7 @@ export default async function middleware(request: Request): Promise<Response> {
       pragma: "no-cache",
     },
   });
-  if (!htmlRes.ok) return fetch(request);
+  if (!htmlRes.ok) return nextResponse();
   let html = await htmlRes.text();
 
   // Title

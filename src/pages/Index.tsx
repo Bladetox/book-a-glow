@@ -1,42 +1,41 @@
+import { useMarketingShell } from "@/components/home/useMarketingShell";
+import "@/styles/marketing.css";
 import SiteHeader from "@/components/site/SiteHeader";
 import SiteFooter from "@/components/site/SiteFooter";
 import { HOME_STYLES } from "@/components/home/homeStyles";
 import { HeroSection } from "@/components/home/HeroSection";
 import { ProofTicker } from "@/components/home/ProofTicker";
+import { WhoItsForSection } from "@/components/home/WhoItsForSection";
+import { HomePricingPreview } from "@/components/home/HomePricingPreview";
 import { CaseStudySection } from "@/components/home/CaseStudySection";
-import { NextyAISection } from "@/components/home/NextyAISection";
-import { RevenueSection } from "@/components/home/RevenueSection";
 import { FeaturesSection } from "@/components/home/FeaturesSection";
 import { HeatmapSection } from "@/components/home/HeatmapSection";
 import { CTASection } from "@/components/home/CTASection";
-import { C, FONT_BODY } from "@/components/home/tokens";
+import "@/components/home/homeJourneyLayout.css";
 
-const Index = () => (
-  <div
-    className="nextslot-theme dark-brand scrollbar-hide"
-    style={{
-      minHeight: "100dvh",
-      overflowX: "hidden",
-      background: C.bg,
-      color: C.text,
-      fontFamily: FONT_BODY,
-      WebkitFontSmoothing: "antialiased",
-    } as React.CSSProperties}
-  >
-    <style>{HOME_STYLES}</style>
-    <SiteHeader />
-    <main>
-      <HeroSection />
-      <ProofTicker />
-      <NextyAISection />
-      <RevenueSection />
-      <FeaturesSection />
-      <HeatmapSection />
-      <CaseStudySection />
-      <CTASection />
-    </main>
-    <SiteFooter />
-  </div>
-);
+const Index = () => {
+  useMarketingShell();
 
+  return (
+    <div className="nextslot-theme marketing-light marketing-site marketing-homepage">
+      <style>{HOME_STYLES}</style>
+      <SiteHeader />
+      <main>
+        <div className="home-hero-experience">
+          <HeroSection />
+          <ProofTicker />
+        </div>
+        <WhoItsForSection />
+        <FeaturesSection />
+        <div className="home-insights">
+          <HeatmapSection />
+        </div>
+        <CaseStudySection />
+        <HomePricingPreview />
+        <CTASection />
+      </main>
+      <SiteFooter />
+    </div>
+  );
+};
 export default Index;

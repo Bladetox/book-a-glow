@@ -9,9 +9,11 @@ import { PublicTenantProvider, usePublicTenant } from "./contexts/PublicTenantCo
 import { getTenantSlug, isCustomDomainHost } from "./lib/tenant-resolver";
 import { supabase } from "./integrations/supabase/client";
 import { PwaUpdater } from "@/components/PwaUpdater";
+import { usePageSEO } from "@/hooks/usePageSEO";
 
 const Index            = lazy(() => import("./pages/Index"));
 const About            = lazy(() => import("./pages/About"));
+const DemoAdminEmbed   = lazy(() => import("./pages/DemoAdminEmbed"));
 const Resources        = lazy(() => import("./pages/Resources"));
 const Book             = lazy(() => import("./pages/Book"));
 const Pricing          = lazy(() => import("./pages/Pricing"));
@@ -27,6 +29,15 @@ const TenantNotFound   = lazy(() => import("./pages/TenantNotFound"));
 const PaymentSuccess   = lazy(() => import("./pages/PaymentSuccess"));
 const BillingSuccess   = lazy(() => import("./pages/BillingSuccess"));
 const Demo             = lazy(() => import("./pages/Demo"));
+const CaseStudy         = lazy(() => import("./pages/CaseStudy"));
+const OnlineBookingSoftware = lazy(() => import("./pages/OnlineBookingSoftware"));
+const BusinessManagementSoftware = lazy(() => import("./pages/BusinessManagementSoftware"));
+const BookingSoftwareSouthAfrica = lazy(() => import("./pages/BookingSoftwareSouthAfrica"));
+const ClientManagement = lazy(() => import("./pages/ClientManagement"));
+const BusinessAnalytics = lazy(() => import("./pages/BusinessAnalytics"));
+const MobileServiceBusinesses = lazy(() => import("./pages/MobileServiceBusinesses"));
+const Payments = lazy(() => import("./pages/Payments"));
+const BusinessGrowth = lazy(() => import("./pages/BusinessGrowth"));
 
 const queryClient = new QueryClient();
 
@@ -45,6 +56,8 @@ const MarketingShell = () => (
 const TenantShell = () => (
   <div style={{ position: "fixed", inset: 0, background: "transparent" }} />
 );
+
+const SEO = ({ path }: { path: string }) => { usePageSEO(path); return null; };
 
 const ScrollToTop = () => {
   const { pathname } = useLocation();
@@ -76,28 +89,37 @@ const MarketingRoutes = () => (
     <AuthRecoveryHandler />
     <Suspense fallback={<MarketingShell />}>
       <Routes>
-        <Route path="/" element={<Index />} />
-        <Route path="/about" element={<About />} />
-        <Route path="/resources" element={<Resources />} />
-        <Route path="/pricing" element={<Pricing />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/onboarding" element={<Onboarding />} />
+        <Route path="/" element={<><SEO path="/" /><Index /></>} />
+        <Route path="/about" element={<><SEO path="/about" /><About /></>} />
+        <Route path="/resources" element={<><SEO path="/resources" /><Resources /></>} />
+        <Route path="/pricing" element={<><SEO path="/pricing" /><Pricing /></>} />
+        <Route path="/login" element={<><SEO path="/login" /><Login /></>} />
+        <Route path="/onboarding" element={<><SEO path="/onboarding" /><Onboarding /></>} />
         <Route path="/signup" element={<Navigate to="/onboarding" replace />} />
-        <Route path="/privacy" element={<Privacy />} />
-        <Route path="/terms" element={<SiteTerms />} />
+        <Route path="/privacy" element={<><SEO path="/privacy" /><Privacy /></>} />
+        <Route path="/terms" element={<><SEO path="/terms" /><SiteTerms /></>} />
+        <Route path="/online-booking-software" element={<><SEO path="/online-booking-software" /><OnlineBookingSoftware /></>} />
+        <Route path="/business-management-software" element={<><SEO path="/business-management-software" /><BusinessManagementSoftware /></>} />
+        <Route path="/booking-software-south-africa" element={<><SEO path="/booking-software-south-africa" /><BookingSoftwareSouthAfrica /></>} />
+        <Route path="/client-management" element={<><SEO path="/client-management" /><ClientManagement /></>} />
+        <Route path="/business-analytics" element={<><SEO path="/business-analytics" /><BusinessAnalytics /></>} />
+        <Route path="/mobile-service-businesses" element={<><SEO path="/mobile-service-businesses" /><MobileServiceBusinesses /></>} />
+        <Route path="/payments" element={<><SEO path="/payments" /><Payments /></>} />
+        <Route path="/business-growth" element={<><SEO path="/business-growth" /><BusinessGrowth /></>} />
         <Route path="/admin" element={<Navigate to="/login" replace />} />
-        <Route path="/superadmin" element={<SuperAdmin />} />
-        <Route path="/demo" element={<Demo />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/payment" element={<PublicTenantProvider><PaymentSuccess /></PublicTenantProvider>} />
-        <Route path="/payment-success" element={<PublicTenantProvider><PaymentSuccess /></PublicTenantProvider>} />
-        {/* Platform billing return URL — iKhokha redirects here after checkout */}
-        <Route path="/billing-success" element={<BillingSuccess />} />
-        <Route path="/book" element={<PublicTenantProvider><Book /></PublicTenantProvider>} />
+        <Route path="/superadmin" element={<><SEO path="/superadmin" /><SuperAdmin /></>} />
+        <Route path="/demo" element={<><SEO path="/demo" /><Demo /></>} />
+        <Route path="/demo/admin-embed" element={<DemoAdminEmbed />} />
+        <Route path="/case-study/phenomebeauty" element={<><SEO path="/case-study/phenomebeauty" /><CaseStudy /></>} />
+        <Route path="/reset-password" element={<><SEO path="/reset-password" /><ResetPassword /></>} />
+        <Route path="/payment" element={<><SEO path="/payment" /><PublicTenantProvider><PaymentSuccess /></PublicTenantProvider></>} />
+        <Route path="/payment-success" element={<><SEO path="/payment-success" /><PublicTenantProvider><PaymentSuccess /></PublicTenantProvider></>} />
+        {/* Platform billing return URL - iKhokha redirects here after checkout */}
+        <Route path="/billing-success" element={<><SEO path="/billing-success" /><BillingSuccess /></>} />
+        <Route path="/book" element={<><SEO path="/book" /><PublicTenantProvider><Book /></PublicTenantProvider></>} />
         {/* Legacy redirects */}
         <Route path="/product" element={<Navigate to="/" replace />} />
         <Route path="/blog" element={<Navigate to="/resources" replace />} />
-        <Route path="/case-study/phenomebeauty" element={<Navigate to="/about" replace />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>

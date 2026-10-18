@@ -1,3 +1,4 @@
+import BookingHeatmap, { type HeatmapRow } from "@/components/shared/BookingHeatmap";
 import { useState, useMemo } from "react";
 import { SetupChecklist } from '@/components/admin/SetupChecklist';
 import { motion, AnimatePresence } from "framer-motion";
@@ -10,7 +11,7 @@ import {
 } from "lucide-react";
 import { useDashboardData } from "@/hooks/useSupabaseDashboard";
 import RevenueTrendCard from "@/components/admin/RevenueTrendCard";
-import { useClientAlerts } from "@/hooks/useClientAlerts";
+import { useClientAlerts, type OverdueLoyaltyClient, type InactiveClient } from "@/hooks/useClientAlerts";
 import ClientAlertsModal, { alertCardLayoutId } from "@/components/admin/ClientAlertsModal";
 import { useTenant } from "@/contexts/TenantContext";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
@@ -66,16 +67,6 @@ interface Appointment {
   service: string;
   status: "confirmed" | "pending" | "complete" | "completed" | "cancelled";
   balance: number;
-}
-
-interface HeatmapCell {
-  slot: string;
-  intensity: number;
-}
-
-interface HeatmapRow {
-  day: string;
-  slots: HeatmapCell[];
 }
 
 interface MetricEntry {
@@ -290,94 +281,6 @@ const SectionInfoPanel = ({ lines }: { lines: InfoLine[] }) => (
   </div>
 );
 
-const BookingHeatmap = ({ data }: { data: HeatmapRow[] }) => {
-  const maxIntensity = Math.max(...data.flatMap((r) => r.slots.map((s) => s.intensity)), 1);
-
-  // Derive slot labels dynamically from hook data -- no hardcoded slots
-  const slotLabels = data[0]?.slots.map((s) => s.slot) ?? [];
-
-  return (
-    <>
-      {/* Desktop: days = rows, slots = columns */}
-      <div className="hidden sm:block overflow-x-auto -mx-1">
-        <table className="w-full">
-          <thead>
-            <tr>
-              <th className="text-[10px] text-white/20 text-left pr-2 pb-2" />
-              {slotLabels.map((s) => (
-                <th key={s} className="text-[10px] text-white/20 text-center pb-2 px-1">
-                  {s}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {data.map((row) => (
-              <tr key={row.day}>
-                <td className="text-[10px] text-white/30 pr-2 py-1">{row.day}</td>
-                {row.slots.map((cell) => {
-                  const opacity = Math.min(cell.intensity / maxIntensity, 1);
-                  return (
-                    <td key={cell.slot} className="p-0.5">
-                      <div
-                        className="h-7 rounded-md transition-colors relative group"
-                        style={{ backgroundColor: `rgba(52, 211, 153, ${Math.max(opacity * 0.85, 0.06)})` }}
-                      >
-                        {cell.intensity > 0 && (
-                          <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-white/60 opacity-0 group-hover:opacity-100 transition-opacity">
-                            {cell.intensity}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                  );
-                })}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Mobile: slots = rows, days = columns */}
-      <div className="sm:hidden overflow-x-auto -mx-1">
-        <div
-          className="grid gap-0.5"
-          style={{ gridTemplateColumns: `auto repeat(${data.length}, minmax(0, 1fr))` }}
-        >
-          {/* Header row: empty corner + day labels */}
-          <div />
-          {data.map((row) => (
-            <div key={row.day} className="text-center text-[9px] font-semibold text-white/30 pb-1 truncate">
-              {row.day}
-            </div>
-          ))}
-
-          {/* One row per time slot -- derived from hook data */}
-          {slotLabels.map((slot) => (
-            <>
-              <div key={`label-${slot}`} className="flex items-center justify-end pr-1.5">
-                <span className="text-[9px] text-white/25 leading-none whitespace-nowrap">{slot}</span>
-              </div>
-              {data.map((row) => {
-                const cell = row.slots.find((s) => s.slot === slot);
-                const intensity = cell?.intensity ?? 0;
-                const opacity = Math.min(intensity / maxIntensity, 1);
-                return (
-                  <div
-                    key={`${row.day}-${slot}`}
-                    className="h-8 rounded-md min-w-0"
-                    style={{ backgroundColor: `rgba(52, 211, 153, ${Math.max(opacity * 0.85, 0.06)})` }}
-                  />
-                );
-              })}
-            </>
-          ))}
-        </div>
-      </div>
-    </>
-  );
-};
-
 const AppointmentsList = ({
   appointments,
   onSelect,
@@ -495,14 +398,32 @@ function parseNextAppt(raw: string | null): { value: string; sub: string | null 
   return { value: raw.slice(0, idx), sub: raw.slice(idx + 3) };
 }
 
-const AdminDashboard = ({
-  onSelectAppointment,
-  onNavigate,
-}: {
+export interface AdminDashboardViewProps {
+  data: ReturnType<typeof useDashboardData>;
+  overdueClients: OverdueLoyaltyClient[];
+  inactiveClients: InactiveClient[];
+  alertsLoading?: boolean;
+  flags: { ai_insights?: boolean; payshap_payments?: boolean };
+  /** Marketing demo: static data, no hook-backed widgets, never reads/writes the admin's saved layout. */
+  demo?: boolean;
   onSelectAppointment?: (client: string) => void;
   onNavigate?: (view: string) => void;
-}) => {
-  const [visibility, setVisibility] = useState(getVisibility);
+}
+
+/** Presentational dashboard. The live admin feeds it real data; the marketing demo feeds it sample data. */
+export const AdminDashboardView = ({
+  data,
+  overdueClients,
+  inactiveClients,
+  alertsLoading = false,
+  flags,
+  demo = false,
+  onSelectAppointment,
+  onNavigate,
+}: AdminDashboardViewProps) => {
+  const [visibility, setVisibility] = useState<Record<SectionKey, boolean>>(() =>
+    demo ? (Object.fromEntries(ALL_SECTIONS.map((k) => [k, true])) as Record<SectionKey, boolean>) : getVisibility(),
+  );
   const [showCustomize, setShowCustomize] = useState(false);
   const [showHeatInfo, setShowHeatInfo] = useState(false);
   const [expandedCard, setExpandedCard] = useState<ExpandedCard | null>(null);
@@ -510,27 +431,12 @@ const AdminDashboard = ({
   const [alertModalOpen, setAlertModalOpen] = useState(false);
   const [alertModalType, setAlertModalType] = useState<"overdue_loyalty" | "inactive_90_days" | null>(null);
 
-  const data = useDashboardData();
-  const { tenantId, tenant } = useTenant();
-  const {
-    data: { overdueLoyaltyClients = [], inactiveClients = [] } = {},
-    isLoading: alertsLoading,
-  } = useClientAlerts(tenantId);
-
-  const overdueClients = overdueLoyaltyClients;
-
-  const { flags } = useFeatureFlags(
-    tenantId,
-    tenant?.is_lifetime_free,
-    tenant?.subscription_status,
-    tenant?.trial_ends_at,
-  );
-  const isNextyEnabled = flags.ai_insights;
+  const isNextyEnabled = !!flags.ai_insights;
 
   const toggle = (key: SectionKey) => {
     const next = { ...visibility, [key]: !visibility[key] };
     setVisibility(next);
-    saveVisibility(next);
+    if (!demo) saveVisibility(next);
   };
 
   if (data.coreLoading) {
@@ -617,20 +523,27 @@ const AdminDashboard = ({
   return (
     <div className="flex flex-col gap-6">
       <MetricExpandOverlay card={expandedCard} onClose={() => setExpandedCard(null)} />
-      <ClientAlertsModal
-        isOpen={alertModalOpen}
-        onClose={() => setAlertModalOpen(false)}
-        alertType={alertModalType}
-        overdueClients={overdueClients}
-        inactiveClients={inactiveClients}
-      />
+      {!demo && (
+        <ClientAlertsModal
+          isOpen={alertModalOpen}
+          onClose={() => setAlertModalOpen(false)}
+          alertType={alertModalType}
+          overdueClients={overdueClients}
+          inactiveClients={inactiveClients}
+        />
+      )}
 
       <div className="flex items-center justify-end">
         <button
+          data-demo-customize-control={demo ? "toggle" : undefined}
           onClick={() => setShowCustomize((v) => !v)}
-          className="flex items-center gap-1.5 text-[10px] tracking-[0.1em] uppercase text-white/25 hover:text-white/50 transition-colors"
+          className={`flex items-center gap-1.5 rounded-lg border px-3 py-2 text-[10px] tracking-[0.1em] uppercase transition-colors ${
+            demo
+              ? "border-[#B88B52]/50 bg-[#B88B52]/10 text-[#D6B47E] hover:bg-[#B88B52]/20 hover:text-[#F0D5A6]"
+              : "border-transparent text-white/25 hover:text-white/50"
+          }`}
         >
-          <Eye className="w-3 h-3" />
+          <Eye className="w-3.5 h-3.5" />
           Customise
         </button>
       </div>
@@ -649,6 +562,7 @@ const AdminDashboard = ({
                 {ALL_SECTIONS.map((key) => (
                   <button
                     key={key}
+                    data-demo-customize-control={demo ? "section-toggle" : undefined}
                     onClick={() => toggle(key)}
                     className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-colors border ${
                       visibility[key]
@@ -686,13 +600,13 @@ const AdminDashboard = ({
       )}
 
       {/* PayShap verification queue — gated by flags.payshap_payments */}
-      {flags.payshap_payments && <AdminPayshapQueue />}
-      <TrialCountdownNudge />
+      {!demo && flags.payshap_payments && <AdminPayshapQueue />}
+      {!demo && <TrialCountdownNudge />}
 
       {visibility.hero && (
         <motion.section {...fadeUp} transition={{ duration: 0.35 }}>
           <div className="rounded-2xl border border-white/[0.10] bg-white/[0.02] p-5 flex flex-col gap-4">
-            <SetupChecklist onNavigate={onNavigate} />
+            {!demo && <SetupChecklist onNavigate={onNavigate} />}
 
             {/* ── Month revenue header ── */}
             <div className="flex items-start justify-between gap-3">
@@ -1007,6 +921,40 @@ const AdminDashboard = ({
         <DashboardStockAlerts stockAlerts={stockAlerts} onNavigate={onNavigate} />
       )}
     </div>
+  );
+};
+
+const AdminDashboard = ({
+  onSelectAppointment,
+  onNavigate,
+}: {
+  onSelectAppointment?: (client: string) => void;
+  onNavigate?: (view: string) => void;
+}) => {
+  const data = useDashboardData();
+  const { tenantId, tenant } = useTenant();
+  const {
+    data: { overdueLoyaltyClients = [], inactiveClients = [] } = {},
+    isLoading: alertsLoading,
+  } = useClientAlerts(tenantId);
+
+  const { flags } = useFeatureFlags(
+    tenantId,
+    tenant?.is_lifetime_free,
+    tenant?.subscription_status,
+    tenant?.trial_ends_at,
+  );
+
+  return (
+    <AdminDashboardView
+      data={data}
+      overdueClients={overdueLoyaltyClients}
+      inactiveClients={inactiveClients}
+      alertsLoading={alertsLoading}
+      flags={flags}
+      onSelectAppointment={onSelectAppointment}
+      onNavigate={onNavigate}
+    />
   );
 };
 

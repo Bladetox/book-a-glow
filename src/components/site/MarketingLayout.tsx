@@ -1,25 +1,18 @@
 import React from "react";
+import "@/styles/marketing.css";
 import { HOME_STYLES } from "@/components/home/homeStyles";
+import { useMarketingShell } from "@/components/home/useMarketingShell";
 
-interface MarketingLayoutProps {
-  children: React.ReactNode;
-}
+interface MarketingLayoutProps { children: React.ReactNode; }
 
-/* Pure layout wrapper -- no JS class toggling needed.
-   html/body scroll naturally because .app-shell is never applied
-   to marketing routes. See App.tsx for the split. */
-const MarketingLayout = ({ children }: MarketingLayoutProps) => (
-  <div
-    className="nextslot-theme dark-brand scrollbar-hide"
-    style={{
-      background: "#000",
-      overflowX: "hidden",
-      WebkitFontSmoothing: "antialiased",
-    } as React.CSSProperties}
-  >
-    <style>{HOME_STYLES}</style>
-    {children}
-  </div>
-);
-
+/* Shared warm-light theme for public marketing routes. */
+const MarketingLayout = ({ children }: MarketingLayoutProps) => {
+  useMarketingShell();
+  return (
+    <div className="nextslot-theme marketing-light scrollbar-hide marketing-layout">
+      <style>{HOME_STYLES}</style>
+      {children}
+    </div>
+  );
+};
 export default MarketingLayout;

@@ -65,24 +65,34 @@ interface AdminSidebarProps {
 
 const DESKTOP_COLLAPSE_KEY = "ns_admin_sidebar_collapsed";
 
-const AdminSidebar = ({ views, activeView, onSelect, isOpen, onClose }: AdminSidebarProps) => {
-  const { tenantId }            = useTenant();
-  const { data: tenant }        = useTenantSettings();
-  const isMobile                = useIsMobile();
-  const stockAlerts             = useStockAlerts();
-  const { data: bookings = [] } = useSupabaseBookings();
-  const pendingCount = bookings.filter(b => b.status === "pending").length;
+export interface AdminSidebarViewProps extends AdminSidebarProps {
+  tenantName?: string | null;
+  logoUrl?: string | null;
+  stockAlerts: { out: number; low: number; total: number };
+  pendingCount: number;
+  isMobile: boolean;
+  /** false in the marketing demo so it never touches a real admin's saved preference */
+  persistCollapse?: boolean;
+}
+
+/** Presentational sidebar. Used by the live admin (via AdminSidebar) and the marketing demo. */
+export const AdminSidebarView = ({
+  views, activeView, onSelect, isOpen, onClose,
+  tenantName, logoUrl: logoUrlProp = null, stockAlerts, pendingCount, isMobile,
+  persistCollapse = true,
+}: AdminSidebarViewProps) => {
 
   // Desktop-only icon-rail collapse. Mobile keeps its own full off-canvas
   // open/close behaviour (isOpen/onClose) — this is a separate axis.
   const [collapsed, setCollapsed] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
+    if (typeof window === "undefined" || !persistCollapse) return false;
     return window.localStorage.getItem(DESKTOP_COLLAPSE_KEY) === "1";
   });
 
   useEffect(() => {
+    if (!persistCollapse) return;
     window.localStorage.setItem(DESKTOP_COLLAPSE_KEY, collapsed ? "1" : "0");
-  }, [collapsed]);
+  }, [collapsed, persistCollapse]);
 
   const [openGroups, setOpenGroups] = useState<Set<string>>(() => {
     const parent = parentGroupOf(activeView);
@@ -110,8 +120,8 @@ const AdminSidebar = ({ views, activeView, onSelect, isOpen, onClose }: AdminSid
     return name.slice(0, 2).toUpperCase();
   };
 
-  const businessName = tenant?.name || tenantId;
-  const logoUrl      = tenant?.logo_url ?? null;
+  const businessName = tenantName;
+  const logoUrl      = logoUrlProp;
   const abbreviation = businessName ? getAbbreviation(String(businessName)) : "NS";
   const xPos = isMobile ? (isOpen ? 0 : "-100%") : 0;
   const railCollapsed = !isMobile && collapsed;
@@ -346,6 +356,26 @@ const AdminSidebar = ({ views, activeView, onSelect, isOpen, onClose }: AdminSid
         </nav>
       </motion.aside>
     </>
+  );
+};
+
+const AdminSidebar = (props: AdminSidebarProps) => {
+  const { tenantId }            = useTenant();
+  const { data: tenant }        = useTenantSettings();
+  const isMobile                = useIsMobile();
+  const stockAlerts             = useStockAlerts();
+  const { data: bookings = [] } = useSupabaseBookings();
+  const pendingCount = bookings.filter(b => b.status === "pending").length;
+
+  return (
+    <AdminSidebarView
+      {...props}
+      tenantName={tenant?.name || tenantId}
+      logoUrl={tenant?.logo_url ?? null}
+      stockAlerts={stockAlerts}
+      pendingCount={pendingCount}
+      isMobile={isMobile}
+    />
   );
 };
 

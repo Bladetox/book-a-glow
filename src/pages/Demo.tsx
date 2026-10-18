@@ -1,47 +1,26 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { PrimaryCTA } from "@/components/home/PrimaryCTA";
 import SiteHeader from "@/components/site/SiteHeader";
 import SiteFooter from "@/components/site/SiteFooter";
 import MarketingLayout from "@/components/site/MarketingLayout";
-import DashboardPreview from "@/components/site/DashboardPreview";
-import MobileDashboardPreview from "@/components/site/MobileDashboardPreview";
+import DemoDeviceIframe from "@/components/site/DemoDeviceIframe";
 import BookingAppPreview from "@/components/site/BookingAppPreview";
 import { LaptopFrame, MobileFrame } from "@/components/site/DeviceFrames";
 import {
-  ArrowRight, LayoutDashboard, Smartphone, Info,
-  EyeOff, SlidersHorizontal, LayoutGrid
+  LayoutDashboard, Smartphone, Info,
+  SlidersHorizontal
 } from "lucide-react";
-import { C, FONT_BODY, FONT_DISPLAY } from "@/components/home/tokens";
-
-const CTA_BG     = "radial-gradient(ellipse at 20% 35%, rgba(255,242,185,0.55) 0%, transparent 55%), radial-gradient(ellipse at 50% 50%, #D4A574 0%, #B8915F 52%, #7a4200 100%)";
-const CTA_SHADOW = "inset -2px -3px 8px rgba(0,0,0,0.45), inset 2px 2px 6px rgba(255,235,160,0.18), 0 4px 18px rgba(184,145,95,0.35), 0 1px 6px rgba(0,0,0,0.5)";
-
-const customisationTips = [
-  {
-    icon: SlidersHorizontal,
-    title: "Toggle cards on or off",
-    desc: "Use the customise button in the dashboard header to show or hide any data card. Keep only what is relevant to your day.",
-  },
-  {
-    icon: EyeOff,
-    title: "Hide what you do not need",
-    desc: "Not tracking inventory? Not running loyalty yet? Turn those cards off so your dashboard stays clean and focused.",
-  },
-  {
-    icon: LayoutGrid,
-    title: "Your layout, your choice",
-    desc: "Every business is different. Your dashboard should reflect how you actually run yours, not a generic template.",
-  },
-];
+import { C, MK, SECTION } from "@/components/home/tokens";
 
 const DashboardCustomisationCallout = () => (
-  <div style={{ maxWidth: 768, margin: "0 auto 32px" }}>
+  <div style={{ maxWidth: 860, margin: "0 auto", width: "100%" }}>
     <div style={{
-      borderRadius: 16,
-      border: `1px solid rgba(212,165,116,0.30)`,
-      background: `rgba(212,165,116,0.06)`,
+      ...MK.card,
+      background: "rgba(184,139,82,0.08)",
+      border: "1px solid rgba(184,139,82,0.35)",
+      boxShadow: "none",
       padding: "16px 20px",
-      marginBottom: 12,
       display: "flex",
       flexWrap: "wrap",
       alignItems: "center",
@@ -49,59 +28,20 @@ const DashboardCustomisationCallout = () => (
     }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
         <div style={{
-          width: 32, height: 32, borderRadius: 10,
-          background: `rgba(212,165,116,0.15)`,
-          border: `1px solid rgba(212,165,116,0.30)`,
+          width: 32, height: 32, borderRadius: 8,
+          background: "rgba(184,139,82,0.15)",
+          border: "1px solid rgba(184,139,82,0.35)",
           display: "flex", alignItems: "center", justifyContent: "center",
         }}>
-          <SlidersHorizontal style={{ height: 16, width: 16, color: C.gold }} strokeWidth={2} />
+          <SlidersHorizontal style={{ height: 16, width: 16, color: C.goldDim }} strokeWidth={2} />
         </div>
-        <p style={{ fontSize: 14, fontWeight: 600, color: C.text, fontFamily: FONT_BODY, margin: 0 }}>
+        <p style={{ ...MK.small, fontSize: 14, fontWeight: 600, color: C.text }}>
           Your dashboard, your way
         </p>
       </div>
-      <p style={{
-        fontSize: 14, color: C.muted, fontFamily: FONT_BODY, margin: 0,
-        borderLeft: `1px solid ${C.border2}`, paddingLeft: 16, lineHeight: 1.6,
-      }}>
-        Look for the customise button in the dashboard header. You can switch any card on or off so your view stays focused on the metrics that matter to your business.
+      <p style={{ ...MK.small, fontSize: 14, flex: "1 1 260px" }}>
+        Select the highlighted eye icon in the dashboard to customise your view. Toggle a section off to see how your workspace adapts.
       </p>
-    </div>
-
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12 }} className="demo-tips-grid">
-      {customisationTips.map((tip) => {
-        const Icon = tip.icon;
-        return (
-          <div
-            key={tip.title}
-            style={{
-              display: "flex", alignItems: "flex-start", gap: 12,
-              borderRadius: 16,
-              border: `1px solid ${C.border}`,
-              background: C.s1,
-              padding: "16px",
-            }}
-          >
-            <div style={{
-              flexShrink: 0, marginTop: 2,
-              width: 32, height: 32, borderRadius: 10,
-              background: `rgba(212,165,116,0.12)`,
-              border: `1px solid rgba(212,165,116,0.20)`,
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}>
-              <Icon style={{ height: 16, width: 16, color: C.gold }} strokeWidth={2} />
-            </div>
-            <div>
-              <p style={{ fontSize: 13, fontWeight: 600, color: C.text, fontFamily: FONT_BODY, margin: "0 0 2px", lineHeight: 1.3 }}>
-                {tip.title}
-              </p>
-              <p style={{ fontSize: 12, color: C.muted, fontFamily: FONT_BODY, margin: 0, lineHeight: 1.6 }}>
-                {tip.desc}
-              </p>
-            </div>
-          </div>
-        );
-      })}
     </div>
   </div>
 );
@@ -121,6 +61,13 @@ function useIsMobile(breakpoint = 768) {
   return isMobile;
 }
 
+const demoContext: Record<"dashboard" | "booking", string> = {
+  dashboard:
+    "This is your back office where you run the business. Bookings, services, payments, and clients.",
+  booking:
+    "Your clients will love the frictionless booking. No login, no app download.",
+};
+
 const Demo = () => {
   const [tab, setTab] = useState<"dashboard" | "booking">("dashboard");
   const isMobile = useIsMobile();
@@ -130,231 +77,167 @@ const Demo = () => {
       <SiteHeader />
       <main>
 
-        {/* Hero */}
-        <section style={{ maxWidth: 1280, margin: "0 auto", padding: "80px 24px 64px" }}>
+        {/* Hero + interactive demo */}
+        <section style={{ maxWidth: 1280, margin: "0 auto", padding: isMobile ? SECTION.heroMobile : "120px 24px 68px" }}>
 
           <div style={{ textAlign: "center", marginBottom: 32 }}>
-            <div style={{
-              display: "inline-flex", alignItems: "center", gap: 8,
-              background: `rgba(212,165,116,0.08)`,
-              border: `1px solid rgba(212,165,116,0.2)`,
-              borderRadius: 100, padding: "5px 14px",
-              fontSize: 11, fontWeight: 700, color: C.gold,
-              letterSpacing: "0.09em", textTransform: "uppercase",
-              marginBottom: 24, fontFamily: FONT_BODY,
-            } as React.CSSProperties}>
-              <span style={{ width: 6, height: 6, borderRadius: "50%", background: C.gold, display: "inline-block" }} />
-              Interactive Demo - 100% Mock Data
-            </div>
-
-            <h1 style={{
-              fontFamily: FONT_DISPLAY,
-              fontSize: "clamp(28px,3.5vw,42px)",
-              fontWeight: 700, color: C.text,
-              letterSpacing: "-0.02em", lineHeight: 1.1,
-              margin: "0 0 16px",
-            }}>
-              See NextSlot in action
+            <p style={MK.eyebrow}>Demo · Interactive walkthrough</p>
+            <h1 style={MK.h1}>
+              See NextSlot <span style={MK.accent}>in action.</span>
             </h1>
-
-            <p style={{
-              fontSize: 14, color: C.muted, fontFamily: FONT_BODY,
-              maxWidth: 480, margin: "0 auto", lineHeight: 1.7,
-            }}>
-              This is a fully interactive demo using fictional data for a mock bridal makeup studio called{" "}
-              <span style={{ fontWeight: 600, color: C.text }}>Brush &amp; Veil.</span> No account required.
+            <p style={{ ...MK.lead, maxWidth: 560, margin: "0 auto" }}>
+              Explore your admin dashboard, where you'll run your business, and the booking page your clients will use.
+              Example for a bridal makeup studio called{" "}
+              <span style={{ fontWeight: 600, color: C.text }}>Brush &amp; Veil</span>.
             </p>
           </div>
 
           <div style={{
+            ...MK.card,
             display: "flex", alignItems: "flex-start", gap: 12,
-            background: `rgba(212,165,116,0.05)`,
-            border: `1px solid rgba(212,165,116,0.18)`,
-            borderRadius: 16,
+            background: "rgba(184,139,82,0.06)",
+            border: "1px solid rgba(184,139,82,0.25)",
+            boxShadow: "none",
             padding: "16px 20px",
             maxWidth: 640, margin: "0 auto 40px",
           }}>
-            <Info style={{ width: 16, height: 16, color: C.gold, flexShrink: 0, marginTop: 2 }} />
-            <p style={{ fontSize: 12, color: C.muted, fontFamily: FONT_BODY, margin: 0, lineHeight: 1.7 }}>
-              <span style={{ fontWeight: 600, color: C.text }}>Demo mode.</span> Everything you see here is fictional and for illustration purposes only. No bookings are created, no payments are processed, and no data is stored.
+            <Info style={{ width: 16, height: 16, color: C.goldDim, flexShrink: 0, marginTop: 2 }} />
+            <p style={{ ...MK.small, fontSize: 13 }}>
+              <span style={{ fontWeight: 600, color: C.text }}>Demo mode.</span> No bookings are created, no payments are processed, and no data is stored.
             </p>
           </div>
 
           {/* Tab switcher */}
-          <div style={{ display: "flex", justifyContent: "center", marginBottom: 40 }}>
-            <div style={{
-              display: "inline-flex", padding: 4, borderRadius: 16,
-              background: C.s1, border: `1px solid ${C.border}`, gap: 4,
-            }}>
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 32 }}>
+            <div className="demo-tab-switcher" role="tablist" aria-label="Choose a demo">
               <button
+                role="tab"
+                aria-selected={tab === "dashboard"}
+                className={`demo-tab-button${tab === "dashboard" ? " is-active" : ""}`}
                 onClick={() => setTab("dashboard")}
-                style={{
-                  display: "flex", alignItems: "center", gap: 8,
-                  padding: "10px 20px", borderRadius: 12,
-                  fontSize: 13, fontWeight: 500, fontFamily: FONT_BODY,
-                  cursor: "pointer", transition: "all 0.2s",
-                  background: tab === "dashboard" ? C.s2 : "transparent",
-                  color: tab === "dashboard" ? C.text : C.muted,
-                  border: tab === "dashboard" ? `1px solid ${C.border2}` : "1px solid transparent",
-                  boxShadow: tab === "dashboard" ? "0 1px 4px rgba(0,0,0,0.3)" : "none",
-                }}
               >
                 <LayoutDashboard style={{ width: 16, height: 16 }} />
-                Admin Dashboard
+                Owner dashboard
               </button>
               <button
+                role="tab"
+                aria-selected={tab === "booking"}
+                className={`demo-tab-button${tab === "booking" ? " is-active" : ""}`}
                 onClick={() => setTab("booking")}
-                style={{
-                  display: "flex", alignItems: "center", gap: 8,
-                  padding: "10px 20px", borderRadius: 12,
-                  fontSize: 13, fontWeight: 500, fontFamily: FONT_BODY,
-                  cursor: "pointer", transition: "all 0.2s",
-                  background: tab === "booking" ? C.s2 : "transparent",
-                  color: tab === "booking" ? C.text : C.muted,
-                  border: tab === "booking" ? `1px solid ${C.border2}` : "1px solid transparent",
-                  boxShadow: tab === "booking" ? "0 1px 4px rgba(0,0,0,0.3)" : "none",
-                }}
               >
                 <Smartphone style={{ width: 16, height: 16 }} />
-                Client Booking App
+                Client booking view
               </button>
             </div>
           </div>
 
-          {/* DASHBOARD TAB */}
-          {tab === "dashboard" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-              <DashboardCustomisationCallout />
+          {/* Animated stage — remounts per tab so the panel animation replays */}
+          <div
+            key={tab}
+            className={`demo-tab-panel demo-stage demo-stage--${tab}`}
+            style={{ paddingTop: isMobile ? 8 : 24 }}
+          >
 
-              <p style={{ textAlign: "center", fontSize: 12, color: C.faint, fontFamily: FONT_BODY, margin: 0 }}>
-                Click any sidebar icon to explore all dashboard sections
-              </p>
+            <p style={{
+              ...MK.small,
+              textAlign: "center",
+              fontSize: 13,
+              fontWeight: 500,
+              color: C.text,
+              maxWidth: 480,
+              margin: "0 auto 24px",
+            }}>
+              {demoContext[tab]}
+            </p>
 
-              {/* Desktop: laptop + mobile side by side */}
-              {!isMobile && (
-                <div style={{ display: "flex", alignItems: "flex-end", gap: 24, justifyContent: "center" }}>
-                  <div style={{ flex: 1, maxWidth: 860 }}>
-                    <LaptopFrame interactive={true}>
-                      <DashboardPreview />
-                    </LaptopFrame>
+            {/* DASHBOARD TAB */}
+            {tab === "dashboard" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+                <DashboardCustomisationCallout />
+
+                <p style={{ ...MK.small, textAlign: "center", fontSize: 12, color: C.faint }}>
+                  {isMobile
+                    ? "Tap the icons in the dashboard to explore each section."
+                    : "Click any sidebar icon to explore all dashboard sections."}
+                </p>
+
+                {!isMobile && (
+                  <div style={{ display: "flex", alignItems: "flex-end", gap: 24, justifyContent: "center" }}>
+                    <div style={{ flex: 1, maxWidth: 860 }}>
+                      <LaptopFrame interactive={true} fill>
+                        <DemoDeviceIframe device="desktop" src="/demo/admin-embed" title="NextSlot admin dashboard (desktop demo)" />
+                      </LaptopFrame>
+                    </div>
+                    <div style={{ width: 220, flexShrink: 0, marginBottom: -4 }}>
+                      <MobileFrame interactive={true} fill>
+                        <DemoDeviceIframe device="mobile" src="/demo/admin-embed" title="NextSlot admin dashboard (mobile demo)" />
+                      </MobileFrame>
+                    </div>
                   </div>
-                  <div style={{ width: 160, flexShrink: 0, marginBottom: -4 }}>
-                    <MobileFrame interactive={true}>
-                      <MobileDashboardPreview />
-                    </MobileFrame>
-                  </div>
-                </div>
-              )}
+                )}
 
-              {/* Mobile: single phone preview in MobileFrame */}
-              {isMobile && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                  <p style={{ fontSize: 12, textAlign: "center", color: C.muted, fontFamily: FONT_BODY, fontWeight: 500, margin: 0 }}>
-                    Mobile Dashboard
-                  </p>
+                {isMobile && (
                   <div style={{ maxWidth: 300, margin: "0 auto", width: "100%" }}>
-                    <MobileFrame interactive={true}>
-                      <MobileDashboardPreview />
+                    <MobileFrame interactive={true} fill>
+                      <DemoDeviceIframe device="mobile" src="/demo/admin-embed" title="NextSlot admin dashboard (mobile demo)" />
                     </MobileFrame>
                   </div>
-                  <p style={{ textAlign: "center", fontSize: 12, color: C.faint, fontFamily: FONT_BODY, margin: 0 }}>
-                    Toggle cards on or off from the customise button in the dashboard header.
-                  </p>
+                )}
+              </div>
+            )}
+
+            {/* BOOKING APP TAB */}
+            {tab === "booking" && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+                <div className="demo-progress" aria-label="Booking flow steps">
+                  <span className="demo-progress__step is-current">Service</span>
+                  <span className="demo-progress__sep">→</span>
+                  <span className="demo-progress__step">Date &amp; time</span>
+                  <span className="demo-progress__sep">→</span>
+                  <span className="demo-progress__step">Your details</span>
+                  <span className="demo-progress__sep">→</span>
+                  <span className="demo-progress__step">Review + Pay</span>
                 </div>
-              )}
-            </div>
-          )}
 
-          {/* BOOKING APP TAB */}
-          {tab === "booking" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-              <p style={{ textAlign: "center", fontSize: 12, color: C.faint, fontFamily: FONT_BODY, margin: 0 }}>
-                Walk through the full booking flow your clients will experience
-              </p>
-
-              {/* Desktop: phone frame centered */}
-              {!isMobile && (
-                <div style={{ display: "flex", justifyContent: "center" }}>
-                  <div style={{ width: 320 }}>
-                    <MobileFrame interactive={true}>
-                      <BookingAppPreview />
-                    </MobileFrame>
-                  </div>
-                </div>
-              )}
-
-              {/* Mobile: phone frame centered, full width bounded */}
-              {isMobile && (
-                <div style={{ display: "flex", justifyContent: "center", padding: "0 16px" }}>
+                <div style={{ display: "flex", justifyContent: "center", padding: isMobile ? "0 16px" : 0 }}>
                   <div style={{ width: "100%", maxWidth: 320 }}>
                     <MobileFrame interactive={true}>
                       <BookingAppPreview />
                     </MobileFrame>
                   </div>
                 </div>
-              )}
-            </div>
-          )}
+              </div>
+            )}
+
+          </div>
 
         </section>
 
         {/* CTA */}
-        <section style={{
-          background: C.s1,
-          borderTop: `1px solid ${C.border}`,
-          padding: "64px 24px",
-          textAlign: "center",
-        }}>
-          <div style={{ maxWidth: 560, margin: "0 auto", display: "flex", flexDirection: "column", gap: 20, alignItems: "center" }}>
-            <h2 style={{
-              fontFamily: FONT_DISPLAY,
-              fontSize: "clamp(22px,3vw,32px)",
-              fontWeight: 700, color: C.text,
-              letterSpacing: "-0.01em", lineHeight: 1.15,
-              margin: 0,
-            }}>
-              Ready to set this up for your business?
-            </h2>
-            <p style={{ fontSize: 14, color: C.muted, fontFamily: FONT_BODY, margin: 0 }}>
-              Get your own booking page live in minutes. No payment required.
+        <section style={{ padding: isMobile ? SECTION.mobile : SECTION.desktop, background: C.s1, borderTop: `1px solid ${C.border}` }}>
+          <div style={{ maxWidth: 560, margin: "0 auto", textAlign: "center" }}>
+            <p style={MK.eyebrow}>Ready to start?</p>
+            <h2 style={MK.h2}>Set this up for my business.</h2>
+            <p style={{ ...MK.body, margin: "0 auto 32px" }}>
+              Get your own booking page live in minutes.
             </p>
-            <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "center", gap: 16 }}>
-              <Link
-                to="/onboarding"
-                style={{
-                  background: CTA_BG, boxShadow: CTA_SHADOW,
-                  color: "#080808", fontFamily: FONT_BODY,
-                  fontSize: 14, fontWeight: 700,
-                  padding: "14px 30px", borderRadius: 10,
-                  textDecoration: "none",
-                  display: "inline-flex", alignItems: "center", gap: 8,
-                  minHeight: 48,
-                }}
-              >
+            <div className="marketing-cta-row">
+              <PrimaryCTA to="/onboarding">
                 Create Your Booking Page
-                <ArrowRight style={{ height: 16, width: 16 }} />
-              </Link>
-              <Link
-                to="/pricing"
-                style={{
-                  fontSize: 14, fontWeight: 500, color: C.muted,
-                  fontFamily: FONT_BODY, textDecoration: "none",
-                  padding: "14px 4px", minHeight: 48,
-                  display: "inline-flex", alignItems: "center",
-                }}
-              >
+              </PrimaryCTA>
+              <Link to="/pricing" className="marketing-cta marketing-cta--secondary">
                 View pricing
               </Link>
             </div>
-            <p style={{ fontSize: 11, color: C.faint, letterSpacing: "0.04em", fontFamily: FONT_BODY, margin: 0 }}>
-              No payment required · Free for 30 days · Cancel anytime
+            <p style={{ ...MK.small, fontSize: 12, color: C.faint, letterSpacing: "0.04em", marginTop: 16 }}>
+              No payment required · Free trial · Cancel anytime
             </p>
           </div>
         </section>
 
       </main>
       <SiteFooter />
-      </MarketingLayout>
+    </MarketingLayout>
   );
 };
 

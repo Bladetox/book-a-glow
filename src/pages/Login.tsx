@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import "@/styles/marketing.css";
 import { Link } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
