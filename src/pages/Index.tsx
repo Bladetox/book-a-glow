@@ -1,4 +1,5 @@
 import { useMarketingShell } from "@/components/home/useMarketingShell";
+import "@/styles/marketing.css";
 import SiteHeader from "@/components/site/SiteHeader";
 import SiteFooter from "@/components/site/SiteFooter";
 import { HOME_STYLES } from "@/components/home/homeStyles";
