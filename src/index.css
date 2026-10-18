@@ -908,35 +908,99 @@ html.marketing-page::-webkit-scrollbar, html.marketing-page *::-webkit-scrollbar
   .demo-progress { font-size: 10px; gap: 6px; }
 }
 
-/* 
-  OVERRIDE: Fixes the grid overflow on desktop 
-  and ensures padding matches other sections
-*/
+
+/* ═══════════════════════════════════════════════════════════════
+   OVERRIDE: HOME AUDIENCE SECTION FIX
+   Fixes layout breakage on desktop, ensures uniform padding, 
+   creates the 2-column split, and scales images properly.
+═══════════════════════════════════════════════════════════════ */
+
 .home-audience {
-  padding: 64px 40px 68px; /* Ensures desktop padding */
-  overflow: hidden;        /* Prevents horizontal scroll */
+  padding: 64px 40px 68px;
+  overflow: hidden;        
+}
+
+/* Creates the 2-column layout on desktop (Text left, Images right) */
+.home-audience__inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 48px;
+  align-items: center;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 .home-audience__visuals {
+  display: grid !important;
   /* Forces the 3 columns to shrink and fit the container */
   grid-template-columns: repeat(3, minmax(0, 1fr)) !important; 
+  gap: 16px;
   min-width: 0;
 }
 
-/* Restore your mobile padding and layout just in case */
+/* Constrains the image wrapper so it doesn't overflow */
+.home-audience__visual {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  aspect-ratio: 3 / 4; /* Keeps the images uniform and vertical */
+}
+
+/* CRITICAL FIX: Forces images to shrink with the grid */
+.home-audience__visual img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.home-audience__visual figcaption {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 24px 16px 16px;
+  background: linear-gradient(to top, rgba(0,0,0,0.85), transparent);
+  color: #fff;
+  font: 600 12px/1.4 'Inter', sans-serif;
+}
+
+/* --- TABLET --- */
 @media (max-width: 1023px) {
   .home-audience {
     padding: 48px 24px 52px;
   }
+  /* Stacks the text on top of the images */
+  .home-audience__inner {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 32px;
+  }
 }
 
+/* --- MOBILE --- */
 @media (max-width: 767px) {
   .home-audience {
     padding: 40px 16px 44px;
   }
+  /* Turns the images into a swipeable carousel */
   .home-audience__visuals {
     display: flex !important;
-    flex-direction: column; /* Or flex-row with overflow-x: auto */
-    gap: 16px;
+    flex-direction: row;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 12px;
+    padding-bottom: 16px;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .home-audience__visuals::-webkit-scrollbar {
+    display: none;
+  }
+  .home-audience__visual {
+    flex: 0 0 85%;
+    scroll-snap-align: center;
   }
 }
