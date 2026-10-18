@@ -206,9 +206,9 @@
 }
 
 @media (max-width: 767px) {
-  h1 { font-size: clamp(2rem, 7vw, 2.75rem); line-height: 1.1; }
-  h2 { font-size: clamp(1.75rem, 6vw, 2.25rem); line-height: 1.15; }
-  h3 { font-size: clamp(1.25rem, 5vw, 1.5rem); line-height: 1.2; }
+  .marketing-layout h1 { font-size: clamp(2rem, 7vw, 2.75rem); line-height: 1.1; }
+  .marketing-layout h2 { font-size: clamp(1.75rem, 6vw, 2.25rem); line-height: 1.15; }
+  .marketing-layout h3 { font-size: clamp(1.25rem, 5vw, 1.5rem); line-height: 1.2; }
   .home-hero { min-height: 0; align-items: stretch; }
   .home-hero__image { object-position: 72% 30%; }
   .home-hero__overlay { background: linear-gradient(180deg, rgba(245, 240, 231, 0.86) 0%, rgba(245, 240, 231, 0.8) 55%, rgba(245, 240, 231, 0.62) 80%, rgba(245, 240, 231, 0.22) 100%); }
