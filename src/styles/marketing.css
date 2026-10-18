@@ -437,3 +437,89 @@ html.marketing-page::-webkit-scrollbar, html.marketing-page *::-webkit-scrollbar
     scroll-snap-align: center;
   }
 }
+
+/* Homepage refinements: align section copy and Nexty story to the site's centred rhythm. */
+.home-audience__inner {
+  align-items: center;
+}
+.home-audience__copy {
+  max-width: 500px;
+  margin-inline: auto;
+  text-align: center;
+}
+.home-audience__copy > p:not(.home-audience__eyebrow) {
+  margin-inline: auto;
+}
+.home-audience__visuals {
+  align-items: stretch;
+  grid-auto-rows: 1fr;
+}
+.home-audience__visual {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3 / 4;
+  align-self: stretch;
+}
+.home-audience__visual img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.home-audience__visual figcaption {
+  z-index: 1;
+}
+.home-audience__swipe-hint {
+  text-align: center;
+}
+.home-heatmap__story {
+  width: 100%;
+  max-width: 920px;
+  margin-inline: auto;
+}
+.home-heatmap__nexty {
+  width: 100%;
+  max-width: 760px;
+  margin-inline: auto;
+  text-align: center;
+}
+.home-heatmap__nexty-top {
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+.home-heatmap__nexty-top > div:last-child {
+  min-width: 0;
+}
+.home-heatmap__nexty-top .home-heatmap__kicker,
+.home-heatmap__nexty-top .home-heatmap__lead {
+  margin-inline: auto;
+}
+.home-heatmap__nexty .speech-bubble {
+  width: 100%;
+  box-sizing: border-box;
+  text-align: left;
+}
+@media (min-width: 1024px) {
+  .home-audience__inner {
+    align-items: center;
+  }
+  .home-audience__copy {
+    flex: 0 1 45%;
+  }
+  .home-audience__visuals {
+    flex: 0 1 50%;
+  }
+}
+@media (max-width: 767px) {
+  .home-audience__visual {
+    flex: 0 0 85%;
+    height: auto;
+  }
+  .home-heatmap__nexty-top {
+    flex-direction: column;
+  }
+}
+
