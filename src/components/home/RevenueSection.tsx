@@ -17,7 +17,6 @@ export const RevenueSection = () => {
         }}
       >
         <div style={{ maxWidth: 1040, margin: "0 auto", textAlign: "left" }}>
-          <FigmaDashboardPreview />
           <Eyebrow text="See the business behind the bookings" />
           <h2 className="home-revenue__heading"
             style={{
@@ -45,28 +44,9 @@ export const RevenueSection = () => {
             When your bookings, payments and client activity are connected, you get a clear picture of your business, not just what is happening today.
           </p>
 
-          <div
-            style={{
-              display: "inline-flex",
-              flexWrap: "wrap",
-              gap: 8,
-              padding: "14px 16px",
-              border: `1px solid ${C.border2}`,
-              borderRadius: 12,
-              background: "rgba(126,96,58,0.06)",
-              fontFamily: FONT_BODY,
-              fontSize: 12,
-              color: C.muted,
-              lineHeight: 1.5,
-            }}
-          >
-            <strong style={{ color: C.text, fontWeight: 700 }}>See your business clearly.</strong>
-            <span>Revenue. Bookings. Clients. Demand. Performance.</span>
+          <div className="home-revenue__dashboard">
+            <FigmaDashboardPreview />
           </div>
-
-          <p style={{ fontSize: 13, color: C.muted, lineHeight: 1.6, margin: "16px 0 0", maxWidth: 480 }}>
-            Everything in one place, so you spend less time piecing together the picture and more time deciding what to do with it.
-          </p>
         </div>
       </div>
     </section>
