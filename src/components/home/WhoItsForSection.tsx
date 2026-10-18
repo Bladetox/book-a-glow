@@ -7,7 +7,7 @@ import tattooArtist from "../../assets/tools-tattoo-artist-at-work.webp";
 
 const audienceCards = [
   {
-    label: "Beauty & wellness",
+    label: "Beauty & Wellness",
     image: beautyProfessional,
     alt: "Beauty professional delivering a treatment in a calm, prepared space",
     position: "center",
@@ -19,7 +19,7 @@ const audienceCards = [
     position: "center",
   },
   {
-    label: "Creative & mobile",
+    label: "Photographers",
     image: creativeProfessional,
     alt: "Photographer at work with a camera in the field",
     position: "center",
