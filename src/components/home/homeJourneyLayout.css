@@ -50,25 +50,25 @@
 }
 .home-insights .home-heatmap__visual-row {
   display: grid;
-  grid-template-columns: 250px minmax(0, 1fr);
-  gap: 28px;
-  align-items: stretch;
-  width: min(100%, 980px);
-  margin: 36px auto 48px;
+  grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr);
+  gap: clamp(16px, 2.2vw, 32px);
+  align-items: center;
+  width: min(100%, 1080px);
+  margin: clamp(28px, 3vw, 40px) auto clamp(32px, 4vw, 48px);
   box-sizing: border-box;
 }
 .home-insights .home-heatmap__dashboard {
   display: flex;
+  align-items: center;
   justify-content: center;
   min-width: 0;
   width: 100%;
-  float: none;
 }
 .home-insights .home-heatmap__evidence {
   min-width: 0;
   width: 100%;
   box-sizing: border-box;
-  padding: 24px;
+  padding: clamp(14px, 1.8vw, 24px);
   border-radius: 16px;
   background: #191918;
   color: #F8F4ED;
@@ -76,42 +76,78 @@
   display: flex;
   flex-direction: column;
 }
-.home-insights .home-heatmap__times,
-.home-insights .home-heatmap__row {
-  display: grid;
-  grid-template-columns: 34px repeat(5, minmax(0, 1fr));
+.home-insights .home-heatmap__evidence-heading h3 {
+  margin: 2px 0 0;
+  font-size: clamp(15px, 1.5vw, 20px);
+  line-height: 1.2;
+}
+.home-insights .home-heatmap__shared-grid {
+  min-width: 0;
+  width: 100%;
+  margin-top: 12px;
+}
+.home-insights .home-heatmap__shared-grid table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.home-insights .home-heatmap__shared-grid th,
+.home-insights .home-heatmap__shared-grid td {
+  min-width: 0;
+}
+.home-insights .home-heatmap__shared-grid td > div {
+  height: clamp(22px, 2.4vw, 34px);
+  border-radius: 5px;
+}
+.home-insights .home-heatmap__legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 12px;
+  color: rgba(248,244,237,.72);
+  font-size: 11px;
+}
+.home-insights .home-heatmap__legend span {
+  display: inline-flex;
+  align-items: center;
   gap: 6px;
 }
-.home-insights .home-heatmap__cell {
-  width: 100%;
-  height: auto;
-  aspect-ratio: 2.5 / 1;
-  min-height: 0;
-  box-sizing: border-box;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.home-insights .home-heatmap__legend i {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: rgba(52,211,153,.18);
 }
-.home-insights .home-heatmap__cell.is-low { background: #B8DEC7; color: #17251D; }
-.home-insights .home-heatmap__cell.is-medium { background: #62A47F; color: #17251D; }
-.home-insights .home-heatmap__cell.is-high { background: #287A58; color: #FFFFFF; }
-.home-insights .home-heatmap__cell.is-peak { background: #1D5A40; color: #FFFFFF; }
+.home-insights .home-heatmap__legend span:last-child i {
+  background: rgba(52,211,153,.85);
+}
+.home-insights .home-heatmap__peak {
+  margin: 8px 0 0;
+  font-size: 11px;
+  line-height: 1.45;
+  color: rgba(248,244,237,.78);
+}
 
-/* Dashboard scales with its fixed source frame, not with heatmap cell dimensions. */
+/* The dashboard is a fixed-ratio source preview. Scale the frame and its reserved space together. */
 .home-insights .home-dashboard-preview {
   --dashboard-scale: 0.6;
   width: 241.2px;
   height: 524.4px;
+  flex: 0 1 241.2px;
   max-width: 100%;
   margin-inline: auto;
-  overflow: visible;
+  overflow: hidden;
   box-sizing: border-box;
+  position: relative;
 }
 .home-insights .home-dashboard-preview__viewport {
-  width: 241.2px;
-  height: 524.4px;
-  overflow: visible;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
 }
 .home-insights .home-dashboard-preview__frame {
   width: 402px;
@@ -119,86 +155,60 @@
   transform: scale(var(--dashboard-scale));
   transform-origin: top left;
 }
-.home-insights .home-heatmap__story {
-  display: flex;
-  justify-content: center;
-  width: 100%;
-}
-.home-insights .home-heatmap__nexty {
-  width: 100%;
-  max-width: 680px;
-  padding: 32px;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-  text-align: center;
-  box-sizing: border-box;
-}
 
-@media (min-width: 768px) and (max-width: 1200px) {
+/* Tablet: retain the same side-by-side relationship while scaling both columns together. */
+@media (min-width: 768px) and (max-width: 1100px) {
   .home-insights { padding: 48px 24px; }
   .home-insights .home-heatmap__visual-row {
-    grid-template-columns: 201px minmax(0, 1fr);
-    gap: 20px;
+    grid-template-columns: minmax(0, 0.62fr) minmax(0, 1.38fr);
+    gap: 16px;
   }
   .home-insights .home-dashboard-preview {
-    --dashboard-scale: 0.5;
-    width: 201px;
-    height: 437px;
+    --dashboard-scale: 0.42;
+    width: 168.84px;
+    height: 367.08px;
+    flex-basis: 168.84px;
   }
-  .home-insights .home-dashboard-preview__viewport {
-    width: 201px;
-    height: 437px;
-  }
-  .home-insights .home-heatmap__evidence { padding: 18px; }
-  .home-insights .home-heatmap__times,
-  .home-insights .home-heatmap__row {
-    grid-template-columns: 28px repeat(5, minmax(0, 1fr));
-    gap: 4px;
-  }
+  .home-insights .home-heatmap__shared-grid .hidden.sm\:block { display: block; }
+  .home-insights .home-heatmap__shared-grid .sm\:hidden { display: none; }
+  .home-insights .home-heatmap__shared-grid td > div { height: 24px; }
 }
 
-/* Narrow screens scroll the intact composition instead of compressing or reshaping the heatmap. */
+/* Mobile keeps the complete composition in the viewport. The shared heatmap uses its admin mobile layout. */
 @media (max-width: 767px) {
-  .home-insights {
-    padding: 40px 16px;
-    overflow: hidden;
-  }
+  .home-insights { padding: 40px 16px; overflow: hidden; }
   .home-insights .home-heatmap__visual-row {
     width: 100%;
-    grid-template-columns: 100.5px 390px;
-    gap: 12px;
-    justify-content: start;
-    margin: 28px 0 40px;
-    overflow-x: auto;
-    overflow-y: hidden;
-    padding: 0 0 12px;
-    -webkit-overflow-scrolling: touch;
+    grid-template-columns: minmax(76px, 0.34fr) minmax(0, 1fr);
+    gap: 10px;
+    margin: 24px auto 32px;
+    overflow: visible;
   }
+  .home-insights .home-heatmap__dashboard { align-self: start; }
   .home-insights .home-dashboard-preview {
-    --dashboard-scale: 0.25;
-    width: 100.5px;
-    height: 218.5px;
-    flex: 0 0 100.5px;
+    --dashboard-scale: 0.22;
+    width: 88.44px;
+    height: 192.28px;
+    flex: 0 1 88.44px;
   }
-  .home-insights .home-dashboard-preview__viewport {
-    width: 100.5px;
-    height: 218.5px;
-  }
-  .home-insights .home-heatmap__dashboard { width: 100.5px; }
+  .home-insights .home-dashboard-preview__frame { border-radius: 14px; }
   .home-insights .home-heatmap__evidence {
-    width: 390px;
-    min-width: 390px;
-    padding: 16px;
-    border-radius: 16px;
+    min-width: 0;
+    padding: 12px 10px;
+    border-radius: 12px;
   }
-  .home-insights .home-heatmap__times,
-  .home-insights .home-heatmap__row {
-    grid-template-columns: 34px repeat(5, minmax(0, 1fr));
-    gap: 6px;
-  }
+  .home-insights .home-heatmap__evidence-heading > span { font-size: 9px; }
+  .home-insights .home-heatmap__evidence-heading h3 { font-size: 14px; }
+  .home-insights .home-heatmap__shared-grid .hidden.sm\:block { display: none; }
+  .home-insights .home-heatmap__shared-grid .sm\:hidden { display: block; }
+  .home-insights .home-heatmap__shared-grid .sm\:hidden > div { grid-template-columns: auto repeat(7, minmax(0, 1fr)); }
+  .home-insights .home-heatmap__shared-grid .sm\:hidden .h-8 { height: 16px; }
+  .home-insights .home-heatmap__legend { font-size: 9px; gap: 4px; }
+  .home-insights .home-heatmap__peak { font-size: 10px; }
   .home-insights .home-heatmap__nexty { padding: 24px 0; }
+  .home-insights .home-heatmap__nexty-top { gap: 12px; }
+  .home-insights .home-heatmap__orb { width: 56px; height: 56px; flex-basis: 56px; }
+  .home-insights .home-heatmap__orb .nexty-orb { transform: translate(-50%, -50%) scale(.7); }
 }
 
 /* The heatmap section owns the orb's positioning context and clips decorative layers. */
