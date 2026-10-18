@@ -602,7 +602,6 @@ export const HOME_STYLES = `
     .home-revenue, .home-heatmap { padding-top: 36px !important; padding-bottom: 36px !important; }
     .home-insights > .home-revenue { padding-bottom: 16px !important; }
     .home-insights > .home-heatmap { padding-top: 16px !important; }
-    .home-heatmap > div > div:first-child { text-align: left !important; }
   }
   @media (prefers-reduced-motion: reduce) {
     .home-features__card, .home-audience__visual, .home-pricing-preview__plan {
@@ -756,7 +755,6 @@ export const HOME_STYLES = `
   }
   /* Green is the demand scale; lighter green means more activity. */
   .home-heatmap { background: #F0E7DA !important; }
-  .home-heatmap .home-heatmap__grid-cell { background: inherit; }
   @media (max-width: 767px) {
     .home-audience,
     .home-features,
