@@ -13,17 +13,7 @@ const HEAT_ROWS = [
   { day: "Sat", slots: [15, 18, 16, 14, 11] },
   { day: "Sun", slots: [3, 4, 2, 2, 1] },
 ];
-
-// Higher booking counts use deeper greens; lower counts use lighter greens.
-const heatColor = (v: number) =>
-  v < 4
-    ? C.emLight
-    : v < 8
-      ? C.emMid
-      : v < 12
-        ? C.em
-        : C.emDeep;
-
+const heatColor = (v: number) => v < 4 ? C.emLight : v < 8 ? C.emMid : v < 12 ? C.em : C.emDeep;
 const TIME_LABELS = ["9am", "11am", "1pm", "3pm", "5pm"];
 
 export const HeatmapSection = () => {
@@ -31,116 +21,53 @@ export const HeatmapSection = () => {
   const isMobile = width < BP;
 
   return (
-    <section className="home-heatmap">
-      <div style={{ maxWidth: 1200, margin: "0 auto" }}>
-        <div style={{ textAlign: "center", maxWidth: 620, margin: "0 auto", padding: isMobile ? "0 8px" : 0 }}>
+    <section className="home-heatmap" aria-labelledby="home-insight-heading">
+      <div className="home-heatmap__inner">
+        <header className="home-heatmap__header">
           <Eyebrow text="See the opportunity" />
-          <h2
-            style={{
-              fontFamily: FONT_DISPLAY,
-              fontSize: isMobile ? 30 : 44,
-              fontWeight: 800,
-              lineHeight: 1.08,
-              color: C.text,
-              margin: "0 0 16px",
-              letterSpacing: "-0.02em",
-            }}
-          >
-            See what's <span style={{ color: C.goldDim }}>hiding</span> in your bookings.
-          </h2>
-          <p style={{ fontSize: 15, color: C.muted, lineHeight: 1.7, margin: 0 }}>
-            Patterns become easier to spot when your booking history is in one place. Nexty helps turn those patterns into something worth acting on.
-          </p>
-        </div>
+          <h2 id="home-insight-heading">See what's <span>hiding</span> in your bookings.</h2>
+          <p>Your booking history shows what is happening. Nexty helps you decide what to do next.</p>
+        </header>
 
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: isMobile ? "1fr" : "1.15fr 0.85fr",
-            gap: isMobile ? 24 : 44,
-            alignItems: "center",
-            marginTop: isMobile ? 24 : 36,
-          }}
-        >
-          <div
-            style={{
-              background: "#191918",
-              borderRadius: 20,
-              padding: isMobile ? "20px 16px" : "28px 24px",
-              border: "1px solid rgba(255,255,255,.14)",
-              boxShadow: "0 18px 40px rgba(24,22,19,.16)",
-              color: "#FFFFFF",
-              fontFamily: FONT_BODY,
-            }}
-          >
-            <div style={{ fontSize: 12, color: "#F8F4ED", marginBottom: 16 }}>
-              Booking demand by day &amp; time
+        <div className="home-heatmap__story">
+          <article className="home-heatmap__nexty">
+            <div className="home-heatmap__nexty-top">
+              <div className="home-heatmap__orb"><Orb scale={isMobile ? 0.62 : 0.78} /></div>
+              <div>
+                <p className="home-heatmap__kicker">YOUR GROWTH ADVISOR</p>
+                <h3>Meet Nexty.</h3>
+                <p className="home-heatmap__lead">Not just another dashboard. A clearer next step.</p>
+              </div>
             </div>
+            <SpeechBubble
+              type="growth"
+              speaker="Nexty"
+              label="Growth opportunity"
+              message="Tuesday afternoons sit empty most weeks. A mid-week offer could help fill those gaps."
+              action="See the gap"
+              delay={0}
+            />
+            <p className="home-heatmap__support">This recommendation is grounded in the booking patterns shown here.</p>
+          </article>
 
-            <div style={{ display: "grid", gridTemplateColumns: "40px repeat(5,1fr)", gap: 4, marginBottom: 6 }}>
-              <div />
-              {TIME_LABELS.map((t) => (
-                <div key={t} style={{ fontSize: 10, color: "#D9D0C4", textAlign: "center", fontWeight: 600 }}>{t}</div>
+          <div className="home-heatmap__evidence">
+            <div className="home-heatmap__evidence-heading">
+              <span>THE SIGNAL</span>
+              <h3>Booking demand by day and time</h3>
+            </div>
+            <div className="home-heatmap__grid" role="img" aria-label="Illustrative booking demand heatmap. Darker green cells indicate more bookings; lighter green cells indicate fewer bookings.">
+              <div className="home-heatmap__times"><span />{TIME_LABELS.map(t => <span key={t}>{t}</span>)}</div>
+              {HEAT_ROWS.map(row => (
+                <div className="home-heatmap__row" key={row.day}>
+                  <span className="home-heatmap__day">{row.day}</span>
+                  {row.slots.map((v, i) => (
+                    <span className="home-heatmap__cell" key={i} style={{ background: heatColor(v), color: v < 8 ? "#17251D" : "#FFFFFF" }}>{v}</span>
+                  ))}
+                </div>
               ))}
             </div>
-
-            {HEAT_ROWS.map((row) => (
-              <div key={row.day} style={{ display: "grid", gridTemplateColumns: "40px repeat(5,1fr)", gap: 4, marginBottom: 4 }}>
-                <div style={{ fontSize: 11, color: "#F8F4ED", fontWeight: 600, display: "flex", alignItems: "center" }}>{row.day}</div>
-                {row.slots.map((v, i) => (
-                  <div
-                    key={i}
-                    style={{
-                      height: isMobile ? 26 : 34,
-                      borderRadius: 6,
-                      background: heatColor(v),
-                      border: "1px solid rgba(255,255,255,.08)",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                    }}
-                  >
-                    <span style={{ fontSize: 10, color: v < 8 ? "#191918" : "#FFFFFF", fontWeight: 700 }}>{v}</span>
-                  </div>
-                ))}
-              </div>
-            ))}
-
-            <div style={{ marginTop: 14, fontSize: 12, color: "#F8F4ED" }}>
-              Saturday 11am is the peak slot · 18 bookings on average
-            </div>
-          </div>
-
-          <div style={{ minWidth: 0 }}>
-            <div
-              style={{
-                position: "relative",
-                height: isMobile ? 180 : 220,
-                marginBottom: 20,
-                overflow: "visible",
-              }}
-            >
-              <Orb scale={isMobile ? 0.72 : 0.82} />
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              <SpeechBubble
-                type="growth"
-                speaker="Nexty"
-                label="Growth"
-                message="Tuesday afternoons sit empty most weeks. Worth a promo to fill them."
-                action="See the gap"
-                delay={0}
-              />
-              <SpeechBubble
-                type="critical"
-                speaker="Nexty"
-                label="Retention"
-                message="Your booking patterns show where clients are returning, and where they are not."
-                action="Find the opportunity"
-                delay={0.15}
-              />
-            </div>
+            <div className="home-heatmap__legend"><span><i className="is-low" />Fewer bookings</span><span><i className="is-high" />More bookings</span></div>
+            <p className="home-heatmap__peak">Saturday at 11am is the busiest illustrated slot, averaging 18 bookings.</p>
           </div>
         </div>
       </div>
