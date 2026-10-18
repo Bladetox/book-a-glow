@@ -1,4 +1,5 @@
 import React from "react";
+import "@/styles/marketing.css";
 import { HOME_STYLES } from "@/components/home/homeStyles";
 import { useMarketingShell } from "@/components/home/useMarketingShell";
 

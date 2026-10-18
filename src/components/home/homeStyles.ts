@@ -395,15 +395,13 @@ export const HOME_STYLES = `
 
   /* Keep the main story on one warm canvas, with a small number of deliberate chapter shifts. */
   .home-features,
-  .home-revenue,
-  .home-heatmap {
+  .home-revenue {
     background: #F5F0E7;
     padding: clamp(48px, 6vw, 76px) 24px;
   }
 
   .home-features__inner,
-  .home-revenue > div,
-  .home-heatmap > div {
+  .home-revenue > div {
     width: min(1120px, 100%);
     margin-inline: auto;
   }
@@ -538,8 +536,7 @@ export const HOME_STYLES = `
 
   @media (max-width: 767px) {
     .home-features,
-    .home-revenue,
-    .home-heatmap { padding: 48px 16px 52px; }
+    .home-revenue { padding: 48px 16px 52px; }
     .home-features__grid { grid-template-columns: minmax(0, 1fr); gap: 28px; }
     .home-features__header { margin-bottom: 28px; text-align: left; }
     .home-features__visual { min-height: 124px; }
@@ -554,9 +551,7 @@ export const HOME_STYLES = `
   .home-hero__heading { margin-bottom: 20px; }
   .home-hero__description { margin-bottom: 24px; }
   .home-hero__supporting { margin-top: 18px; }
-  .home-insights { background: #EDE4D7; }
-  .home-insights > .home-revenue { padding-bottom: 28px; }
-  .home-insights > .home-heatmap { padding-top: 28px; }
+  /* Insights canvas and spacing are owned by homeJourneyLayout.css. */
   .home-features__swipe-hint, .home-audience__swipe-hint, .home-pricing-preview__swipe-hint { display: none; }
 
   @media (max-width: 767px) {
@@ -599,10 +594,7 @@ export const HOME_STYLES = `
       box-sizing: border-box; scroll-snap-align: start; scroll-snap-stop: always;
     }
     .home-pricing-preview__footer { text-align: left; }
-    .home-revenue, .home-heatmap { padding-top: 36px !important; padding-bottom: 36px !important; }
-    .home-insights > .home-revenue { padding-bottom: 16px !important; }
-    .home-insights > .home-heatmap { padding-top: 16px !important; }
-    .home-heatmap > div > div:first-child { text-align: left !important; }
+    .home-revenue { padding-top: 36px !important; padding-bottom: 36px !important; }
   }
   @media (prefers-reduced-motion: reduce) {
     .home-features__card, .home-audience__visual, .home-pricing-preview__plan {
@@ -705,8 +697,6 @@ export const HOME_STYLES = `
   /* One shared responsive spacing rhythm for every homepage section. */
   .home-audience,
   .home-features,
-  .home-insights > .home-revenue,
-  .home-insights > .home-heatmap,
   #results,
   .home-pricing-preview,
   .home-cta {
@@ -714,13 +704,12 @@ export const HOME_STYLES = `
   }
   .home-audience,
   .home-features,
-  .home-insights,
   #results,
   .home-pricing-preview,
   .home-cta { box-sizing: border-box; }
   .home-audience { background: #F5F0E7 !important; }
   .home-features { background: #EDE4D7 !important; }
-  .home-insights { background: #F0E7DA !important; }
+  /* Insights canvas is owned by homeJourneyLayout.css. */
   #results { background: #E8D6B9 !important; }
   .home-pricing-preview { background: #F5F0E7 !important; }
   .home-cta { background: #EDE4D7 !important; }
@@ -754,21 +743,15 @@ export const HOME_STYLES = `
   .home-pricing-preview__plan.plan-studio .home-pricing-preview__trial {
     text-align: center;
   }
-  /* Green is the demand scale; lighter green means more activity. */
-  .home-heatmap { background: #F0E7DA !important; }
-  .home-heatmap .home-heatmap__grid-cell { background: inherit; }
+  /* Heatmap presentation is owned by homeJourneyLayout.css. */
   @media (max-width: 767px) {
     .home-audience,
     .home-features,
-    .home-insights > .home-revenue,
-    .home-insights > .home-heatmap,
     #results,
     .home-pricing-preview,
     .home-cta {
       padding-block: 40px !important;
     }
-    .home-insights > .home-revenue { padding-bottom: 24px !important; }
-    .home-insights > .home-heatmap { padding-top: 24px !important; }
     .home-pricing-preview__plan { min-height: 100%; }
     .home-pricing-preview__trial { text-align: left; }
     .home-pricing-preview__plan.plan-studio .home-pricing-preview__trial { text-align: center; }
@@ -831,8 +814,6 @@ export const HOME_STYLES = `
   /* Final responsive polish: consistent gutters scale with viewport width without stretching content. */
   .home-audience,
   .home-features,
-  .home-insights > .home-revenue,
-  .home-insights > .home-heatmap,
   #results,
   .home-pricing-preview,
   .home-cta {
@@ -841,8 +822,7 @@ export const HOME_STYLES = `
   .home-audience__inner,
   .home-features__inner,
   .home-pricing-preview__inner,
-  .home-insights > .home-revenue > div,
-  .home-insights > .home-heatmap > div {
+  .home-revenue > div {
     width: min(1440px, 100%) !important;
     margin-inline: auto !important;
   }
@@ -871,8 +851,6 @@ export const HOME_STYLES = `
   @media (max-width: 767px) {
     .home-audience,
     .home-features,
-    .home-insights > .home-revenue,
-    .home-insights > .home-heatmap,
     #results,
     .home-pricing-preview,
     .home-cta {
@@ -885,8 +863,6 @@ export const HOME_STYLES = `
   /* One consistent gutter token across breakpoints; the inner wrapper controls line length. */
   .home-audience,
   .home-features,
-  .home-insights > .home-revenue,
-  .home-insights > .home-heatmap,
   #results,
   .home-pricing-preview,
   .home-cta {
@@ -896,8 +872,7 @@ export const HOME_STYLES = `
   .home-audience__inner,
   .home-features__inner,
   .home-pricing-preview__inner,
-  .home-insights > .home-revenue > div,
-  .home-insights > .home-heatmap > div {
+  .home-revenue > div {
     width: 100% !important;
     max-width: 1560px !important;
     margin-inline: auto !important;
@@ -942,8 +917,6 @@ export const HOME_STYLES = `
   @media (max-width: 767px) {
     .home-audience,
     .home-features,
-    .home-insights > .home-revenue,
-    .home-insights > .home-heatmap,
     #results,
     .home-pricing-preview,
     .home-cta { padding-inline: 24px !important; }
@@ -952,25 +925,8 @@ export const HOME_STYLES = `
   }
 
 
-  /* Final source-of-truth overrides for the unified insights canvas. */
-  .home-insights > .home-revenue,
-  .home-insights > .home-heatmap { background: transparent !important; }
-  .home-insights .home-heatmap__nexty {
-    background: transparent !important; border: 0 !important; border-radius: 0 !important;
-    box-shadow: none !important; padding: 0 !important;
-  }
-  .home-insights .home-heatmap__orb {
-    overflow: visible !important; background: transparent !important;
-    border: 0 !important; box-shadow: none !important;
-  }
-  .home-insights .home-heatmap__nexty-top h3 { color: #000000 !important; }
-  .home-insights .home-heatmap__nexty-top h3 span { color: #B88B52 !important; }
-  .home-insights .home-heatmap__story {
-    gap: clamp(24px, 3vw, 44px) !important; align-items: center !important;
-  }
+  /* Nexty card styling is separate from the insights layout. */
   @media (max-width: 767px) {
-    .home-insights .home-heatmap__story { gap: 20px !important; }
-    .home-insights .home-heatmap__nexty { padding: 0 !important; }
   }
 
 `;

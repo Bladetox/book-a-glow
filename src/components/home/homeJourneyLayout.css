@@ -14,73 +14,61 @@
 .marketing-site [id="pricing-preview"],
 .marketing-site [id="get-started"] { scroll-margin-top: 88px; }
 
-/* ═══════════════════════════════════════════════════════════════
-   CLEAN LAYOUT FOR INSIGHTS / HEATMAP SECTION
-   Single source of truth. Side-by-side always.
-═══════════════════════════════════════════════════════════════ */
-
+/* Authoritative layout and heatmap geometry. Do not duplicate these rules in homeStyles.ts. */
 .home-insights {
   background: #EDE4D7;
   padding: 64px 40px;
   isolation: isolate;
+  overflow: hidden;
 }
-
-.home-insights > .home-revenue,
-.home-insights > .home-heatmap {
+.home-insights > .home-revenue {
   background: transparent;
   padding: 0;
-  margin: 0 auto;
+  margin: 0 auto 64px;
   max-width: 1200px;
   width: 100%;
   box-sizing: border-box;
 }
-
-.home-insights > .home-revenue {
-  margin-bottom: 64px;
+.home-insights > .home-heatmap {
+  background: transparent;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
-
-/* Header */
-.home-heatmap__header {
-  max-width: 660px;
-  margin: 0 auto 40px;
+.home-insights .home-heatmap__inner {
+  width: 100%;
+  max-width: none;
+  margin-inline: auto;
+  box-sizing: border-box;
+}
+.home-insights .home-heatmap__header {
+  max-width: 800px;
+  margin-inline: auto;
   text-align: center;
 }
-.home-heatmap__header h2 {
-  margin: 0 0 14px;
-  color: #000;
-  font: 800 clamp(30px, 3.5vw, 44px)/1.08 'Montserrat', sans-serif;
-  letter-spacing: -.03em;
-  text-wrap: balance;
-}
-.home-heatmap__header h2 span {
-  color: #94672F;
-}
-.home-heatmap__header p {
-  margin: 0;
-  color: #51483D;
-  font: 400 15px/1.7 'Inter', sans-serif;
-}
-
-/* Visual Row (Dashboard + Heatmap) - ALWAYS SIDE BY SIDE */
-.home-heatmap__visual-row {
+.home-insights .home-heatmap__visual-row {
   display: grid;
-  grid-template-columns: 0.85fr 1.15fr; 
-  gap: clamp(16px, 2vw, 32px);
-  align-items: stretch;
-  margin-bottom: 48px;
+  grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr);
+  gap: clamp(16px, 2.2vw, 32px);
+  align-items: center;
+  width: min(100%, 1080px);
+  margin: clamp(28px, 3vw, 40px) auto clamp(32px, 4vw, 48px);
+  box-sizing: border-box;
+}
+.home-insights .home-heatmap__dashboard {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
   width: 100%;
 }
-
-.home-heatmap__dashboard,
-.home-heatmap__evidence {
+.home-insights .home-heatmap__evidence {
   min-width: 0;
   width: 100%;
   box-sizing: border-box;
-}
-
-/* Heatmap Card */
-.home-heatmap__evidence {
-  padding: clamp(12px, 1.5vw, 24px);
+  padding: clamp(14px, 1.8vw, 24px);
   border-radius: 16px;
   background: #191918;
   color: #F8F4ED;
@@ -88,159 +76,200 @@
   display: flex;
   flex-direction: column;
 }
-
-.home-heatmap__evidence-heading span {
-  color: #C8A36F;
-  font: 700 clamp(8px, 0.8vw, 10px)/1.4 'Inter', sans-serif;
-  letter-spacing: .14em;
-  text-transform: uppercase;
+.home-insights .home-heatmap__evidence-heading h3 {
+  margin: 2px 0 0;
+  font-size: clamp(15px, 1.5vw, 20px);
+  line-height: 1.2;
 }
-
-.home-heatmap__evidence-heading h3 {
-  margin: 6px 0 clamp(12px, 1.5vw, 20px);
-  font: 600 clamp(11px, 1.2vw, 16px)/1.4 'Inter', sans-serif;
+.home-insights .home-heatmap__shared-grid {
+  min-width: 0;
+  width: 100%;
+  margin-top: 12px;
 }
-
-.home-heatmap__grid {
-  display: grid;
-  gap: clamp(2px, 0.5vw, 6px);
-  flex: 1;
+.home-insights .home-heatmap__shared-grid table {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 0;
 }
-
-.home-heatmap__times,
-.home-heatmap__row {
-  display: grid;
-  grid-template-columns: clamp(20px, 2vw, 34px) repeat(5, minmax(0, 1fr));
-  gap: clamp(2px, 0.5vw, 6px);
+.home-insights .home-heatmap__shared-grid th,
+.home-insights .home-heatmap__shared-grid td {
+  min-width: 0;
 }
-
-.home-heatmap__times {
-  margin-bottom: 2px;
-  color: #D9D0C4;
-  text-align: center;
-  font: 600 clamp(7px, 0.8vw, 10px)/1.4 'Inter', sans-serif;
+.home-insights .home-heatmap__shared-grid td > div {
+  height: clamp(22px, 2.4vw, 34px);
+  border-radius: 5px;
 }
-
-.home-heatmap__day {
-  display: flex;
-  align-items: center;
-  color: #F8F4ED;
-  font: 600 clamp(8px, 0.9vw, 11px)/1 'Inter', sans-serif;
-}
-
-.home-heatmap__cell {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: clamp(18px, 2.5vw, 32px);
-  border-radius: clamp(3px, 0.5vw, 6px);
-  font: 700 clamp(7px, 0.8vw, 10px)/1 'Inter', sans-serif;
-}
-
-.home-heatmap__legend {
+.home-insights .home-heatmap__legend {
   display: flex;
   flex-wrap: wrap;
-  gap: clamp(6px, 1vw, 14px);
-  margin-top: clamp(8px, 1.2vw, 18px);
-  color: #D9D0C4;
-  font: 400 clamp(7px, 0.8vw, 11px)/1.4 'Inter', sans-serif;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 12px;
+  color: rgba(248,244,237,.72);
+  font-size: 11px;
 }
-.home-heatmap__legend span {
+.home-insights .home-heatmap__legend span {
   display: inline-flex;
   align-items: center;
   gap: 6px;
 }
-.home-heatmap__legend i {
-  width: 10px;
-  height: 10px;
+.home-insights .home-heatmap__legend i {
   display: inline-block;
+  width: 12px;
+  height: 12px;
   border-radius: 3px;
+  background: rgba(52,211,153,.18);
 }
-.home-heatmap__legend .is-low { background: #B8DEC7; }
-.home-heatmap__legend .is-high { background: #1D5A40; }
-
-.home-heatmap__peak {
-  margin: clamp(8px, 1.2vw, 14px) 0 0;
-  color: #F8F4ED;
-  font: 400 clamp(8px, 0.9vw, 11px)/1.6 'Inter', sans-serif;
+.home-insights .home-heatmap__legend span:last-child i {
+  background: rgba(52,211,153,.85);
+}
+.home-insights .home-heatmap__peak {
+  margin: 8px 0 0;
+  font-size: 11px;
+  line-height: 1.45;
+  color: rgba(248,244,237,.78);
 }
 
-/* Nexty Story */
-.home-heatmap__story {
-  display: flex;
-  justify-content: center;
+/* The dashboard is a fixed-ratio source preview. Scale the frame and its reserved space together. */
+.home-insights .home-dashboard-preview {
+  --dashboard-scale: 0.6;
+  width: 241.2px;
+  height: 524.4px;
+  flex: 0 1 241.2px;
+  max-width: 100%;
+  margin-inline: auto;
+  overflow: hidden;
+  box-sizing: border-box;
+  position: relative;
+}
+.home-insights .home-dashboard-preview__viewport {
   width: 100%;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+}
+.home-insights .home-dashboard-preview__frame {
+  width: 402px;
+  height: 874px;
+  transform: scale(var(--dashboard-scale));
+  transform-origin: top left;
 }
 
-.home-heatmap__nexty {
-  width: 100%;
-  max-width: 680px;
-  padding: 32px;
-  border: 1px solid rgba(126,96,58,.22);
-  border-radius: 18px;
-  background: #FAF7F1;
-  box-shadow: 0 12px 30px rgba(66,48,27,.08);
+/* Tablet: retain the same side-by-side relationship while scaling both columns together. */
+@media (min-width: 768px) and (max-width: 1100px) {
+  .home-insights { padding: 48px 24px; }
+  .home-insights .home-heatmap__visual-row {
+    grid-template-columns: minmax(0, 0.62fr) minmax(0, 1.38fr);
+    gap: 16px;
+  }
+  .home-insights .home-dashboard-preview {
+    --dashboard-scale: 0.42;
+    width: 168.84px;
+    height: 367.08px;
+    flex-basis: 168.84px;
+  }
+  .home-insights .home-heatmap__shared-grid .hidden.sm\:block { display: block; }
+  .home-insights .home-heatmap__shared-grid .sm\:hidden { display: none; }
+  .home-insights .home-heatmap__shared-grid td > div { height: 24px; }
+}
+
+/* Mobile keeps the complete composition in the viewport. The shared heatmap uses its admin mobile layout. */
+@media (max-width: 767px) {
+  .home-insights { padding: 40px 16px; overflow: hidden; }
+  .home-insights .home-heatmap__visual-row {
+    width: 100%;
+    grid-template-columns: minmax(76px, 0.34fr) minmax(0, 1fr);
+    gap: 10px;
+    margin: 24px auto 32px;
+    overflow: visible;
+  }
+  .home-insights .home-heatmap__dashboard { align-self: start; }
+  .home-insights .home-dashboard-preview {
+    --dashboard-scale: 0.22;
+    width: 88.44px;
+    height: 192.28px;
+    flex: 0 1 88.44px;
+  }
+  .home-insights .home-dashboard-preview__frame { border-radius: 14px; }
+  .home-insights .home-heatmap__evidence {
+    min-width: 0;
+    padding: 12px 10px;
+    border-radius: 12px;
+  }
+  .home-insights .home-heatmap__evidence-heading > span { font-size: 9px; }
+  .home-insights .home-heatmap__evidence-heading h3 { font-size: 14px; }
+  .home-insights .home-heatmap__shared-grid .hidden.sm\:block { display: none; }
+  .home-insights .home-heatmap__shared-grid .sm\:hidden { display: block; }
+  .home-insights .home-heatmap__shared-grid .sm\:hidden > div { grid-template-columns: auto repeat(7, minmax(0, 1fr)); }
+  .home-insights .home-heatmap__shared-grid .sm\:hidden .h-8 { height: 16px; }
+  .home-insights .home-heatmap__legend { font-size: 9px; gap: 4px; }
+  .home-insights .home-heatmap__peak { font-size: 10px; }
+  .home-insights .home-heatmap__nexty { padding: 24px 0; }
+  .home-insights .home-heatmap__nexty-top { gap: 12px; }
+  .home-insights .home-heatmap__orb { width: 56px; height: 56px; flex-basis: 56px; }
+  .home-insights .home-heatmap__orb .nexty-orb { transform: translate(-50%, -50%) scale(.7); }
+}
+
+/* The heatmap section owns the orb's positioning context and clips decorative layers. */
+.home-insights .home-heatmap__orb {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  flex: 0 0 80px;
+  isolation: isolate;
+}
+
+/* Homepage shell styles live in CSS, not inline JSX, so responsive rules stay authoritative. */
+.marketing-homepage {
+  min-height: 100dvh;
+  overflow-x: clip;
+  background: #F5F0E7;
+  color: #000000;
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+/* The advisor orb is a centred, first-row element, with its glow contained by the orb wrapper. */
+.home-insights .home-heatmap__nexty-top {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 18px !important;
+  text-align: center !important;
+}
+.home-insights .home-heatmap__orb {
+  position: relative !important;
+  flex: 0 0 112px !important;
+  width: 112px !important;
+  height: 112px !important;
+  overflow: visible !important;
+  isolation: isolate;
+  margin: 0 auto !important;
+}
+.home-insights .home-heatmap__orb .nexty-orb {
+  transform: translate(-50%, -50%) scale(.78) !important;
+}
+.home-insights .home-heatmap__nexty-copy {
+  width: min(100%, 680px);
+  margin-inline: auto;
   text-align: center;
 }
-
-.home-heatmap__nexty-top {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 24px;
+.home-insights .home-heatmap__nexty-copy .home-heatmap__lead {
+  max-width: 620px;
 }
-
-/* FIX: Added position: relative to keep the Orb contained */
-.home-heatmap__orb {
-  position: relative; 
-  width: 120px;
-  height: 120px;
-  flex-shrink: 0;
-  margin: 0 auto;
-}
-
-.home-heatmap__kicker {
-  margin: 0 0 8px;
-  color: #94672F;
-  font: 700 10px/1.4 'Inter', sans-serif;
-  letter-spacing: .14em;
-  text-transform: uppercase;
-}
-
-.home-heatmap__nexty-top h3 {
-  margin: 0 0 8px;
-  color: #000;
-  font: 800 clamp(24px, 2.4vw, 32px)/1.1 'Montserrat', sans-serif;
-}
-.home-heatmap__nexty-top h3 span {
-  color: #B88B52;
-}
-
-.home-heatmap__lead {
-  margin: 0;
-  color: #51483D;
-  font: 400 14px/1.6 'Inter', sans-serif;
-}
-
-.home-heatmap__nexty .speech-bubble {
-  width: 100%;
-  box-sizing: border-box;
-  margin: 0 auto;
-}
-
-/* Responsive adjustments for overall padding, but keeping visual-row side-by-side */
-@media (max-width: 900px) {
-  .home-insights {
-    padding: 48px 24px;
-  }
-  .home-heatmap__nexty {
-    padding: 24px 16px;
-  }
-}
-
 @media (max-width: 767px) {
-  .home-insights {
-    padding: 40px 16px;
+  .home-insights .home-heatmap__nexty-top { gap: 12px !important; }
+  .home-insights .home-heatmap__orb {
+    flex-basis: 96px !important;
+    width: 96px !important;
+    height: 96px !important;
+  }
+  .home-insights .home-heatmap__orb .nexty-orb {
+    transform: translate(-50%, -50%) scale(.64) !important;
   }
 }
+

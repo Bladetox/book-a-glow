@@ -7,7 +7,7 @@ const PLANS = [
   { name: "Starter", price: "R99", trial: "7-day free trial", headline: "Make it official", features: ["Move bookings out of your DMs", "A professional booking page", "Instant payments without EFT chasing"], available: true, audience: "For the solo owner ready to look and feel established", tone: "starter" },
   { name: "Flow", price: "R399", trial: "30-day free trial", headline: "Secure your time", features: ["Automated online payments", "Automated booking confirmation", "Own your client relationships"], available: true, audience: "For the owner who understands time = money", tone: "flow" },
   { name: "Professional", price: "R699", trial: "30-day free trial", headline: "Grow with confidence", features: ["Unlock your growth advisor, Nexty", "Automatic call-out fee calculation", "Custom domain"], available: true, audience: "For the established owner ready to grow with clarity", tone: "professional" },
-  { name: "Studio", price: "R899", trial: null, headline: "Financial oversight for your shared space", features: ["One shared location", "Revenue and operating costs in one view", "Clearer visibility across day-to-day operations"], available: false, audience: "For space owners who need oversight, not more admin", tone: "studio" },
+  { name: "Studio", price: "R999", trial: null, headline: "Independent providers. Clear oversight.", features: ["Automated invoicing for independent service providers", "Structured dispute resolution", "Operational oversight without controlling how providers run their businesses"], available: false, audience: "For business owners who host independent service providers", tone: "studio" },
 ];
 
 export const HomePricingPreview = () => {
@@ -17,7 +17,7 @@ export const HomePricingPreview = () => {
       <div className="home-pricing-preview__inner">
         <div className="home-pricing-preview__heading">
           <p className="home-pricing-preview__eyebrow">Pricing</p>
-          <h2>A plan for where your business is today.</h2>
+          <h2>A plan for <span className="home-pricing-preview__gold">where your business is today.</span></h2>
           <p>Start with what you need. Add more as your business grows.</p>
         </div>
         <div id="home-pricing-track" className={"home-pricing-preview__grid" + (isMobile ? " is-mobile" : "")} role="region" aria-label="NextSlot pricing plans" tabIndex={0}>

@@ -7,6 +7,9 @@ const dist = path.join(root, "dist");
 const seoPath = path.join(root, "src", "data", "seo-pages.json");
 const pages = JSON.parse(fs.readFileSync(seoPath, "utf8"));
 const baseHtml = fs.readFileSync(path.join(dist, "index.html"), "utf8");
+// Stable app-shell source for tenant middleware. This file is excluded from
+// middleware matching so Node.js middleware can fetch it without recursion.
+fs.writeFileSync(path.join(dist, "tenant-index-template.html"), baseHtml);
 const siteUrl = "https://www.nextslot.co.za";
 
 const esc = (value) => String(value)

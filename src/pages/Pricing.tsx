@@ -257,20 +257,20 @@ const tiers = [
   },
   {
     name: "Studio",
-    price: "R1,299",
+    price: "R999",
     period: "/ month",
-    description: "Built for teams. Runs like a system.",
-    subline: "1 location \u00b7 3 staff included \u00b7 R89 per additional staff member",
+    description: "A shared space for independent service providers, with clear operational oversight and no interference in how they run their businesses.",
+    subline: "For space owners hosting independent service providers.",
     trialDays: 30,
     comingSoon: true,
     groups: [
       {
         label: "Everything in Professional, plus",
         features: [
-          "Stock and inventory management with low-stock alerts",
-          "Barcode and manual stock scanning",
-          "Nexty AI insights for loyalty and business growth",
-          "Advanced analytics suite",
+          "Automated invoicing for independent service providers",
+          "Structured dispute resolution with a documented history",
+          "Operational oversight across the shared space",
+          "Visibility into business activity while providers remain independent",
         ],
       },
     ],
@@ -954,7 +954,7 @@ const Pricing = () => {
                       </Link>
                     )}
                     <p style={{ textAlign: "center", fontSize: 11, color: C.faint, marginTop: 8, fontFamily: FONT_BODY }}>
-                      {tier.comingSoon ? "Notify me when available." : `Free for ${tier.trialDays} days. No payment required.`}
+                      {tier.comingSoon ? "" : `Free for ${tier.trialDays} days. No payment required.`}
                     </p>
                   </>
                 )}

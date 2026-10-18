@@ -1,5 +1,4 @@
 import { BP } from "./tokens";
-import { useWindowWidth } from "./useWindowWidth";
 
 const BG = "#080909";
 const PANEL = "#101212";
@@ -103,14 +102,11 @@ const MobileFrame = () => (
 );
 
 const FigmaDashboardPreview = () => {
-  const width = useWindowWidth();
-  // Keep the phone compact on mobile, but let it scale up with available desktop space.
-  const targetWidth = Math.min(250, Math.max(120, width * 0.17));
-  const safeScale = Math.min(targetWidth / 402, Math.max(0.18, (width - 24) / 402));
+  // Dashboard sizing and responsive scaling are owned by homeJourneyLayout.css.
   return (
-    <div style={{ width: 402 * safeScale, maxWidth: "100%", minWidth: 0, display: "block", float: "right", margin: "0 0 12px 20px", overflow: "visible" }}>
-      <div style={{ width: 402 * safeScale, height: 874 * safeScale, overflow: "visible", flexShrink: 0 }}>
-        <div style={{ width: 402, height: 874, transform: `scale(${safeScale})`, transformOrigin: "top left" }}>
+    <div className="home-dashboard-preview">
+      <div className="home-dashboard-preview__viewport">
+        <div className="home-dashboard-preview__frame">
           <MobileFrame />
         </div>
       </div>
