@@ -1,7 +1,6 @@
 import { C, FONT_BODY, FONT_DISPLAY, BP } from "./tokens";
 import { useWindowWidth } from "./useWindowWidth";
 import { Eyebrow } from "./Eyebrow";
-import FigmaDashboardPreview from "./FigmaDashboardPreview";
 
 export const RevenueSection = () => {
   const width = useWindowWidth();
@@ -44,9 +43,6 @@ export const RevenueSection = () => {
             When your bookings, payments and client activity are connected, you get a clear picture of your business, not just what is happening today.
           </p>
 
-          <div className="home-revenue__dashboard">
-            <FigmaDashboardPreview />
-          </div>
         </div>
       </div>
     </section>
