@@ -951,4 +951,25 @@ export const HOME_STYLES = `
     .home-features__visual--see { aspect-ratio: 4 / 3 !important; }
   }
 
+
+  /* Final source-of-truth overrides for the unified insights canvas. */
+  .home-insights > .home-revenue,
+  .home-insights > .home-heatmap { background: transparent !important; }
+  .home-insights .home-heatmap__nexty {
+    background: transparent !important; border: 0 !important; border-radius: 0 !important;
+    box-shadow: none !important; padding: 0 !important;
+  }
+  .home-insights .home-heatmap__orb {
+    overflow: visible !important; background: transparent !important;
+    border: 0 !important; box-shadow: none !important;
+  }
+  .home-insights .home-heatmap__nexty-top h3 { color: #B88B52 !important; }
+  .home-insights .home-heatmap__story {
+    gap: clamp(24px, 3vw, 44px) !important; align-items: center !important;
+  }
+  @media (max-width: 767px) {
+    .home-insights .home-heatmap__story { gap: 20px !important; }
+    .home-insights .home-heatmap__nexty { padding: 0 !important; }
+  }
+
 `;
