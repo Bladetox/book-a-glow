@@ -54,6 +54,16 @@ async function fetchTenant(
   }
 }
 
+/** Continue the original request through Vercel's routing layer.
+ * Fetching the incoming URL from middleware re-enters the same route and can
+ * trigger Vercel's 508 INFINITE_LOOP_DETECTED protection.
+ */
+function nextResponse(): Response {
+  return new Response(null, {
+    headers: { "x-middleware-next": "1" },
+  });
+}
+
 export default async function middleware(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const hostname = url.hostname;
@@ -62,7 +72,7 @@ export default async function middleware(request: Request): Promise<Response> {
   const tenantSlug = resolveTenantSlug(hostname);
 
   // Not a tenant subdomain → marketing site, pass through untouched
-  if (!tenantSlug) return fetch(request);
+  if (!tenantSlug) return nextResponse();
 
   // ── Static assets — pass through (JS/CSS bundles, images etc.) ──────────
   // Extended to cover png/jpg/jpeg/svg/xml/txt/webmanifest, which were
@@ -71,7 +81,7 @@ export default async function middleware(request: Request): Promise<Response> {
   // those requests returned HTML instead of the image, PWA installation
   // would fail on those tenants.
   const isAsset = /\.(?:js|css|woff2?|ttf|otf|eot|map|json|webp|avif|gif|mp4|webm|ico|png|jpe?g|svg|xml|txt|webmanifest)$/.test(path);
-  if (isAsset) return fetch(request);
+  if (isAsset) return nextResponse();
 
   // ── Favicon / apple-touch-icon → redirect to tenant logo ────────────
   const isFavicon =
@@ -85,7 +95,7 @@ export default async function middleware(request: Request): Promise<Response> {
     if (tenant?.logoUrl) {
       return Response.redirect(tenant.logoUrl, 302);
     }
-    return fetch(request);
+    return nextResponse();
   }
 
   // ── PWA manifest ─────────────────────────────────────────────────
@@ -95,7 +105,7 @@ export default async function middleware(request: Request): Promise<Response> {
     path === "/manifest.webmanifest";
 
   const tenant = await fetchTenant(tenantSlug);
-  if (!tenant) return fetch(request);
+  if (!tenant) return nextResponse();
 
   const { name, logoUrl } = tenant;
   const title = `${name} | Book Online`;
@@ -155,7 +165,7 @@ export default async function middleware(request: Request): Promise<Response> {
       pragma: "no-cache",
     },
   });
-  if (!htmlRes.ok) return fetch(request);
+  if (!htmlRes.ok) return nextResponse();
   let html = await htmlRes.text();
 
   // Title
