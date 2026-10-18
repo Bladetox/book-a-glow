@@ -523,3 +523,80 @@ html.marketing-page::-webkit-scrollbar, html.marketing-page *::-webkit-scrollbar
   }
 }
 
+/* Shared homepage typography system. These rules are authoritative for all section headings. */
+.marketing-homepage main .marketing-eyebrow,
+.marketing-homepage main .home-hero__eyebrow,
+.marketing-homepage main .home-audience__eyebrow,
+.marketing-homepage main .home-pricing-preview__eyebrow,
+.marketing-homepage main .home-cta__eyebrow {
+  margin: 0 0 16px !important;
+  color: #94672F !important;
+  font-family: 'Inter', sans-serif !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  line-height: 1.4 !important;
+  letter-spacing: 0.15em !important;
+  text-transform: uppercase !important;
+}
+.marketing-homepage main .home-hero__eyebrow {
+  color: #51483D !important;
+  margin-bottom: 20px !important;
+}
+.marketing-homepage main .home-audience__eyebrow,
+.marketing-homepage main .home-pricing-preview__eyebrow,
+.marketing-homepage main .home-cta__eyebrow {
+  text-align: center;
+}
+.marketing-homepage main .home-hero__heading {
+  font-family: 'Montserrat', sans-serif !important;
+  font-size: clamp(2.25rem, 4.6vw, 3.5rem) !important;
+  font-weight: 800 !important;
+  line-height: 1.08 !important;
+  letter-spacing: -0.03em !important;
+  text-wrap: balance;
+}
+.marketing-homepage main .home-audience__copy h2,
+.marketing-homepage main .home-features__header h2,
+.marketing-homepage main .home-heatmap__header h2,
+.marketing-homepage main #results h2,
+.marketing-homepage main .home-pricing-preview__heading h2,
+.marketing-homepage main .home-cta h2 {
+  margin: 0 0 16px !important;
+  color: #000000 !important;
+  font-family: 'Montserrat', sans-serif !important;
+  font-size: clamp(1.75rem, 3vw, 2.5rem) !important;
+  font-weight: 800 !important;
+  line-height: 1.12 !important;
+  letter-spacing: -0.02em !important;
+  text-wrap: balance;
+}
+.marketing-homepage main .home-audience__copy h2 span,
+.marketing-homepage main .home-features__header h2 span,
+.marketing-homepage main .home-heatmap__header h2 span,
+.marketing-homepage main #results h2 span,
+.marketing-homepage main .home-cta h2 span {
+  color: #94672F !important;
+  font-style: normal !important;
+}
+.marketing-homepage main .home-heatmap__evidence-heading h3,
+.marketing-homepage main .home-heatmap__nexty h3 {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+@media (max-width: 767px) {
+  .marketing-homepage main .home-hero__heading {
+    font-size: clamp(2.25rem, 10vw, 3.3rem) !important;
+  }
+  .marketing-homepage main .home-audience__copy h2,
+  .marketing-homepage main .home-features__header h2,
+  .marketing-homepage main .home-heatmap__header h2,
+  .marketing-homepage main #results h2,
+  .marketing-homepage main .home-pricing-preview__heading h2,
+  .marketing-homepage main .home-cta h2 {
+    font-size: clamp(1.75rem, 7vw, 2.5rem) !important;
+  }
+}
+
