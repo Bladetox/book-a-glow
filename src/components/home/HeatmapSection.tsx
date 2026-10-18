@@ -12,7 +12,7 @@ const HEAT_ROWS = [
   { day: "Sat", slots: [15, 18, 16, 14, 11] },
   { day: "Sun", slots: [3, 4, 2, 2, 1] },
 ];
-const heatColor = (v: number) => v < 4 ? C.emLight : v < 8 ? C.emMid : v < 12 ? C.em : C.emDeep;
+const heatLevel = (v: number) => v < 4 ? "is-low" : v < 8 ? "is-medium" : v < 12 ? "is-high" : "is-peak";
 const TIME_LABELS = ["9am", "11am", "1pm", "3pm", "5pm"];
 
 export const HeatmapSection = () => {
@@ -40,7 +40,7 @@ export const HeatmapSection = () => {
                 <div className="home-heatmap__row" key={row.day}>
                   <span className="home-heatmap__day">{row.day}</span>
                   {row.slots.map((v, i) => (
-                    <span className="home-heatmap__cell" key={i} style={{ background: heatColor(v), color: v < 8 ? "#17251D" : "#FFFFFF" }}>{v}</span>
+                    <span className={`home-heatmap__cell ${heatLevel(v)}`} key={i}>{v}</span>
                   ))}
                 </div>
               ))}
