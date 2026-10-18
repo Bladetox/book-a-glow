@@ -11,16 +11,12 @@ const MAIN_DOMAINS = ["nextslot.co.za", "nextslot.app"];
 // NOTE: we must intercept ALL requests on tenant subdomains — not just
 // text/html — because crawlers (WhatsApp, iMessage, Slack) omit Accept.
 //
-// NOTE ON RUNTIME: This middleware fetches its own origin at "/" to obtain
-// index.html for patching. Same-origin fetch() from Edge middleware
-// bypasses the middleware layer. From Node.js middleware, the same fetch
-// re-enters the middleware and creates an infinite loop (508
-// INFINITE_LOOP_DETECTED). Vercel has deprecated the Edge runtime and emits
-// a build warning; migrating to Node would require replacing the self-fetch
-// with a build-time HTML template or a module-scope cache. That is a
-// separate engineering task, not a one-line runtime flag.
+// The build script emits this immutable app-shell template to dist. The
+// matcher excludes it so the internal fetch cannot recursively invoke this
+// middleware when running on Node.js.
 export const config = {
-  matcher: "/((?!_vercel|_next/static|_next/image|assets|robots|sitemap|placeholder).*)",
+  runtime: "nodejs",
+  matcher: "/((?!_vercel|_next/static|_next/image|assets|robots|sitemap|placeholder|tenant-index-template\\.html).*)",
 };
 
 /** Resolve tenant slug from hostname, or null for marketing domains. */
@@ -145,11 +141,11 @@ export default async function middleware(request: Request): Promise<Response> {
     });
   }
 
-  // ── All other requests → serve patched index.html ─────────────────────
-  // Fetch the raw index.html from Vercel's origin, bypassing edge cache.
-  // We add a unique cache-buster so Vercel doesn't serve us a stale copy.
+  // ── All other requests → serve patched app-shell HTML ─────────────────
+  // Fetch the build-time template from a path excluded by the middleware
+  // matcher. This avoids recursive self-fetches on the Node.js runtime.
   const indexUrl = new URL(request.url);
-  indexUrl.pathname = "/";
+  indexUrl.pathname = "/tenant-index-template.html";
   indexUrl.search = `?__cb=${Date.now()}`;
 
   const htmlRes = await fetch(indexUrl.toString(), {
