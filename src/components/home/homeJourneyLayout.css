@@ -231,3 +231,45 @@
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
+
+/* The advisor orb is a centred, first-row element, with its glow contained by the orb wrapper. */
+.home-insights .home-heatmap__nexty-top {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 18px !important;
+  text-align: center !important;
+}
+.home-insights .home-heatmap__orb {
+  position: relative !important;
+  flex: 0 0 112px !important;
+  width: 112px !important;
+  height: 112px !important;
+  overflow: visible !important;
+  isolation: isolate;
+  margin: 0 auto !important;
+}
+.home-insights .home-heatmap__orb .nexty-orb {
+  transform: translate(-50%, -50%) scale(.78) !important;
+}
+.home-insights .home-heatmap__nexty-copy {
+  width: min(100%, 680px);
+  margin-inline: auto;
+  text-align: center;
+}
+.home-insights .home-heatmap__nexty-copy .home-heatmap__lead {
+  max-width: 620px;
+}
+@media (max-width: 767px) {
+  .home-insights .home-heatmap__nexty-top { gap: 12px !important; }
+  .home-insights .home-heatmap__orb {
+    flex-basis: 96px !important;
+    width: 96px !important;
+    height: 96px !important;
+  }
+  .home-insights .home-heatmap__orb .nexty-orb {
+    transform: translate(-50%, -50%) scale(.64) !important;
+  }
+}
+
