@@ -47,7 +47,7 @@ const tiers = [
   },
   {
     name: "Studio",
-    price: "R899",
+    price: "R999",
     period: "/ month",
     description: "For teams and multi-operator setups.",
     planKey: "studio",
