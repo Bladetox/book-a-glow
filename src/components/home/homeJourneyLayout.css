@@ -198,6 +198,5 @@
     grid-template-columns: 34px repeat(5, minmax(0, 1fr));
     gap: 6px;
   }
-  .home-insights .home-heatmap__cell { aspect-ratio: 2.5 / 1; }
   .home-insights .home-heatmap__nexty { padding: 24px 0; }
 }
