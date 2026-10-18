@@ -16,7 +16,7 @@
 
 /* ═══════════════════════════════════════════════════════════════
    CLEAN LAYOUT FOR INSIGHTS / HEATMAP SECTION
-   Single source of truth. No overrides, no conflicting shapes.
+   Single source of truth. Side-by-side always.
 ═══════════════════════════════════════════════════════════════ */
 
 .home-insights {
@@ -61,13 +61,14 @@
   font: 400 15px/1.7 'Inter', sans-serif;
 }
 
-/* Visual Row (Dashboard + Heatmap) */
+/* Visual Row (Dashboard + Heatmap) - ALWAYS SIDE BY SIDE */
 .home-heatmap__visual-row {
   display: grid;
-  grid-template-columns: 0.85fr 1.15fr; /* Dashboard slightly narrower than heatmap */
-  gap: 32px;
+  grid-template-columns: 0.85fr 1.15fr; 
+  gap: clamp(16px, 2vw, 32px);
   align-items: stretch;
   margin-bottom: 48px;
+  width: 100%;
 }
 
 .home-heatmap__dashboard,
@@ -79,7 +80,7 @@
 
 /* Heatmap Card */
 .home-heatmap__evidence {
-  padding: 24px;
+  padding: clamp(12px, 1.5vw, 24px);
   border-radius: 16px;
   background: #191918;
   color: #F8F4ED;
@@ -90,59 +91,59 @@
 
 .home-heatmap__evidence-heading span {
   color: #C8A36F;
-  font: 700 10px/1.4 'Inter', sans-serif;
+  font: 700 clamp(8px, 0.8vw, 10px)/1.4 'Inter', sans-serif;
   letter-spacing: .14em;
   text-transform: uppercase;
 }
 
 .home-heatmap__evidence-heading h3 {
-  margin: 6px 0 20px;
-  font: 600 16px/1.4 'Inter', sans-serif;
+  margin: 6px 0 clamp(12px, 1.5vw, 20px);
+  font: 600 clamp(11px, 1.2vw, 16px)/1.4 'Inter', sans-serif;
 }
 
 .home-heatmap__grid {
   display: grid;
-  gap: 6px;
+  gap: clamp(2px, 0.5vw, 6px);
   flex: 1;
 }
 
 .home-heatmap__times,
 .home-heatmap__row {
   display: grid;
-  grid-template-columns: 34px repeat(5, minmax(0, 1fr));
-  gap: 6px;
+  grid-template-columns: clamp(20px, 2vw, 34px) repeat(5, minmax(0, 1fr));
+  gap: clamp(2px, 0.5vw, 6px);
 }
 
 .home-heatmap__times {
   margin-bottom: 2px;
   color: #D9D0C4;
   text-align: center;
-  font: 600 10px/1.4 'Inter', sans-serif;
+  font: 600 clamp(7px, 0.8vw, 10px)/1.4 'Inter', sans-serif;
 }
 
 .home-heatmap__day {
   display: flex;
   align-items: center;
   color: #F8F4ED;
-  font: 600 11px/1 'Inter', sans-serif;
+  font: 600 clamp(8px, 0.9vw, 11px)/1 'Inter', sans-serif;
 }
 
 .home-heatmap__cell {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 32px;
-  border-radius: 6px;
-  font: 700 10px/1 'Inter', sans-serif;
+  height: clamp(18px, 2.5vw, 32px);
+  border-radius: clamp(3px, 0.5vw, 6px);
+  font: 700 clamp(7px, 0.8vw, 10px)/1 'Inter', sans-serif;
 }
 
 .home-heatmap__legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 14px;
-  margin-top: 18px;
+  gap: clamp(6px, 1vw, 14px);
+  margin-top: clamp(8px, 1.2vw, 18px);
   color: #D9D0C4;
-  font: 400 11px/1.4 'Inter', sans-serif;
+  font: 400 clamp(7px, 0.8vw, 11px)/1.4 'Inter', sans-serif;
 }
 .home-heatmap__legend span {
   display: inline-flex;
@@ -159,9 +160,9 @@
 .home-heatmap__legend .is-high { background: #1D5A40; }
 
 .home-heatmap__peak {
-  margin: 14px 0 0;
+  margin: clamp(8px, 1.2vw, 14px) 0 0;
   color: #F8F4ED;
-  font: 400 11px/1.6 'Inter', sans-serif;
+  font: 400 clamp(8px, 0.9vw, 11px)/1.6 'Inter', sans-serif;
 }
 
 /* Nexty Story */
@@ -190,7 +191,9 @@
   margin-bottom: 24px;
 }
 
+/* FIX: Added position: relative to keep the Orb contained */
 .home-heatmap__orb {
+  position: relative; 
   width: 120px;
   height: 120px;
   flex-shrink: 0;
@@ -226,14 +229,10 @@
   margin: 0 auto;
 }
 
-/* Responsive adjustments - stack gracefully, don't squish */
+/* Responsive adjustments for overall padding, but keeping visual-row side-by-side */
 @media (max-width: 900px) {
   .home-insights {
     padding: 48px 24px;
-  }
-  .home-heatmap__visual-row {
-    grid-template-columns: 1fr; /* Stack them cleanly */
-    gap: 24px;
   }
   .home-heatmap__nexty {
     padding: 24px 16px;
@@ -243,17 +242,5 @@
 @media (max-width: 767px) {
   .home-insights {
     padding: 40px 16px;
-  }
-  .home-heatmap__evidence {
-    padding: 16px;
-  }
-  .home-heatmap__cell {
-    height: 26px;
-    font-size: 9px;
-  }
-  .home-heatmap__times,
-  .home-heatmap__row {
-    grid-template-columns: 28px repeat(5, minmax(0, 1fr));
-    gap: 4px;
   }
 }
