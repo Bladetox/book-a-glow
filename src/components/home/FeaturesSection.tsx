@@ -5,6 +5,7 @@ import { CarouselDots } from "./CarouselDots";
 import captureImage from "../../assets/professional-using-nextslot-payment-workflow.webp";
 import seeImage from "../../assets/nextslot-dashboard-product-showcase.webp";
 import { Orb } from "./Orb";
+import focusImage from "../../assets/scene-beauty-treatment-room-aspiration.webp";
 
 const GROUPS = [
   {
@@ -27,6 +28,9 @@ const GROUPS = [
     stage: "Grow",
     title: "See the opportunity.",
     description: "Spot quieter periods, recognise booking patterns and discover where your business has room to grow.",
+    image: focusImage,
+    alt: "Nexty highlights a potential opportunity in a service business schedule",
+    imageFit: "cover",
   },
 ];
 
