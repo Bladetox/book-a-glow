@@ -23,8 +23,7 @@ export const HeatmapSection = () => {
         <header className="home-heatmap__header">
           <Eyebrow text="See the business behind the bookings" />
           <h2 id="home-insight-heading">Your bookings tell you <span>more than who is coming next.</span></h2>
-          <p>When your bookings, payments and client activity are connected, you get a clearer picture of your business. See what is happening today, what is hiding in your booking patterns, and where Nexty can help you grow.</p>
-          <p className="home-heatmap__subheading">See what's <span>hiding</span> in your bookings.</p>
+          <p>When your bookings, payments and client activity are connected, you get a clearer picture of your business.</p>
         </header>
 
         <div className="home-heatmap__visual-row">
