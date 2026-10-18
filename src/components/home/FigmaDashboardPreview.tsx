@@ -1,5 +1,4 @@
 import { BP } from "./tokens";
-import { useWindowWidth } from "./useWindowWidth";
 
 const BG = "#080909";
 const PANEL = "#101212";
