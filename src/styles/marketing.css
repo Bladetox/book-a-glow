@@ -600,3 +600,135 @@ html.marketing-page::-webkit-scrollbar, html.marketing-page *::-webkit-scrollbar
   }
 }
 
+/* Final corrections: audience copy sits above a uniform image grid; all audience cards share identical geometry. */
+.marketing-homepage main .home-audience__inner {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  gap: 28px !important;
+}
+.marketing-homepage main .home-audience__copy {
+  width: min(100%, 760px) !important;
+  max-width: 760px !important;
+  flex: 0 1 auto !important;
+  margin: 0 auto !important;
+  text-align: center !important;
+  align-self: center !important;
+}
+.marketing-homepage main .home-audience__copy .home-audience__eyebrow,
+.marketing-homepage main .home-audience__copy h2,
+.marketing-homepage main .home-audience__copy > p:not(.home-audience__eyebrow) {
+  width: 100%;
+  margin-inline: auto !important;
+  text-align: center !important;
+}
+.marketing-homepage main .home-audience__visuals {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  grid-auto-rows: 1fr;
+  align-items: stretch !important;
+  gap: clamp(12px, 1.5vw, 20px) !important;
+  width: min(100%, 900px) !important;
+  margin: 0 auto !important;
+  padding: 0 !important;
+  overflow: visible !important;
+}
+.marketing-homepage main .home-audience__visual {
+  position: relative !important;
+  display: block !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  height: auto !important;
+  aspect-ratio: 4 / 5 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+.marketing-homepage main .home-audience__visual img {
+  display: block !important;
+  position: absolute !important;
+  inset: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  max-width: none !important;
+  object-fit: cover !important;
+  object-position: center !important;
+}
+.marketing-homepage main .home-audience__visual figcaption {
+  position: absolute !important;
+  inset: auto 0 0 !important;
+  z-index: 2 !important;
+  box-sizing: border-box !important;
+}
+.marketing-homepage main .home-audience__swipe-hint,
+.marketing-homepage main .home-audience .home-carousel-dots {
+  display: none !important;
+}
+@media (max-width: 767px) {
+  .marketing-homepage main .home-audience__inner { gap: 22px !important; }
+  .marketing-homepage main .home-audience__visuals {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    justify-content: flex-start !important;
+    gap: 14px !important;
+    width: auto !important;
+    max-width: none !important;
+    margin-inline: -24px !important;
+    padding: 0 24px 12px !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: 24px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .marketing-homepage main .home-audience__visual {
+    flex: 0 0 min(72vw, 280px) !important;
+    width: min(72vw, 280px) !important;
+    aspect-ratio: 4 / 5 !important;
+    scroll-snap-align: start;
+  }
+  .marketing-homepage main .home-audience .home-carousel-dots,
+  .marketing-homepage main .home-audience__swipe-hint {
+    display: block !important;
+  }
+  .marketing-homepage main .home-audience .home-carousel-dots { display: flex !important; }
+}
+
+/* Use the existing MK typography token values for Nexty's advisor heading and supporting copy. */
+.marketing-homepage main .home-heatmap__nexty-copy .home-heatmap__kicker {
+  margin: 0 0 12px !important;
+  color: #94672F !important;
+  font-family: 'Inter', sans-serif !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  line-height: 1.4 !important;
+  letter-spacing: 0.15em !important;
+  text-transform: uppercase !important;
+}
+.marketing-homepage main .home-heatmap__nexty-copy h3 {
+  margin: 0 0 16px !important;
+  color: #000000 !important;
+  font-family: 'Montserrat', sans-serif !important;
+  font-size: clamp(1.75rem, 3vw, 2.5rem) !important;
+  font-weight: 800 !important;
+  line-height: 1.12 !important;
+  letter-spacing: -0.02em !important;
+  text-wrap: balance;
+}
+.marketing-homepage main .home-heatmap__nexty-copy h3 span {
+  color: #94672F !important;
+  font-style: normal !important;
+}
+.marketing-homepage main .home-heatmap__nexty-copy .home-heatmap__lead {
+  margin: 0 auto !important;
+  color: #51483D !important;
+  font-family: 'Inter', sans-serif !important;
+  font-size: 15px !important;
+  line-height: 1.7 !important;
+}
+
