@@ -146,3 +146,52 @@
   .home-insights .home-heatmap__dashboard { max-width: 520px !important; margin-inline: auto !important; }
   .home-insights .home-heatmap__story { max-width: 100% !important; }
 }
+
+
+/* Keep dashboard and heatmap adjacent at every viewport width. */
+.home-insights .home-heatmap__visual-row {
+  display: grid !important;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr) !important;
+  align-items: center !important;
+  gap: clamp(12px, 2.2vw, 32px) !important;
+  width: 100% !important;
+  max-width: 1200px !important;
+  margin: 0 auto 32px !important;
+}
+.home-insights .home-heatmap__dashboard,
+.home-insights .home-heatmap__visual-row .home-heatmap__evidence {
+  min-width: 0 !important;
+  width: 100% !important;
+  margin: 0 !important;
+  float: none !important;
+  box-sizing: border-box !important;
+}
+.home-insights .home-heatmap__dashboard > * {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+}
+.home-insights .home-heatmap__visual-row .home-heatmap__evidence {
+  padding: clamp(10px, 1.2vw, 18px) !important;
+}
+@media (max-width: 767px) {
+  .home-insights .home-heatmap__visual-row {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr) !important;
+    gap: 10px !important;
+    align-items: center !important;
+    margin-bottom: 24px !important;
+  }
+  .home-insights .home-heatmap__visual-row .home-heatmap__evidence {
+    padding: 8px !important;
+  }
+  .home-insights .home-heatmap__evidence-heading h3 {
+    font-size: clamp(10px, 2.5vw, 14px) !important;
+  }
+  .home-insights .home-heatmap__times,
+  .home-insights .home-heatmap__day,
+  .home-insights .home-heatmap__cell,
+  .home-insights .home-heatmap__legend,
+  .home-insights .home-heatmap__peak {
+    font-size: clamp(7px, 1.7vw, 10px) !important;
+  }
+}
