@@ -45,18 +45,10 @@
   margin: 0 auto;
   text-align: center;
 }
-.home-heatmap__header > p:not(.home-heatmap__subheading) {
+.home-heatmap__header > p {
   max-width: 720px;
   margin-inline: auto;
 }
-.home-heatmap__subheading {
-  margin: 30px 0 0;
-  color: #000;
-  font: 800 clamp(22px, 2.5vw, 30px)/1.15 'Montserrat', sans-serif;
-  letter-spacing: -.025em;
-  text-wrap: balance;
-}
-.home-heatmap__subheading span { color: #94672F; }
 .home-heatmap__header h2 {
   margin: 0 0 14px;
   color: #000;
@@ -74,13 +66,42 @@
 }
 
 /* Visual Row (Dashboard + Heatmap) - ALWAYS SIDE BY SIDE */
+.home-heatmap__inner {
+  width: 100%;
+  max-width: 1200px;
+  margin-inline: auto;
+  box-sizing: border-box;
+}
+
 .home-heatmap__visual-row {
   display: grid;
-  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  grid-template-columns: minmax(0, 250px) minmax(0, 1fr);
   gap: clamp(16px, 2vw, 32px);
   align-items: stretch;
   width: min(100%, 980px);
   margin: 36px auto 48px;
+  box-sizing: border-box;
+}
+
+.home-dashboard-preview {
+  --dashboard-scale: 0.6;
+  width: calc(402px * var(--dashboard-scale));
+  max-width: 100%;
+  height: calc(874px * var(--dashboard-scale));
+  margin-inline: auto;
+  overflow: visible;
+  box-sizing: border-box;
+}
+.home-dashboard-preview__viewport {
+  width: calc(402px * var(--dashboard-scale));
+  height: calc(874px * var(--dashboard-scale));
+  overflow: visible;
+}
+.home-dashboard-preview__frame {
+  width: 402px;
+  height: 874px;
+  transform: scale(var(--dashboard-scale));
+  transform-origin: top left;
 }
 
 .home-heatmap__dashboard,
@@ -275,13 +296,23 @@
     text-align: center !important;
   }
   .home-insights .home-heatmap__visual-row {
-    width: min(100%, 520px);
-    grid-template-columns: minmax(0, 1fr);
-    gap: 20px;
+    width: 100%;
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+    gap: 10px;
     margin-top: 28px;
   }
-  .home-insights .home-heatmap__subheading {
-    margin-top: 24px;
+  .home-insights .home-heatmap__evidence {
+    padding: 8px;
+    border-radius: 10px;
+  }
+  .home-insights .home-heatmap__times,
+  .home-insights .home-heatmap__row {
+    grid-template-columns: clamp(14px, 4vw, 22px) repeat(5, minmax(0, 1fr));
+    gap: 2px;
+  }
+  .home-insights .home-heatmap__cell {
+    height: clamp(14px, 4vw, 24px);
+    border-radius: 3px;
   }
 }
 
@@ -293,4 +324,60 @@
 }
 @media (max-width: 767px) {
   .home-insights .home-dashboard-preview { --dashboard-scale: 0.25; }
+}
+
+
+/* Explicit source-of-truth layout for the combined insights composition. */
+.home-insights > .home-heatmap {
+  width: 100% !important;
+  max-width: 1200px !important;
+  margin-inline: auto !important;
+  padding-inline: 0 !important;
+  box-sizing: border-box !important;
+}
+.home-insights .home-heatmap__inner {
+  width: 100% !important;
+  max-width: 1200px !important;
+  margin-inline: auto !important;
+  box-sizing: border-box !important;
+}
+.home-insights .home-heatmap__visual-row {
+  display: grid !important;
+  grid-template-columns: minmax(0, 250px) minmax(0, 1fr) !important;
+  width: min(100%, 980px) !important;
+  margin: 36px auto 48px !important;
+  box-sizing: border-box !important;
+}
+.home-insights .home-heatmap__dashboard {
+  float: none !important;
+  display: flex !important;
+  justify-content: center !important;
+  min-width: 0 !important;
+}
+.home-insights .home-dashboard-preview {
+  float: none !important;
+  margin-inline: auto !important;
+}
+@media (min-width: 768px) and (max-width: 1200px) {
+  .home-insights .home-dashboard-preview { --dashboard-scale: 0.5; }
+}
+@media (max-width: 767px) {
+  .home-insights .home-heatmap__visual-row {
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr) !important;
+    gap: 10px !important;
+    width: 100% !important;
+    margin-top: 28px !important;
+  }
+  .home-insights .home-dashboard-preview { --dashboard-scale: 0.25; }
+  .home-insights .home-heatmap__dashboard,
+  .home-insights .home-heatmap__evidence { min-width: 0 !important; }
+  .home-insights .home-heatmap__evidence { padding: 8px !important; }
+  .home-insights .home-heatmap__times,
+  .home-insights .home-heatmap__row {
+    grid-template-columns: clamp(14px, 4vw, 22px) repeat(5, minmax(0, 1fr)) !important;
+    gap: 2px !important;
+  }
+  .home-insights .home-heatmap__cell {
+    height: clamp(14px, 4vw, 24px) !important;
+  }
 }
