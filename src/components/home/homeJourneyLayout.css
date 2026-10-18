@@ -90,3 +90,59 @@
 .home-insights > .home-heatmap {
   background: transparent !important;
 }
+
+
+/* Final visual-evidence layout: dashboard and heatmap are peers with a clear gutter. */
+.home-insights .home-heatmap__visual-row {
+  display: grid !important;
+  grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.18fr) !important;
+  align-items: center !important;
+  gap: clamp(24px, 3vw, 44px) !important;
+  margin: 0 auto 36px !important;
+  width: 100% !important;
+}
+.home-insights .home-heatmap__dashboard {
+  min-width: 0 !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  float: none !important;
+  clear: none !important;
+}
+.home-insights .home-heatmap__dashboard > * {
+  max-width: 100% !important;
+  width: 100% !important;
+  margin-inline: auto !important;
+}
+.home-insights .home-heatmap__visual-row .home-heatmap__evidence {
+  min-width: 0 !important;
+  width: 100% !important;
+  margin: 0 !important;
+}
+.home-insights .home-heatmap__story {
+  display: block !important;
+  max-width: 760px !important;
+  margin: 0 auto !important;
+}
+.home-insights .home-heatmap__nexty {
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+.home-insights .home-heatmap__orb {
+  overflow: visible !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+@media (max-width: 767px) {
+  .home-insights .home-heatmap__visual-row {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 24px !important;
+    margin-bottom: 28px !important;
+  }
+  .home-insights .home-heatmap__dashboard { max-width: 520px !important; margin-inline: auto !important; }
+  .home-insights .home-heatmap__story { max-width: 100% !important; }
+}
