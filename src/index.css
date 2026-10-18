@@ -912,7 +912,7 @@ html.marketing-page::-webkit-scrollbar, html.marketing-page *::-webkit-scrollbar
 /* ═══════════════════════════════════════════════════════════════
    OVERRIDE: HOME AUDIENCE SECTION FIX
    Fixes layout breakage on desktop, ensures uniform padding, 
-   creates the 2-column split, and scales images properly.
+   centers content properly, and scales images.
 ═══════════════════════════════════════════════════════════════ */
 
 .home-audience {
@@ -920,14 +920,19 @@ html.marketing-page::-webkit-scrollbar, html.marketing-page *::-webkit-scrollbar
   overflow: hidden;        
 }
 
-/* Creates the 2-column layout on desktop (Text left, Images right) */
+/* Uses flexbox to keep text and images closer together and aligned */
 .home-audience__inner {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  display: flex;
+  flex-direction: column;
   gap: 48px;
-  align-items: center;
   max-width: 1200px;
   margin: 0 auto;
+}
+
+/* Constrains the text width so it aligns nicely with the rest of the page */
+.home-audience__copy {
+  width: 100%;
+  max-width: 500px; 
 }
 
 .home-audience__visuals {
@@ -936,6 +941,7 @@ html.marketing-page::-webkit-scrollbar, html.marketing-page *::-webkit-scrollbar
   grid-template-columns: repeat(3, minmax(0, 1fr)) !important; 
   gap: 16px;
   min-width: 0;
+  width: 100%;
 }
 
 /* Constrains the image wrapper so it doesn't overflow */
@@ -968,15 +974,28 @@ html.marketing-page::-webkit-scrollbar, html.marketing-page *::-webkit-scrollbar
   font: 600 12px/1.4 'Inter', sans-serif;
 }
 
+/* --- DESKTOP LAYOUT --- */
+@media (min-width: 1024px) {
+  .home-audience__inner {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 64px; /* Keeps the text and images from getting too far apart */
+  }
+  
+  .home-audience__copy {
+    flex: 0 1 45%; /* Text takes up 45% of the available space */
+  }
+  
+  .home-audience__visuals {
+    flex: 0 1 50%; /* Images take up 50% of the available space */
+  }
+}
+
 /* --- TABLET --- */
 @media (max-width: 1023px) {
   .home-audience {
     padding: 48px 24px 52px;
-  }
-  /* Stacks the text on top of the images */
-  .home-audience__inner {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 32px;
   }
 }
 
