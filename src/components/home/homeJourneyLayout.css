@@ -84,3 +84,9 @@
   .home-insights .home-heatmap__row { grid-template-columns: 28px repeat(5,minmax(0,1fr)); gap: 3px; }
   .home-insights .home-heatmap__cell { height: 27px; }
 }
+
+/* The insights content is one section: child sections share the parent canvas instead of painting their own surfaces. */
+.home-insights > .home-revenue,
+.home-insights > .home-heatmap {
+  background: transparent !important;
+}
