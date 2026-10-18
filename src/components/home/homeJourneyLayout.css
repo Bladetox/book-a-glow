@@ -174,3 +174,116 @@
   .home-insights .home-heatmap__legend { gap: 6px !important; margin-top: 8px !important; }
   .home-insights .home-heatmap__peak { margin-top: 8px !important; }
 }
+
+
+/* Final responsive rules for the insights story.
+   Keep the dashboard and heatmap as fixed-proportion siblings at every viewport.
+   Responsive changes belong to the available width and outer gutter, not to card internals. */
+.home-insights .home-heatmap__visual-row {
+  display: grid !important;
+  grid-template-columns: minmax(0, 0.72fr) minmax(0, 1.28fr) !important;
+  gap: clamp(12px, 1.6vw, 24px) !important;
+  align-items: center !important;
+}
+.home-insights .home-heatmap__visual-row .home-heatmap__evidence {
+  padding: 22px !important;
+  aspect-ratio: 1.28 / 1 !important;
+  min-height: 0 !important;
+  height: auto !important;
+}
+.home-insights .home-heatmap__times,
+.home-insights .home-heatmap__row {
+  grid-template-columns: 34px repeat(5, minmax(0, 1fr)) !important;
+  gap: 5px !important;
+}
+.home-insights .home-heatmap__cell {
+  height: 30px !important;
+  font-size: 10px !important;
+}
+.home-insights .home-heatmap__times,
+.home-insights .home-heatmap__day,
+.home-insights .home-heatmap__legend,
+.home-insights .home-heatmap__peak {
+  font-size: 10px !important;
+}
+.home-insights .home-heatmap__story {
+  display: flex !important;
+  justify-content: center !important;
+  width: 100% !important;
+}
+.home-insights .home-heatmap__nexty {
+  width: min(680px, 100%) !important;
+  margin-inline: auto !important;
+  padding: 28px !important;
+  text-align: center !important;
+}
+.home-insights .home-heatmap__nexty-top {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 12px !important;
+  margin-bottom: 22px !important;
+  text-align: center !important;
+}
+.home-insights .home-heatmap__orb {
+  width: 132px !important;
+  height: 132px !important;
+  flex: 0 0 132px !important;
+  overflow: visible !important;
+  margin: 0 auto !important;
+}
+.home-insights .home-heatmap__kicker,
+.home-insights .home-heatmap__nexty-top h3,
+.home-insights .home-heatmap__lead {
+  text-align: center !important;
+}
+.home-insights .home-heatmap__nexty-top h3 span { color: #B88B52 !important; }
+.home-insights .home-heatmap__nexty .speech-bubble {
+  width: 100% !important;
+  box-sizing: border-box !important;
+  text-align: center !important;
+  margin-inline: auto !important;
+}
+.home-insights .home-heatmap__nexty .speech-bubble,
+.home-insights .home-heatmap__nexty .speech-bubble * {
+  text-align: center !important;
+}
+
+@media (max-width: 767px) {
+  .home-insights > .home-revenue,
+  .home-insights > .home-heatmap {
+    padding-inline: 16px !important;
+  }
+  .home-insights .home-heatmap__visual-row {
+    grid-template-columns: minmax(0, 0.72fr) minmax(0, 1.28fr) !important;
+    gap: 12px !important;
+  }
+  .home-insights .home-heatmap__visual-row .home-heatmap__evidence {
+    padding: 22px !important;
+    aspect-ratio: 1.28 / 1 !important;
+  }
+  .home-insights .home-heatmap__times,
+  .home-insights .home-heatmap__row {
+    grid-template-columns: 34px repeat(5, minmax(0, 1fr)) !important;
+    gap: 5px !important;
+  }
+  .home-insights .home-heatmap__cell {
+    height: 30px !important;
+    font-size: 10px !important;
+  }
+  .home-insights .home-heatmap__times,
+  .home-insights .home-heatmap__day,
+  .home-insights .home-heatmap__legend,
+  .home-insights .home-heatmap__peak {
+    font-size: 10px !important;
+  }
+  .home-insights .home-heatmap__nexty {
+    padding: 24px 16px !important;
+  }
+  .home-insights .home-heatmap__orb {
+    width: 132px !important;
+    height: 132px !important;
+    flex-basis: 132px !important;
+  }
+}
