@@ -115,9 +115,8 @@ export default defineConfig(({ mode }) => ({
       output: {
         manualChunks: (id) => {
           if (!id.includes("node_modules")) return;
-          // Split the framework and heavyweight optional features from the
-          // catch-all vendor chunk to keep individual chunks below the warning threshold.
-          if (id.includes("/react/") || id.includes("/react-dom/") || id.includes("/scheduler/")) return "react-core";
+          // Isolate heavyweight libraries with clear dependency boundaries.
+          // Leave React and unclassified packages to Rollup default graph analysis.
           if (id.includes("framer-motion")) return "framer";
           if (id.includes("lucide-react")) return "icons";
           if (id.includes("@radix-ui")) return "radix";
@@ -128,7 +127,7 @@ export default defineConfig(({ mode }) => ({
           if (id.includes("pdfjs-dist")) return "pdf";
           if (id.includes("tesseract.js") || id.includes("tesseract")) return "ocr";
           if (id.includes("react-hook-form") || id.includes("@hookform")) return "forms";
-          return "vendor";
+          return;
         },
       },
     },
