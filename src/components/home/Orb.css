@@ -125,11 +125,6 @@
   animation: dotOrbitC 3.4s linear infinite 1.1s;
 }
 
-/* Keep the large aura layers from becoming layout dimensions of their own. */
-.home-heatmap__orb {
-  position: relative;
-  isolation: isolate;
-}
 
 @media (prefers-reduced-motion: reduce) {
   .nexty-orb__aura,
