@@ -206,3 +206,15 @@
   position: relative;
   isolation: isolate;
 }
+
+/* Homepage shell styles live in CSS, not inline JSX, so responsive rules stay authoritative. */
+.marketing-homepage {
+  min-height: 100dvh;
+  overflow-x: clip;
+  background: #F5F0E7;
+  color: #000000;
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
