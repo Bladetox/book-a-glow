@@ -309,7 +309,7 @@ const Resources = () => {
                 Free Tools
               </p>
               <h2 style={MK.h2}>
-                Built to solve real problems.
+                Built to solve <span style={MK.accent}>real challenges.</span>
               </h2>
             </div>
 
@@ -742,48 +742,43 @@ const Resources = () => {
           <div className="resources-story-inner">
             <article className="resources-story-block resources-story-idea">
               <p className="resources-story-eyebrow">The Idea Behind NextSlot</p>
-              <h2>Technology that feels like part of your business.</h2>
+              <h2>I didn't want to build just another booking app.</h2>
               <p>
-                NextSlot is a platform designed to help service-based businesses manage bookings,
-                understand their data, and make smarter decisions. The goal goes beyond software.
+                I've always been interested in one simple question: why does something have to be
+                done a certain way?
+              </p>
+              <p>
+                Independent service providers have spent years developing their craft. Running a
+                business adds another layer of responsibility: managing bookings, payments, client
+                relationships and the many decisions that come with keeping everything moving.
+              </p>
+              <p>
+                I wanted to bring those moving parts together, giving business owners a clearer
+                picture of what's happening in their businesses.
               </p>
               <blockquote className="resources-story-quote resources-story-vision">
-                <strong>The vision is simple.</strong>
-                <p>
-                  To give service businesses tools that feel like they were built by someone who
-                  actually understands their world. Not overly complex. Not disconnected from
-                  reality. Just useful, thoughtful technology that helps businesses move forward.
-                </p>
+                <p><strong>However, I believed there was an opportunity to go further.</strong></p>
               </blockquote>
               <p>
-                In a market like South Africa, where raising prices, losing clients, or making the
-                wrong decision can have real consequences, businesses need tools that are street
-                smart as well as professional. Because behind every booking, every client, and every
-                small studio is a person working hard to build something meaningful. NextSlot exists
-                to support that journey.
+                A booking app can manage appointments. A dashboard can show you the numbers. I wanted
+                to explore what becomes possible when that information starts telling a more useful
+                story.
               </p>
-              <div className="resources-story-principles">
-                <p>Not guru advice.</p>
-                <p>Not guesswork.</p>
-                <p>Real insights based on your business' real data.</p>
-              </div>
-            </article>
-
-            <article className="resources-story-block resources-story-creatives">
-              <p className="resources-story-eyebrow">A Platform Built for Creatives</p>
-              <h2>Relationships matter. Community matters. Reputation matters.</h2>
               <p>
-                Creative service businesses are deeply human. NextSlot respects that. The platform
-                is designed to feel familiar and supportive rather than cold or overly technical.
-                It fits naturally into the way creative professionals already run their businesses,
-                helping them stay organised, understand their growth, and serve their clients better.
+                That's where Nexty comes in. Nexty is NextSlot's growth advisor, designed to help
+                business owners recognise patterns, identify potential opportunities and understand
+                where they could improve. From spotting quieter periods to understanding client
+                behaviour, the aim is to turn business activity into insights that can inform what
+                happens next.
               </p>
-              <blockquote className="resources-story-quote">
-                <p>
-                  It is technology that works quietly in the background while the real craft stays
-                  front and center.
-                </p>
+              <blockquote className="resources-story-quote resources-story-founder-quote">
+                <p>Knowing what happened is valuable. Understanding what you could do with that knowledge is where new possibilities begin.</p>
               </blockquote>
+              <p>
+                NextSlot is built around a simple belief: technology should give you more control
+                over your business, helping you spend less energy piecing together your operations
+                and more time making informed decisions about what comes next.
+              </p>
             </article>
 
             <article className="resources-story-block resources-story-founder">
@@ -799,26 +794,18 @@ const Resources = () => {
                   decoding="async"
                 />
                 <div>
-                  <h2 className="resources-founder-name">Arshad Segal</h2>
+                  <h3 className="resources-founder-name">Arshad Segal</h3>
                   <p className="resources-founder-role">Founder of NextSlot</p>
                 </div>
               </div>
               <p>
-                NextSlot was founded by Arshad Segal, an entrepreneur and builder driven by a simple
-                belief.
-              </p>
-              <blockquote className="resources-story-quote resources-story-founder-quote">
-                <p>Sometimes the biggest barrier to progress is waiting too long to start.</p>
-              </blockquote>
-              <p>
-                Arshad has always been drawn to ideas that combine creativity, technology, and human
-                behaviour. His work often sits at the intersection of entrepreneurship, storytelling,
-                and systems thinking. He believes that when people are given the right tools and a
-                clear path forward, they can build extraordinary things from ordinary beginnings.
+                I'm drawn to ideas that connect creativity, technology and human behaviour. I
+                question why things work the way they do, look for the systems behind everyday
+                challenges, and believe useful ideas should lead to practical action.
               </p>
               <p>
-                This philosophy is reflected in his broader creative work and personal brand, centred
-                on one belief he returns to constantly:
+                That thinking also shapes my personal project, Just Start: a space for creativity,
+                entrepreneurship and the courage to begin.
               </p>
               <a
                 className="resources-just-start-card"
@@ -841,10 +828,6 @@ const Resources = () => {
                   Watch on TikTok
                 </span>
               </a>
-              <p>
-                NextSlot is a practical extension of that mindset, a tool created to help everyday
-                business owners take the next step, make better decisions, and grow with confidence.
-              </p>
             </article>
           </div>
         </section>
