@@ -2,6 +2,8 @@ import { CarouselDots } from "./CarouselDots";
 import beautyProfessional from "../../assets/beautician.jpg";
 import barberProfessional from "../../assets/professional-barber-client-service.webp";
 import creativeProfessional from "../../assets/professional-photographer-at-work.webp";
+import consultingProfessional from "../../assets/consulting.webp";
+import tattooArtist from "../../assets/tools-tattoo-artist-at-work.webp";
 
 const audienceCards = [
   {
@@ -20,6 +22,18 @@ const audienceCards = [
     label: "Creative & mobile",
     image: creativeProfessional,
     alt: "Photographer at work with a camera in the field",
+    position: "center",
+  },
+  {
+    label: "Consulting",
+    image: consultingProfessional,
+    alt: "Consultant working with a client on professional advice",
+    position: "center",
+  },
+  {
+    label: "Tattoo Artist",
+    image: tattooArtist,
+    alt: "Tattoo artist working carefully on a client's tattoo",
     position: "center",
   },
 ];
@@ -47,7 +61,7 @@ export const WhoItsForSection = () => {
             </figure>
           ))}
         </div>
-        <CarouselDots trackId="home-audience-track" count={3} label="Business types" />
+        <CarouselDots trackId="home-audience-track" count={5} label="Business types" />
         <p className="home-audience__swipe-hint">Swipe to explore more business types</p>
       </div>
     </section>
