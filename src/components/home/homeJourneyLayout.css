@@ -195,3 +195,82 @@
     font-size: clamp(7px, 1.7vw, 10px) !important;
   }
 }
+
+
+/* Insights layout source of truth: stable heatmap proportions and a restrained gutter. */
+.home-insights .home-heatmap__visual-row {
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr) !important;
+  gap: clamp(16px, 1.2vw, 24px) !important;
+  align-items: center !important;
+}
+.home-insights .home-heatmap__visual-row .home-heatmap__evidence {
+  aspect-ratio: 1.15 / 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  min-height: 0 !important;
+  padding: clamp(10px, 1.1vw, 16px) !important;
+  box-sizing: border-box !important;
+}
+.home-insights .home-heatmap__evidence-heading h3 {
+  margin-bottom: clamp(8px, 1vw, 14px) !important;
+}
+.home-insights .home-heatmap__grid {
+  flex: 0 0 auto !important;
+  gap: clamp(2px, .25vw, 4px) !important;
+}
+.home-insights .home-heatmap__times,
+.home-insights .home-heatmap__row {
+  grid-template-columns: minmax(18px, 0.75fr) repeat(5, minmax(0, 1fr)) !important;
+  gap: clamp(2px, .25vw, 4px) !important;
+}
+.home-insights .home-heatmap__cell {
+  height: clamp(12px, 2vw, 26px) !important;
+  border-radius: 3px !important;
+  font-size: clamp(7px, .65vw, 10px) !important;
+}
+.home-insights .home-heatmap__times,
+.home-insights .home-heatmap__day,
+.home-insights .home-heatmap__legend,
+.home-insights .home-heatmap__peak {
+  font-size: clamp(7px, .7vw, 10px) !important;
+}
+.home-insights .home-heatmap__legend {
+  gap: 8px !important;
+  margin-top: clamp(6px, .8vw, 12px) !important;
+}
+.home-insights .home-heatmap__peak {
+  margin-top: clamp(6px, .8vw, 12px) !important;
+}
+.home-insights .home-heatmap__lead {
+  max-width: 34rem;
+  text-wrap: pretty;
+}
+.home-insights .home-heatmap__nexty-top h3 span {
+  color: #B88B52 !important;
+}
+@media (max-width: 767px) {
+  .home-insights .home-heatmap__visual-row {
+    grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr) !important;
+    gap: 12px !important;
+  }
+  .home-insights .home-heatmap__visual-row .home-heatmap__evidence {
+    aspect-ratio: 1.15 / 1 !important;
+    padding: 8px !important;
+  }
+  .home-insights .home-heatmap__times,
+  .home-insights .home-heatmap__row {
+    grid-template-columns: minmax(14px, .75fr) repeat(5, minmax(0, 1fr)) !important;
+    gap: 2px !important;
+  }
+  .home-insights .home-heatmap__cell {
+    height: clamp(10px, 2.4vw, 16px) !important;
+    font-size: clamp(6px, 1.35vw, 8px) !important;
+  }
+  .home-insights .home-heatmap__times,
+  .home-insights .home-heatmap__day,
+  .home-insights .home-heatmap__legend,
+  .home-insights .home-heatmap__peak {
+    font-size: clamp(6px, 1.3vw, 8px) !important;
+  }
+}
