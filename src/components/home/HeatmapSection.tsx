@@ -62,7 +62,7 @@ export const HeatmapSection = () => {
               <div>
                 <p className="home-heatmap__kicker">YOUR GROWTH ADVISOR</p>
                 <h3><span>Nexty</span> is your growth advisor.</h3>
-                <p className="home-heatmap__lead">Not just another dashboard. A clearer next step.</p>
+                <p className="home-heatmap__lead">Nexty analyses your bookings and suggests steps to help your business grow.</p>
               </div>
             </div>
             <SpeechBubble
@@ -73,7 +73,6 @@ export const HeatmapSection = () => {
               action="See the gap"
               delay={0}
             />
-            <p className="home-heatmap__support">This recommendation is grounded in the booking patterns shown here.</p>
           </article>
         </div>
       </div>
