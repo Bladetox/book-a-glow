@@ -1,7 +1,7 @@
+import MarketingLayout from "@/components/site/MarketingLayout";
 import SiteHeader from "@/components/site/SiteHeader";
 import SiteFooter from "@/components/site/SiteFooter";
 import { C, FONT_BODY, FONT_DISPLAY } from "@/components/home/tokens";
-import { HOME_STYLES } from "@/components/home/homeStyles";
 
 const bodyText: React.CSSProperties = {
   fontSize: 14,
@@ -11,8 +11,7 @@ const bodyText: React.CSSProperties = {
 };
 
 const SiteTerms = () => (
-  <div className="nextslot-theme marketing-light" style={{ overflowX: "hidden" }}>
-    <style>{HOME_STYLES}</style>
+  <MarketingLayout>
     <SiteHeader />
     <main style={{ maxWidth: 800, margin: "0 auto", padding: "80px 24px 120px" }}>
 
@@ -140,7 +139,7 @@ const SiteTerms = () => (
       </div>
     </main>
     <SiteFooter />
-  </div>
+  </MarketingLayout>
 );
 
 const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
