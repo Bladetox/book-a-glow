@@ -8,7 +8,6 @@ import { ProofTicker } from "@/components/home/ProofTicker";
 import { WhoItsForSection } from "@/components/home/WhoItsForSection";
 import { HomePricingPreview } from "@/components/home/HomePricingPreview";
 import { CaseStudySection } from "@/components/home/CaseStudySection";
-import { RevenueSection } from "@/components/home/RevenueSection";
 import { FeaturesSection } from "@/components/home/FeaturesSection";
 import { HeatmapSection } from "@/components/home/HeatmapSection";
 import { CTASection } from "@/components/home/CTASection";
@@ -35,7 +34,6 @@ const Index = () => {
         <WhoItsForSection />
         <FeaturesSection />
         <div className="home-insights">
-          <RevenueSection />
           <HeatmapSection />
         </div>
         <CaseStudySection />
