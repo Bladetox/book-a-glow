@@ -105,6 +105,23 @@
     padding-left: env(safe-area-inset-left);
     padding-right: env(safe-area-inset-right);
   }
+
+  /* App roots opt into their own visual system. Marketing-only typography and
+     component treatments must never style tenant booking or admin surfaces. */
+  .marketing-site {
+    font-family: var(--font-body);
+  }
+  .booking-app, .admin-app {
+    font-family: var(--font-body);
+    letter-spacing: normal;
+  }
+  .booking-app h1, .booking-app h2, .booking-app h3,
+  .admin-app h1, .admin-app h2, .admin-app h3 {
+    font-family: inherit;
+    letter-spacing: normal;
+    overflow-wrap: normal;
+    word-break: normal;
+  }
   input, select, textarea, [contenteditable] {
     font-size: max(16px, 1em);
     -webkit-appearance: none;
@@ -113,7 +130,7 @@
 }
 
 @layer components {
-  .glass-card, .glass-card-service {
+  .marketing-site .glass-card, .marketing-site .glass-card-service {
     position: relative;
     background: #FAF7F1;
     border: 1px solid rgba(126, 96, 58, 0.16);
@@ -121,16 +138,16 @@
     box-shadow: 0 4px 20px rgba(66, 48, 27, 0.04);
     transition: border-color 0.3s ease, box-shadow 0.3s ease;
   }
-  .glass-card:hover, .glass-card-service:hover {
+  .marketing-site .glass-card:hover, .marketing-site .glass-card-service:hover {
     border-color: rgba(126, 96, 58, 0.4);
     box-shadow: 0 8px 30px rgba(66, 48, 27, 0.08);
   }
-  .dark .glass-card, .dark .glass-card-service {
+  .marketing-site.dark .glass-card, .marketing-site.dark .glass-card-service {
     background: #111110;
     border-color: rgba(255, 255, 255, 0.08);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
   }
-  .pain-point-card {
+  .marketing-site .pain-point-card {
     position: relative;
     background: #FAF7F1;
     border: 1px solid rgba(126, 96, 58, 0.2);
@@ -139,11 +156,11 @@
     box-shadow: 0 4px 16px rgba(66, 48, 27, 0.04);
     transition: border-color 0.25s ease, transform 0.25s ease;
   }
-  .pain-point-card:hover {
+  .marketing-site .pain-point-card:hover {
     border-color: rgba(179, 58, 50, 0.6);
     transform: translateY(-2px);
   }
-  .glass-input {
+  .marketing-site .glass-input {
     background: transparent;
     border: 0;
     border-bottom: 1px solid rgba(126, 96, 58, 0.3);
@@ -153,12 +170,12 @@
     font-size: max(16px, 0.875rem);
     box-shadow: none;
   }
-  .glass-input:focus, .glass-input:focus-within {
+  .marketing-site .glass-input:focus, .marketing-site .glass-input:focus-within {
     border-color: hsl(var(--foreground));
     box-shadow: none;
     background: transparent;
   }
-  .category-pill {
+  .marketing-site .category-pill {
     @apply px-4 py-2 text-[11px] font-semibold tracking-[0.1em] uppercase cursor-pointer;
     background: transparent;
     color: hsl(var(--muted-foreground));
@@ -166,11 +183,11 @@
     border-radius: 2px;
     transition: all 0.2s ease;
   }
-  .category-pill:hover {
+  .marketing-site .category-pill:hover {
     color: hsl(var(--foreground));
     border-color: hsl(var(--foreground) / 0.5);
   }
-  .category-pill.active {
+  .marketing-site .category-pill.active {
     background: hsl(var(--foreground));
     color: hsl(var(--background));
     border-color: hsl(var(--foreground));
@@ -259,17 +276,17 @@
     color: #000000;
     border-color: rgba(126, 96, 58, 0.8);
   }
-  .step-indicator {
+  .booking-app .step-indicator {
     @apply flex items-center justify-center w-7 h-7 text-xs font-semibold;
     border-radius: 2px;
     transition: all 0.3s ease;
   }
-  .step-indicator.active, .step-indicator.completed {
+  .booking-app .step-indicator.active, .booking-app .step-indicator.completed {
     background: #000000;
     color: #FFFFFF;
     border: 1px solid #000000;
   }
-  .step-indicator.upcoming {
+  .booking-app .step-indicator.upcoming {
     background: transparent;
     color: #74695C;
     border: 1px solid rgba(126, 96, 58, 0.3);
