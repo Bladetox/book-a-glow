@@ -8,7 +8,7 @@ export const HeroSection = () => {
   const isMobile = width < BP;
   return (
     <section className={`home-hero${isMobile ? " is-mobile" : ""}`}>
-      <img className="home-hero__image" src={heroImage} alt="" aria-hidden="true" />
+      <img className="home-hero__image" src={heroImage} alt="" aria-hidden="true" fetchPriority="high" />
       <div className="home-hero__overlay" aria-hidden="true" />
       <div className="home-hero__inner">
         <div className="home-hero__layout">
