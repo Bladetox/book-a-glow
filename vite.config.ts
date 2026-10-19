@@ -17,26 +17,29 @@ export default defineConfig(({ mode }) => ({
     {
       name: "preload-homepage-hero-image",
       apply: "build",
-      generateBundle(_options, bundle) {
-        const heroAsset = Object.values(bundle).find(
-          (item) =>
-            item.type === "asset" &&
-            (item.name === "NexSlot_Hero.webp" || item.fileName.includes("NexSlot_Hero")),
-        );
-        const indexHtml = bundle["index.html"];
+      transformIndexHtml: {
+        order: "post",
+        handler(html, ctx) {
+          // In Vite's post HTML transform, ctx.bundle contains the emitted
+          // production assets, including the hashed hero image filename.
+          const heroAsset = Object.values(ctx.bundle ?? {}).find(
+            (item) =>
+              item.type === "asset" &&
+              item.fileName.includes("NexSlot_Hero"),
+          );
 
-        if (!heroAsset || !indexHtml || indexHtml.type !== "asset") {
-          this.warn("Homepage hero preload was not added because the hero image or index.html asset was not found.");
-          return;
-        }
+          if (!heroAsset) {
+            this.warn("Homepage hero preload was not added because the emitted hero image asset was not found.");
+            return html;
+          }
 
-        const html = indexHtml.source.toString();
-        if (html.includes('rel="preload" as="image"')) return;
+          if (html.includes('rel="preload" as="image"')) return html;
 
-        indexHtml.source = html.replace(
-          "</head>",
-          `    <link rel="preload" as="image" href="/${heroAsset.fileName}" fetchpriority="high" />\n  </head>`,
-        );
+          return html.replace(
+            "</head>",
+            `    <link rel="preload" as="image" href="/${heroAsset.fileName}" fetchpriority="high" />\n  </head>`,
+          );
+        },
       },
     },
     react(),
