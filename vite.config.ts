@@ -35,7 +35,7 @@ export default defineConfig(({ mode }) => ({
 
         indexHtml.source = html.replace(
           "</head>",
-          `    <link rel="preload" as="image" href="/${heroAsset.fileName}" fetchpriority="high" />\\n  </head>`,
+          `    <link rel="preload" as="image" href="/${heroAsset.fileName}" fetchpriority="high" />\n  </head>`,
         );
       },
     },
