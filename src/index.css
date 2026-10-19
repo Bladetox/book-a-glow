@@ -704,3 +704,56 @@ html:not(.dark) .booking-app .tenant-logo-img {
 /* Shared utility retained for non-marketing routes during CSS isolation. */
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 .scrollbar-hide::-webkit-scrollbar { display: none; }
+
+/* Booking app readability pass: normalize compact utility text without touching other apps. */
+/* Utility classes are retained in JSX, while this scoped layer gives booking content
+   a consistent minimum readable size. Specificity is limited to the booking shell. */
+.booking-app [class~="text-[9px]"],
+.booking-app [class~="text-[10px]"],
+.booking-app [class~="text-[11px]"] {
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.booking-app [class~="text-xs"] {
+  font-size: 0.8125rem;
+  line-height: 1.45;
+}
+
+/* Keep secondary content readable on translucent tenant-themed surfaces. */
+.booking-app .text-muted-foreground\/20,
+.booking-app .text-muted-foreground\/30,
+.booking-app .text-muted-foreground\/40,
+.booking-app .text-muted-foreground\/50,
+.booking-app .text-muted-foreground\/60 {
+  color: hsl(var(--muted-foreground) / 0.85);
+}
+
+/* Controls must remain comfortably tappable when compact icon sizing is used. */
+.booking-app button,
+.booking-app [role="button"] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.booking-app button:focus-visible,
+.booking-app [role="button"]:focus-visible,
+.booking-app a:focus-visible,
+.booking-app input:focus-visible,
+.booking-app select:focus-visible,
+.booking-app textarea:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 3px;
+}
+
+/* Respect reduced-motion preferences without changing the normal motion language. */
+@media (prefers-reduced-motion: reduce) {
+  .booking-app *,
+  .booking-app *::before,
+  .booking-app *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
