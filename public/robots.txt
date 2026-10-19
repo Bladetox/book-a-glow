@@ -14,4 +14,3 @@ User-agent: *
 Allow: /
 
 Sitemap: https://www.nextslot.co.za/sitemap.xml
-Agentmap: https://www.nextslot.co.za/ai-catalog.json
