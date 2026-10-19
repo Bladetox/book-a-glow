@@ -1,0 +1,56 @@
+{
+  "specVersion": "1.0",
+  "host": {
+    "displayName": "NextSlot",
+    "identifier": "https://www.nextslot.co.za",
+    "documentationUrl": "https://www.nextslot.co.za/resources",
+    "logoUrl": "https://www.nextslot.co.za/favicon.svg"
+  },
+  "entries": [
+    {
+      "identifier": "urn:air:nextslot.co.za:platform:booking",
+      "displayName": "NextSlot public booking platform",
+      "type": "text/html",
+      "url": "https://www.nextslot.co.za/",
+      "description": "Information about NextSlot and its public booking platform for independent service businesses.",
+      "tags": [
+        "booking",
+        "appointments",
+        "service-business",
+        "South Africa"
+      ],
+      "capabilities": [
+        "PublicBookingDiscovery",
+        "ServiceBusinessInformation"
+      ],
+      "representativeQueries": [
+        "What is NextSlot and how does it help independent service businesses?",
+        "How can a service business manage appointments with NextSlot?",
+        "Where can I find information about NextSlot pricing and features?"
+      ],
+      "version": "1.0.0",
+      "updatedAt": "2026-10-19T00:00:00Z"
+    },
+    {
+      "identifier": "urn:air:nextslot.co.za:resources:business-guidance",
+      "displayName": "NextSlot business resources",
+      "type": "text/html",
+      "url": "https://www.nextslot.co.za/resources",
+      "description": "Resources and guidance for independent service businesses.",
+      "tags": [
+        "resources",
+        "small-business",
+        "service-business"
+      ],
+      "capabilities": [
+        "BusinessResourceDiscovery"
+      ],
+      "representativeQueries": [
+        "What resources does NextSlot offer independent service businesses?",
+        "Where can service providers find business guidance from NextSlot?"
+      ],
+      "version": "1.0.0",
+      "updatedAt": "2026-10-19T00:00:00Z"
+    }
+  ]
+}
