@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import shuMeezPhenomebeauty from "@/assets/Shu-meez-Phenomebeauty.webp";
 import { C, FONT_BODY, FONT_DISPLAY, BP } from "./tokens";
 import { useWindowWidth } from "./useWindowWidth";
 import { Eyebrow } from "./Eyebrow";
@@ -49,8 +50,10 @@ export const CaseStudySection = () => {
             }}
           >
             <img
-              src="https://iili.io/Cxw0jRI.jpg"
+              src={shuMeezPhenomebeauty}
               alt="Shu-meez, Owner of PhenomeBeauty"
+              loading="lazy"
+              decoding="async"
               style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center top" }}
             />
           </div>
