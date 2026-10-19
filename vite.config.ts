@@ -14,6 +14,31 @@ export default defineConfig(({ mode }) => ({
     },
   },
   plugins: [
+    {
+      name: "preload-homepage-hero-image",
+      apply: "build",
+      generateBundle(_options, bundle) {
+        const heroAsset = Object.values(bundle).find(
+          (item) =>
+            item.type === "asset" &&
+            (item.name === "NexSlot_Hero.webp" || item.fileName.includes("NexSlot_Hero")),
+        );
+        const indexHtml = bundle["index.html"];
+
+        if (!heroAsset || !indexHtml || indexHtml.type !== "asset") {
+          this.warn("Homepage hero preload was not added because the hero image or index.html asset was not found.");
+          return;
+        }
+
+        const html = indexHtml.source.toString();
+        if (html.includes('rel="preload" as="image"')) return;
+
+        indexHtml.source = html.replace(
+          "</head>",
+          `    <link rel="preload" as="image" href="/${heroAsset.fileName}" fetchpriority="high" />\\n  </head>`,
+        );
+      },
+    },
     react(),
     legacy({
       targets: ["ios >= 13", "safari >= 13"],
