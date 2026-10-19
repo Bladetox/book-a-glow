@@ -1,7 +1,7 @@
 import { PrimaryCTA } from "./PrimaryCTA";
 import { BP } from "./tokens";
 import { useWindowWidth } from "./useWindowWidth";
-import heroImage from "../../assets/NexSlot_Hero.png";
+import heroImage from "../../assets/NexSlot_Hero.webp";
 
 export const HeroSection = () => {
   const width = useWindowWidth();
