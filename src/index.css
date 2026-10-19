@@ -79,7 +79,7 @@
   }
   /* Keep display-font utility available to both apps, but scope marketing
      heading scale/letter-spacing so tenant booking screens keep their own type scale. */
-  .font-display {
+  .marketing-site .font-display {
     font-family: var(--font-display);
     font-weight: 700;
   }

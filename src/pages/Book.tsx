@@ -179,7 +179,7 @@ const Index = () => {
         region scrolls. This eliminates page-level scroll, fixes the iOS
         keyboard jump, and makes every step feel like a native app screen.
       */}
-      <div className="h-dvh flex flex-col overflow-hidden bg-background">
+      <div className="booking-app h-dvh flex flex-col overflow-hidden bg-background">
 
         {!showSplash && ownerId && (
           <PrefetchAvailability durationMinutes={durationForSlots} staffId={ownerId} />
