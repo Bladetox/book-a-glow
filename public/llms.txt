@@ -1,0 +1,22 @@
+# NextSlot
+
+> NextSlot is a South African booking and business-management platform for independent service businesses. It helps service providers manage bookings, clients, payments, availability and business performance.
+
+## Official website
+
+- [NextSlot homepage](https://www.nextslot.co.za/): Product overview, platform features and pricing.
+- [How it works](https://www.nextslot.co.za/#how-it-works): Overview of the NextSlot workflow.
+- [Pricing](https://www.nextslot.co.za/#pricing): Available plans and pricing information.
+- [Resources](https://www.nextslot.co.za/resources): Educational resources for service businesses.
+- [Contact NextSlot](https://www.nextslot.co.za/#contact): Contact and product enquiries.
+
+## Public booking examples
+
+- [PhenomeBeauty bookings](https://phenomebeauty.nextslot.co.za/): Public booking page for PhenomeBeauty.
+- [Zo Beauty Bar bookings](https://zo-beauty-bar.nextslot.co.za/): Public booking page for Zo Beauty Bar.
+
+## Important notes
+
+- Public booking pages and business information are tenant-specific. Consult the relevant tenant booking page for current services, availability and booking terms.
+- Do not assume prices, availability or business policies are identical across tenants.
+- Account, admin and payment-return routes are interactive application flows and are not general documentation sources.
