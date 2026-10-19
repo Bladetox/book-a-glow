@@ -23,7 +23,17 @@
     --border: 34 20% 78%;
     --input: 34 20% 78%;
     --ring: 34 40% 52%;
-    --radius: 0.125rem;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --sidebar-background: 40 38% 93%;
+    --sidebar-foreground: 0 0% 0%;
+    --sidebar-primary: 0 0% 0%;
+    --sidebar-primary-foreground: 40 38% 93%;
+    --sidebar-accent: 35 34% 89%;
+    --sidebar-accent-foreground: 0 0% 0%;
+    --sidebar-border: 34 20% 78%;
+    --sidebar-ring: 34 40% 52%;
+    --radius: 0.75rem;
     --font-display: 'Montserrat', system-ui, sans-serif;
     --font-body: 'Inter', system-ui, sans-serif;
     --font-accent: 'Cormorant Garamond', serif;
@@ -54,7 +64,17 @@
     --border: 0 0% 18%;
     --input: 0 0% 18%;
     --ring: 0 0% 100%;
-    --radius: 0.125rem;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --sidebar-background: 0 0% 5%;
+    --sidebar-foreground: 0 0% 95%;
+    --sidebar-primary: 0 0% 100%;
+    --sidebar-primary-foreground: 0 0% 5%;
+    --sidebar-accent: 0 0% 15%;
+    --sidebar-accent-foreground: 0 0% 85%;
+    --sidebar-border: 0 0% 18%;
+    --sidebar-ring: 0 0% 100%;
+    --radius: 0.75rem;
     --glass-bg: 0 0% 12%;
     --glass-border: 0 0% 22%;
     --glass-highlight: 0 0% 60%;
@@ -624,6 +644,8 @@
   --border: 34 20% 78%;
   --input: 34 20% 78%;
   --ring: 34 40% 52%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
   --radius: 0.125rem;
   --shadow-soft: 0 1px 3px rgba(66,48,27,.05), 0 4px 12px rgba(66,48,27,.04);
   --shadow-elevated: 0 4px 16px rgba(66,48,27,.08), 0 12px 40px rgba(66,48,27,.06);
@@ -634,6 +656,12 @@
   color-scheme: light;
 }
 .nextslot-theme.marketing-light { background: #F5F0E7; color: #000000; color-scheme: light; }
+.nextslot-theme.booking-app,
+.nextslot-theme.admin-app {
+  /* App surfaces retain the pre-refactor rounded component contract. */
+  --radius: 0.625rem;
+}
+
 .nextslot-theme.dark-brand {
   --background: 0 0% 4%;
   --foreground: 0 0% 91%;
@@ -654,6 +682,24 @@
   color: #e8e8e6;
 }
 
+
+/* Tenant logo image treatment retained from the pre-isolation stylesheet.
+   Ownership: booking app only; admin tenant marks keep their own contrast treatment. */
+.booking-app .tenant-logo img,
+.booking-app .tenant-logo-img {
+  mix-blend-mode: multiply;
+  opacity: 0.9;
+  transition: opacity 0.3s ease;
+}
+.dark .booking-app .tenant-logo img,
+.dark .booking-app .tenant-logo-img {
+  mix-blend-mode: luminosity;
+  opacity: 0.88;
+}
+html:not(.dark) .booking-app .tenant-logo img,
+html:not(.dark) .booking-app .tenant-logo-img {
+  mix-blend-mode: multiply;
+}
 
 /* Shared utility retained for non-marketing routes during CSS isolation. */
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
