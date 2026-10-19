@@ -27,11 +27,42 @@
     --font-display: 'Montserrat', system-ui, sans-serif;
     --font-body: 'Inter', system-ui, sans-serif;
     --font-accent: 'Cormorant Garamond', serif;
+    --glass-bg: 0 0% 98%;
+    --glass-border: 0 0% 80%;
+    --glass-highlight: 0 0% 100%;
+    --glass-shimmer: 0 0% 100%;
     --keyboard-height: 0px;
     --visual-viewport-height: 100dvh;
   }
 
-  .dark, .dark-brand {
+  /* Booking dark mode retains the original neutral primary CTA. */
+  .dark {
+    --background: 0 0% 5%;
+    --foreground: 0 0% 95%;
+    --card: 0 0% 10%;
+    --card-foreground: 0 0% 95%;
+    --popover: 0 0% 10%;
+    --popover-foreground: 0 0% 95%;
+    --primary: 0 0% 100%;
+    --primary-foreground: 0 0% 5%;
+    --secondary: 0 0% 15%;
+    --secondary-foreground: 0 0% 85%;
+    --muted: 0 0% 14%;
+    --muted-foreground: 0 0% 55%;
+    --accent: 0 0% 20%;
+    --accent-foreground: 0 0% 100%;
+    --border: 0 0% 18%;
+    --input: 0 0% 18%;
+    --ring: 0 0% 100%;
+    --radius: 0.125rem;
+    --glass-bg: 0 0% 12%;
+    --glass-border: 0 0% 22%;
+    --glass-highlight: 0 0% 60%;
+    --glass-shimmer: 0 0% 70%;
+  }
+
+  /* The marketing pricing theme intentionally keeps its gold accent. */
+  .dark-brand {
     --background: 0 0% 5%;
     --foreground: 0 0% 95%;
     --card: 0 0% 8%;
@@ -50,6 +81,10 @@
     --input: 0 0% 100% / 0.1;
     --ring: 38 45% 65%;
     --radius: 0.125rem;
+    --glass-bg: 0 0% 12%;
+    --glass-border: 0 0% 22%;
+    --glass-highlight: 0 0% 60%;
+    --glass-shimmer: 0 0% 70%;
   }
 }
 
@@ -232,65 +267,345 @@
     border-color: rgba(126, 96, 58, 0.8);
   }
 
-  /* Booking controls are intentionally independent from marketing CTA styling. */
-  .btn-next, .btn-back {
-    appearance: none;
-    box-sizing: border-box;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 0;
-    min-height: 48px;
-    padding: 12px 20px;
-    border: 1px solid #B88B52;
-    border-radius: 8px;
-    font-family: var(--font-body);
-    font-size: 15px;
-    font-weight: 600;
-    letter-spacing: 0;
-    line-height: 1.25;
-    text-align: center;
-    cursor: pointer;
-    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  /* Restore the booking app component system from the last working production commit. */
+
+  /* ===== APPLE LIQUID GLASS ===== */
+  .booking-app .glass-card {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(
+      145deg,
+      hsl(var(--glass-bg) / 0.12),
+      hsl(var(--glass-bg) / 0.06)
+    );
+    backdrop-filter: blur(72px) saturate(2.2) brightness(1.08);
+    -webkit-backdrop-filter: blur(72px) saturate(2.2) brightness(1.08);
+    border: 1px solid transparent;
+    background-clip: padding-box;
+    box-shadow:
+      0 8px 40px hsl(0 0% 0% / 0.18),
+      0 2px 8px hsl(0 0% 0% / 0.08),
+      0 1px 0 hsl(var(--glass-highlight) / 0.55) inset,
+      1px 0 0 hsl(var(--glass-highlight) / 0.25) inset,
+      0 -1px 0 hsl(0 0% 0% / 0.18) inset,
+      -1px 0 0 hsl(0 0% 0% / 0.08) inset,
+      0 0 0 0.5px hsl(var(--glass-highlight) / 0.2);
   }
-  .btn-next {
-    background: #B88B52;
-    color: #000000;
+
+  .booking-app .glass-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1.5px;
+    background: linear-gradient(
+      90deg,
+      transparent 2%,
+      hsl(var(--glass-shimmer) / 0.75) 30%,
+      hsl(0 0% 100% / 0.9) 50%,
+      hsl(var(--glass-shimmer) / 0.75) 70%,
+      transparent 98%
+    );
+    pointer-events: none;
   }
-  .btn-next:hover:not(:disabled) {
-    background: #94672F;
-    border-color: #94672F;
-    color: #FFFFFF;
+
+  .booking-app .glass-card::after {
+    content: '';
+    position: absolute;
+    top: -30%;
+    left: -20%;
+    width: 160%;
+    height: 120%;
+    background: radial-gradient(
+      ellipse at 35% 25%,
+      hsl(0 0% 100% / 0.09),
+      hsl(0 0% 100% / 0.03) 40%,
+      transparent 65%
+    );
+    pointer-events: none;
   }
-  .btn-next:disabled {
-    opacity: 0.45;
+
+  /* ===== SERVICE CARDS ===== */
+  .booking-app .glass-card-service {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(
+      145deg,
+      hsl(var(--glass-bg) / 0.10),
+      hsl(var(--glass-bg) / 0.04)
+    );
+    border: 1px solid hsl(var(--glass-border) / 0.08);
+    backdrop-filter: blur(48px) saturate(2.0) brightness(1.06);
+    -webkit-backdrop-filter: blur(48px) saturate(2.0) brightness(1.06);
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow:
+      0 2px 16px hsl(0 0% 0% / 0.10),
+      0 1px 0 hsl(var(--glass-highlight) / 0.45) inset,
+      1px 0 0 hsl(var(--glass-highlight) / 0.15) inset,
+      0 -1px 0 hsl(0 0% 0% / 0.12) inset,
+      0 0 0 0.5px hsl(var(--glass-highlight) / 0.12);
+  }
+
+  .booking-app .glass-card-service::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent 5%,
+      hsl(var(--glass-shimmer) / 0.55) 40%,
+      hsl(0 0% 100% / 0.70) 50%,
+      hsl(var(--glass-shimmer) / 0.55) 60%,
+      transparent 95%
+    );
+    pointer-events: none;
+  }
+
+  .booking-app .glass-card-service:hover {
+    border-color: hsl(var(--glass-highlight) / 0.18);
+    background: linear-gradient(
+      145deg,
+      hsl(var(--glass-bg) / 0.16),
+      hsl(var(--glass-bg) / 0.08)
+    );
+    box-shadow:
+      0 6px 28px hsl(0 0% 0% / 0.14),
+      0 1px 0 hsl(var(--glass-highlight) / 0.55) inset,
+      0 -1px 0 hsl(0 0% 0% / 0.14) inset,
+      0 0 0 0.5px hsl(var(--glass-highlight) / 0.18);
+    transform: translateY(-2px);
+  }
+
+  .booking-app .glass-card-service.selected {
+    border-color: hsl(var(--primary) / 0.4);
+    background: linear-gradient(
+      145deg,
+      hsl(var(--primary) / 0.12),
+      hsl(var(--primary) / 0.05)
+    );
+    box-shadow:
+      0 0 30px hsl(var(--primary) / 0.08),
+      0 4px 20px hsl(0 0% 0% / 0.18),
+      0 1px 0 hsl(var(--glass-highlight) / 0.15) inset,
+      0 0 0 0.5px hsl(var(--primary) / 0.12) inset;
+  }
+
+  .booking-app .glass-card-service.selected::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(
+      ellipse at 50% 0%,
+      hsl(var(--primary) / 0.05),
+      transparent 60%
+    );
+    pointer-events: none;
+  }
+
+  /* ===== LIQUID INPUT FIELDS ===== */
+  .booking-app .glass-input {
+    position: relative;
+    background: linear-gradient(
+      145deg,
+      hsl(var(--glass-bg) / 0.45),
+      hsl(var(--glass-bg) / 0.2)
+    );
+    backdrop-filter: blur(20px) saturate(1.5);
+    -webkit-backdrop-filter: blur(20px) saturate(1.5);
+    border: 1px solid hsl(var(--glass-border) / 0.15);
+    box-shadow:
+      0 2px 8px hsl(0 0% 0% / 0.06),
+      0 1px 0 hsl(var(--glass-highlight) / 0.08) inset,
+      0 0 0 0.5px hsl(var(--glass-highlight) / 0.04) inset;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    font-size: max(16px, 0.875rem);
+  }
+
+  .booking-app .glass-input:focus,
+  .booking-app .glass-input:focus-within {
+    border-color: hsl(var(--primary) / 0.35);
+    box-shadow:
+      0 0 0 3px hsl(var(--primary) / 0.08),
+      0 2px 12px hsl(0 0% 0% / 0.1),
+      0 1px 0 hsl(var(--glass-highlight) / 0.12) inset;
+    background: linear-gradient(
+      145deg,
+      hsl(var(--glass-bg) / 0.6),
+      hsl(var(--glass-bg) / 0.3)
+    );
+  }
+
+  .booking-app .glass-input.valid {
+    border-color: hsl(142 76% 36% / 0.5);
+    box-shadow:
+      0 0 0 3px hsl(142 76% 36% / 0.1),
+      0 0 12px hsl(142 76% 36% / 0.08),
+      0 2px 8px hsl(0 0% 0% / 0.06);
+  }
+
+  .booking-app .glass-input.invalid {
+    border-color: hsl(0 84% 60% / 0.5);
+    box-shadow:
+      0 0 0 3px hsl(0 84% 60% / 0.1),
+      0 0 12px hsl(0 84% 60% / 0.08),
+      0 2px 8px hsl(0 0% 0% / 0.06);
+  }
+
+  /* ===== CATEGORY PILLS ===== */
+  .booking-app .category-pill {
+    @apply px-5 py-2 rounded-full text-[11px] font-semibold tracking-[0.15em] uppercase cursor-pointer;
+    background: transparent;
+    color: hsl(var(--muted-foreground));
+    border: 1.5px solid hsl(var(--border));
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .booking-app .category-pill:hover {
+    color: hsl(var(--foreground));
+    border-color: hsl(var(--foreground) / 0.4);
+  }
+
+  .booking-app .category-pill.active {
+    background: hsl(var(--foreground));
+    color: hsl(var(--background));
+    border-color: hsl(var(--foreground));
+  }
+
+  /* ===== STEP INDICATOR ===== */
+  .booking-app .step-indicator {
+    @apply flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .booking-app .step-indicator.active {
+    background: linear-gradient(145deg, hsl(var(--primary)), hsl(var(--primary) / 0.85));
+    color: hsl(var(--primary-foreground));
+    box-shadow: 0 0 24px hsl(var(--primary) / 0.3), 0 1px 0 hsl(0 0% 100% / 0.1) inset;
+  }
+
+  .booking-app .step-indicator.completed {
+    background: linear-gradient(145deg, hsl(var(--primary)), hsl(var(--primary) / 0.85));
+    color: hsl(var(--primary-foreground));
+    box-shadow: 0 1px 0 hsl(0 0% 100% / 0.08) inset;
+  }
+
+  .booking-app .step-indicator.upcoming {
+    background: linear-gradient(145deg, hsl(var(--glass-bg) / 0.5), hsl(var(--glass-bg) / 0.25));
+    color: hsl(var(--muted-foreground));
+    border: 1px solid hsl(var(--glass-border) / 0.12);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 1px 0 hsl(var(--glass-highlight) / 0.06) inset;
+  }
+
+  /* ===== BUTTONS ===== */
+  .booking-app .btn-next {
+    @apply w-full py-3.5 rounded-2xl font-semibold tracking-wider uppercase text-sm;
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(145deg, hsl(var(--primary)), hsl(var(--primary) / 0.8));
+    color: hsl(var(--primary-foreground));
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 16px hsl(var(--primary) / 0.2), 0 1px 0 hsl(0 0% 100% / 0.1) inset;
+  }
+
+  .booking-app .btn-next::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 50%;
+    background: linear-gradient(to bottom, hsl(0 0% 100% / 0.08), transparent);
+    pointer-events: none;
+    border-radius: inherit;
+  }
+
+  .booking-app .btn-next:hover:not(:disabled) {
+    box-shadow: 0 6px 28px hsl(var(--primary) / 0.3), 0 1px 0 hsl(0 0% 100% / 0.12) inset;
+    transform: translateY(-1px);
+  }
+
+  .booking-app .btn-next:active:not(:disabled) {
+    transform: scale(0.98);
+    box-shadow: 0 2px 8px hsl(var(--primary) / 0.2), 0 1px 0 hsl(0 0% 100% / 0.05) inset;
+  }
+
+  .booking-app .btn-next:disabled {
+    opacity: 0.35;
     cursor: not-allowed;
   }
-  .btn-back {
-    background: transparent;
-    color: #51483D;
-    border-color: rgba(126, 96, 58, 0.4);
+
+  .booking-app .btn-back {
+    @apply w-full py-3.5 rounded-2xl font-semibold tracking-wider uppercase text-sm;
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(145deg, hsl(var(--glass-bg) / 0.5), hsl(var(--glass-bg) / 0.25));
+    color: hsl(var(--muted-foreground));
+    backdrop-filter: blur(16px) saturate(1.4);
+    -webkit-backdrop-filter: blur(16px) saturate(1.4);
+    border: 1px solid hsl(var(--glass-border) / 0.15);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 8px hsl(0 0% 0% / 0.08), 0 1px 0 hsl(var(--glass-highlight) / 0.08) inset;
   }
-  .btn-back:hover {
-    background: rgba(126, 96, 58, 0.08);
-    color: #000000;
-    border-color: rgba(126, 96, 58, 0.8);
+
+  .booking-app .btn-back::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 50%;
+    background: linear-gradient(to bottom, hsl(var(--glass-highlight) / 0.06), transparent);
+    pointer-events: none;
+    border-radius: inherit;
   }
-  .booking-app .step-indicator {
-    @apply flex items-center justify-center w-7 h-7 text-xs font-semibold;
-    border-radius: 2px;
-    transition: all 0.3s ease;
+
+  .booking-app .btn-back:hover {
+    border-color: hsl(var(--glass-highlight) / 0.25);
+    color: hsl(var(--foreground));
   }
-  .booking-app .step-indicator.active, .booking-app .step-indicator.completed {
-    background: #000000;
-    color: #FFFFFF;
-    border: 1px solid #000000;
+
+  .booking-app .btn-back:active { transform: scale(0.98); }
+
+  /* ===== SELECTION CIRCLE ===== */
+  .booking-app .selection-circle {
+    @apply w-5 h-5 rounded-full border-2 flex items-center justify-center;
+    border-color: hsl(var(--glass-border) / 0.3);
+    background: linear-gradient(145deg, hsl(var(--glass-bg) / 0.4), hsl(var(--glass-bg) / 0.15));
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    box-shadow: 0 1px 0 hsl(var(--glass-highlight) / 0.06) inset;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
-  .booking-app .step-indicator.upcoming {
-    background: transparent;
-    color: #74695C;
-    border: 1px solid rgba(126, 96, 58, 0.3);
+
+  .booking-app .selection-circle.checked {
+    border-color: hsl(var(--primary) / 0.8);
+    background: linear-gradient(145deg, hsl(var(--primary)), hsl(var(--primary) / 0.85));
+    box-shadow: 0 0 12px hsl(var(--primary) / 0.25), 0 1px 0 hsl(0 0% 100% / 0.1) inset;
   }
+
+  /* ===== STICKY BOTTOM BAR ===== */
+  .booking-app .sticky-bottom-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    padding-bottom: env(safe-area-inset-bottom);
+    background: hsl(var(--background));
+    border-top: 1px solid hsl(var(--border) / 0.5);
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .booking-app .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .booking-app .scrollbar-hide::-webkit-scrollbar { display: none; }
 }
 
 .nextslot-theme {

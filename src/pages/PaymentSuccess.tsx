@@ -184,7 +184,7 @@ const PaymentSuccess = () => {
   // ── CANCELLED ─────────────────────────────────────────────────────────────
   if (isCancelled) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6 bg-background">
+      <div className="booking-app min-h-screen flex items-center justify-center p-6 bg-background">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
           className="flex flex-col items-center gap-4 text-center max-w-sm">
           <XCircle className="w-14 h-14 text-destructive" />
@@ -204,7 +204,7 @@ const PaymentSuccess = () => {
       : (displayDeposit ?? displayTotal);
 
     return (
-      <div className="relative min-h-screen flex items-center justify-center p-6 bg-background">
+      <div className="booking-app relative min-h-screen flex items-center justify-center p-6 bg-background">
 
         {/* ── Close / dismiss button ── */}
         <button
