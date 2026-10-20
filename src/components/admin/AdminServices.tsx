@@ -16,7 +16,7 @@ import {
   EmptyState,
 } from "@/components/admin/AdminSharedUI";
 import {
-  Plus, Pencil, Trash2, Check, Search,
+  Plus, Pencil, Trash2, Check, Search, Loader2,
   ChevronDown, ChevronUp, GripVertical, X, Sparkles,
   ArrowUp, ArrowDown, Archive, ArchiveRestore,
 } from "lucide-react";
