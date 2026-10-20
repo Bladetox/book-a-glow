@@ -34,7 +34,8 @@ export function useSuggestedAddons() {
   return useQuery({
     queryKey: ["suggested-addons", tenantId],
     enabled: !!tenantId,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 0,
+    refetchOnMount: "always",
     queryFn: async (): Promise<SuggestedAddonsConfig> => {
       // AdminServices saves suggested add-ons in app_settings. Read that same
       // tenant-scoped source of truth here so the booking flow sees saved rules.

@@ -782,9 +782,20 @@ const AdminServices = () => {
   const saveSuggestedAddons = () => {
     const validRules = addonRules.filter((r) => r.triggerId !== "" && r.suggestIds.length > 0);
     const json = JSON.stringify({ rules: validRules });
-    upsertSetting.mutate({ suggested_addons: json });
-    setAddonSaved(true);
-    setTimeout(() => setAddonSaved(false), 3500);
+    setAddonSaved(false);
+    upsertSetting.mutate(
+      { suggested_addons: json },
+      {
+        onSuccess: () => {
+          setAddonSaved(true);
+          toast.success("Add-on rules saved");
+        },
+        onError: () => {
+          setAddonSaved(false);
+          toast.error("Could not save add-on rules. Your changes are still here. Please try again.");
+        },
+      }
+    );
   };
 
   const startEdit = (t: Service) => {
@@ -1297,6 +1308,7 @@ const AdminServices = () => {
             <button
               onClick={() => {
                 const newIndex = addonRules.length;
+                setAddonSaved(false);
                 setAddonRules([...addonRules, { triggerId: "", suggestIds: [] }]);
                 setOpenRuleIndex(newIndex);
               }}
@@ -1317,8 +1329,12 @@ const AdminServices = () => {
               services={serviceOptions}
               usedTriggerIds={usedTriggerIds}
               onToggle={() => handleToggleRule(i)}
-              onChange={(updated) => setAddonRules(addonRules.map((r, idx) => (idx === i ? updated : r)))}
+              onChange={(updated) => {
+                setAddonSaved(false);
+                setAddonRules(addonRules.map((r, idx) => (idx === i ? updated : r)));
+              }}
               onDelete={() => {
+                setAddonSaved(false);
                 setAddonRules(addonRules.filter((_, idx) => idx !== i));
                 setOpenRuleIndex((prev) =>
                   prev === i ? null : prev !== null && prev > i ? prev - 1 : prev
@@ -1338,11 +1354,18 @@ const AdminServices = () => {
 
         {addonRules.length > 0 && (
           <div className="flex justify-end pt-2">
-            <SaveButton
-              label="Save Add-on Rules"
-              loading={upsertSetting.isPending}
+            <button
               onClick={saveSuggestedAddons}
-            />
+              disabled={upsertSetting.isPending}
+              className={`px-5 py-2 rounded-xl text-xs font-bold transition-colors disabled:opacity-50 flex items-center gap-2 ${
+                addonSaved
+                  ? "bg-emerald-500 text-white hover:bg-emerald-400"
+                  : "bg-white text-zinc-950 hover:bg-white/90"
+              }`}
+            >
+              {upsertSetting.isPending && <Loader2 className="w-3 h-3 animate-spin" />}
+              {upsertSetting.isPending ? "Saving…" : addonSaved ? "Saved" : "Save Add-on Rules"}
+            </button>
           </div>
         )}
       </section>

@@ -8,6 +8,7 @@ import { useConsistencyQuote } from "@/hooks/useConsistencyQuote";
 import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { useState, useEffect, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
 import { Sparkles, X, Loader2, Plus, Minus } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import BookingConfirmation from "@/components/BookingConfirmation";
@@ -918,66 +919,69 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, onPayshapCompl
         )}
       </AnimatePresence>
 
-      {/* Terms sheet */}
-      <AnimatePresence>
-        {showTerms && (
-          <>
-            <motion.div
-              key="terms-backdrop"
-              className="fixed inset-0 z-40 bg-black/50 backdrop-blur-[2px]"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              onClick={() => setShowTerms(false)}
-            />
-            <motion.div
-              key="terms-sheet"
-              className="fixed bottom-0 left-0 right-0 z-50 mx-auto max-w-md rounded-t-3xl bg-background border-t border-border/60 flex flex-col"
-              style={{ maxHeight: "92dvh" }}
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ type: "spring", stiffness: 380, damping: 38 }}
-            >
-              <div className="w-10 h-1 rounded-full bg-muted-foreground/25 mx-auto mt-3 mb-2 shrink-0" />
-              <div className="flex items-center justify-between px-5 pt-1 pb-4 shrink-0">
-                <h2 className="font-display text-lg font-bold text-foreground">Terms &amp; Conditions</h2>
-                <button
-                  onClick={() => setShowTerms(false)}
-                  className="w-8 h-8 rounded-full flex items-center justify-center bg-muted/60 text-muted-foreground hover:bg-muted transition-colors"
-                  aria-label="Close terms"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-6 flex flex-col gap-5 scrollbar-hide">
-              {termsSections.map((section, i) => (
-                <div key={i} className="flex flex-col gap-2">
-                  {section.title && (
-                    <p className="text-sm font-bold text-foreground">{section.title}</p>
-                  )}
-                  {section.content && (
-                    <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-line">
-                      {section.content}
-                    </p>
-                  )}
-                </div>
-              ))}
-              </div>
-              <div className="px-5 pt-3 pb-[max(1.5rem,env(safe-area-inset-bottom))] shrink-0 border-t border-border/30">
-                <motion.button
-                  whileTap={{ scale: 0.97 }}
-                  onClick={() => setShowTerms(false)}
-                  className="btn-next w-full"
-                >
-                  Got it
-                </motion.button>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+      {/* Terms dialog is portalled outside the animated booking-step layer. */}
+      {createPortal(
+                <AnimatePresence>
+                {showTerms && (
+                  <>
+                    <motion.div
+                      key="terms-backdrop"
+                      className="fixed inset-0 z-[10000] bg-black/60 backdrop-blur-sm"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      onClick={() => setShowTerms(false)}
+                    />
+                    <motion.div
+                      key="terms-sheet"
+                      className="fixed inset-0 z-[10001] m-auto w-[calc(100%-2rem)] max-w-md max-h-[calc(100dvh-2rem)] rounded-3xl bg-background border border-border/60 shadow-2xl flex flex-col overflow-hidden"
+                      style={{ height: "min(92dvh, 48rem)" }}
+                      initial={{ opacity: 0, scale: 0.98 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.98 }}
+                      transition={{ duration: 0.2, ease: "easeOut" }}
+                    >
+                      <div className="w-10 h-1 rounded-full bg-muted-foreground/25 mx-auto mt-3 mb-2 shrink-0" />
+                      <div className="flex items-center justify-between px-5 pt-1 pb-4 shrink-0">
+                        <h2 className="font-display text-lg font-bold text-foreground">Terms &amp; Conditions</h2>
+                        <button
+                          onClick={() => setShowTerms(false)}
+                          className="w-8 h-8 rounded-full flex items-center justify-center bg-muted/60 text-muted-foreground hover:bg-muted transition-colors"
+                          aria-label="Close terms"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-6 flex flex-col gap-5 scrollbar-hide">
+                      {termsSections.map((section, i) => (
+                        <div key={i} className="flex flex-col gap-2">
+                          {section.title && (
+                            <p className="text-sm font-bold text-foreground">{section.title}</p>
+                          )}
+                          {section.content && (
+                            <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-line">
+                              {section.content}
+                            </p>
+                          )}
+                        </div>
+                      ))}
+                      </div>
+                      <div className="px-5 pt-3 pb-[max(1.5rem,env(safe-area-inset-bottom))] shrink-0 border-t border-border/30">
+                        <motion.button
+                          whileTap={{ scale: 0.97 }}
+                          onClick={() => setShowTerms(false)}
+                          className="btn-next w-full"
+                        >
+                          Got it
+                        </motion.button>
+                      </div>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>,
+        document.body
+      )}
     </div>
   );
 };
