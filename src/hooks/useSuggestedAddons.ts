@@ -24,12 +24,9 @@ const EMPTY: SuggestedAddonsConfig = { rules: [] };
 // ─── Hook ──────────────────────────────────────────────────────────────────────────────────
 
 /**
- * Reads add-on assignments directly from `service_addon_assignments`
- * (Option B: relational table per tenant).
- *
- * Returns the same SuggestedAddonsConfig shape as before so that
- * ServicesStep.tsx, getActiveSuggestions, and getSelectedAddonsForTrigger
- * require zero changes.
+ * Reads the tenant's saved suggested_addons setting, which is also written by
+ * AdminServices. Keeping admin and booking on this shared JSON contract avoids
+ * rules silently disappearing when the relational assignments table is empty.
  */
 export function useSuggestedAddons() {
   const { tenantId } = usePublicTenant();
@@ -39,32 +36,67 @@ export function useSuggestedAddons() {
     enabled: !!tenantId,
     staleTime: 5 * 60 * 1000,
     queryFn: async (): Promise<SuggestedAddonsConfig> => {
+      // AdminServices saves suggested add-ons in app_settings. Read that same
+      // tenant-scoped source of truth here so the booking flow sees saved rules.
       const { data, error } = await supabase
-        .from("service_addon_assignments")
-        .select("service_id, addon_id")
+        .from("app_settings")
+        .select("value")
         .eq("tenant_id", tenantId)
-        .order("display_order", { ascending: true });
+        .eq("key", "suggested_addons")
+        .maybeSingle();
 
       if (error) throw error;
-      if (!data || data.length === 0) return EMPTY;
+      if (!data?.value) return EMPTY;
 
-      // Group rows into AddonRule[]: one rule per unique service_id,
-      // accumulating its addon_ids in suggestIds order.
-      const ruleMap = new Map<string, string[]>();
-      for (const row of data) {
-        const existing = ruleMap.get(row.service_id);
-        if (existing) {
-          existing.push(row.addon_id);
-        } else {
-          ruleMap.set(row.service_id, [row.addon_id]);
-        }
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(data.value);
+      } catch {
+        throw new Error("The saved suggested add-on configuration is invalid JSON.");
       }
 
-      const rules: AddonRule[] = Array.from(ruleMap.entries()).map(
-        ([triggerId, suggestIds]) => ({ triggerId, suggestIds })
-      );
+      if (!parsed || typeof parsed !== "object") return EMPTY;
 
-      return { rules };
+      const config = parsed as {
+        rules?: unknown;
+        triggerIds?: unknown;
+        suggestIds?: unknown;
+      };
+
+      if (Array.isArray(config.rules)) {
+        const rules: AddonRule[] = config.rules
+          .filter(
+            (rule): rule is AddonRule =>
+              !!rule &&
+              typeof rule === "object" &&
+              typeof (rule as AddonRule).triggerId === "string" &&
+              Array.isArray((rule as AddonRule).suggestIds) &&
+              (rule as AddonRule).suggestIds.every((id) => typeof id === "string")
+          )
+          .map((rule) => ({
+            triggerId: rule.triggerId,
+            suggestIds: Array.from(new Set(rule.suggestIds)),
+          }));
+        return { rules };
+      }
+
+      // Keep compatibility with the older config shape still accepted by admin.
+      if (
+        Array.isArray(config.triggerIds) &&
+        config.triggerIds.every((id) => typeof id === "string") &&
+        Array.isArray(config.suggestIds) &&
+        config.suggestIds.every((id) => typeof id === "string")
+      ) {
+        const suggestIds = Array.from(new Set(config.suggestIds as string[]));
+        return {
+          rules: (config.triggerIds as string[]).map((triggerId) => ({
+            triggerId,
+            suggestIds,
+          })),
+        };
+      }
+
+      return EMPTY;
     },
   });
 }

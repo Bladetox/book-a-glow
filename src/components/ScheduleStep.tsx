@@ -52,6 +52,7 @@ const ScheduleStep = ({
   const [bookedPopup, setBookedPopup] = useState(false);
   const [acquiringSlot, setAcquiringSlot] = useState(false);
   const timeSlotsRef = useRef<HTMLDivElement>(null);
+  const calendarRef = useRef<HTMLDivElement>(null);
   const popupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Pull ownerId from context so useMonthAvailability can skip the extra DB lookup
@@ -130,8 +131,10 @@ const ScheduleStep = ({
 
   const handleChangeDate = useCallback(() => {
     setCalendarOpen(true);
+    // Scroll to the calendar itself after it has mounted, rather than to the
+    // page top. This avoids the card opening beneath a competing page scroll.
     setTimeout(() => {
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      calendarRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }, 50);
   }, []);
 
@@ -271,11 +274,12 @@ const ScheduleStep = ({
         {calendarOpen && (
           <motion.div
             key="calendar"
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-            className="overflow-hidden"
+            ref={calendarRef}
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
+            className="scroll-mt-4"
           >
             <div className="glass-card-service rounded-2xl p-4">
               <div className="flex items-center justify-between mb-4">

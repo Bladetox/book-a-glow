@@ -951,7 +951,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, onPayshapCompl
                   <X className="w-4 h-4" />
                 </button>
               </div>
-              <div className="flex-1 overflow-y-auto px-5 pb-6 flex flex-col gap-5 scrollbar-hide">
+              <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-6 flex flex-col gap-5 scrollbar-hide">
               {termsSections.map((section, i) => (
                 <div key={i} className="flex flex-col gap-2">
                   {section.title && (
