@@ -819,106 +819,108 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, onPayshapCompl
         )}
       </AnimatePresence>
 
-      {/* Pair it with sheet */}
-      <AnimatePresence>
-        {showPairWith && hasPairWith && (
-          <>
-            <motion.div
-              key="pair-backdrop"
-              className="fixed inset-0 z-40 bg-black/50 backdrop-blur-[2px]"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              onClick={() => setShowPairWith(false)}
-            />
-            <motion.div
-              key="pair-sheet"
-              className="fixed bottom-0 left-0 right-0 z-50 mx-auto max-w-md rounded-t-3xl bg-background border-t border-border/60 flex flex-col"
-              style={{ height: "90dvh" }}
-              initial={{ y: "100%" }}
-              animate={{ y: 0 }}
-              exit={{ y: "100%" }}
-              transition={{ type: "spring", stiffness: 380, damping: 38 }}
-            >
-              <div className="w-10 h-1 rounded-full bg-muted-foreground/25 mx-auto mt-3 mb-2 shrink-0" />
-              <div className="flex items-start justify-between px-5 pt-1 pb-4 shrink-0">
-                <div className="flex-1 min-w-0 pr-3">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Sparkles className="w-4 h-4 text-primary shrink-0" />
-                    <h2 className="font-display text-lg font-bold text-foreground leading-tight">
-                      Pair it with
-                    </h2>
-                  </div>
-                  <p className="text-xs text-muted-foreground leading-snug">
-                    Clients who booked your selection also added these.
-                  </p>
-                </div>
-                <button
-                  onClick={() => setShowPairWith(false)}
-                  className="w-8 h-8 rounded-full flex items-center justify-center bg-muted/60 text-muted-foreground hover:bg-muted transition-colors shrink-0 mt-0.5"
-                  aria-label="Close"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-              <div className="flex-1 overflow-y-auto px-5 pb-2 flex flex-col gap-3 scrollbar-hide">
-                {pairWithAddons.map((svc) => {
-                  const qty = getAddonQty(svc.id);
-                  return (
+      {/* Pair-with suggestions are portalled so the booking step's motion/overflow layers cannot clip the sheet. */}
+      {createPortal(
+                <AnimatePresence>
+                {showPairWith && hasPairWith && (
+                  <>
                     <motion.div
-                      key={svc.id}
-                      layout
-                      className="rounded-2xl border border-border/50 bg-muted/20 p-4 flex items-start justify-between gap-3"
+                      key="pair-backdrop"
+                      className="fixed inset-0 z-[10000] bg-black/60 backdrop-blur-sm"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.2 }}
+                      onClick={() => setShowPairWith(false)}
+                    />
+                    <motion.div
+                      key="pair-sheet"
+                      className="fixed bottom-0 left-0 right-0 z-[10001] mx-auto max-w-md rounded-t-3xl bg-background border-t border-border/60 flex flex-col"
+                      style={{ height: "90dvh" }}
+                      initial={{ y: "100%" }}
+                      animate={{ y: 0 }}
+                      exit={{ y: "100%" }}
+                      transition={{ type: "spring", stiffness: 380, damping: 38 }}
                     >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-foreground leading-snug">{svc.name}</p>
-                        {svc.duration_minutes && (
-                          <p className="text-[11px] text-muted-foreground mt-0.5">{svc.duration_minutes} min</p>
-                        )}
-                        <p className="text-sm font-bold text-primary mt-1">{cur}{svc.price.toLocaleString()}</p>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        {qty > 0 ? (
-                          <>
-                            <motion.button
-                              whileTap={{ scale: 0.9 }}
-                              onClick={() => decrementAddon(svc.id)}
-                              className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-foreground"
-                              aria-label="Remove one"
-                            >
-                              <Minus className="w-3.5 h-3.5" />
-                            </motion.button>
-                            <span className="text-sm font-bold text-foreground w-4 text-center">{qty}</span>
-                          </>
-                        ) : null}
-                        <motion.button
-                          whileTap={{ scale: 0.9 }}
-                          onClick={() => incrementAddon(svc.id)}
-                          className="w-7 h-7 rounded-full bg-primary flex items-center justify-center text-primary-foreground"
-                          aria-label="Add one"
+                      <div className="w-10 h-1 rounded-full bg-muted-foreground/25 mx-auto mt-3 mb-2 shrink-0" />
+                      <div className="flex items-start justify-between px-5 pt-1 pb-4 shrink-0">
+                        <div className="flex-1 min-w-0 pr-3">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Sparkles className="w-4 h-4 text-primary shrink-0" />
+                            <h2 className="font-display text-lg font-bold text-foreground leading-tight">
+                              Pair it with
+                            </h2>
+                          </div>
+                          <p className="text-xs text-muted-foreground leading-snug">
+                            Clients who booked your selection also added these.
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => setShowPairWith(false)}
+                          className="w-8 h-8 rounded-full flex items-center justify-center bg-muted/60 text-muted-foreground hover:bg-muted transition-colors shrink-0 mt-0.5"
+                          aria-label="Close"
                         >
-                          <Plus className="w-3.5 h-3.5" />
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <div className="flex-1 overflow-y-auto px-5 pb-2 flex flex-col gap-3 scrollbar-hide">
+                        {pairWithAddons.map((svc) => {
+                          const qty = getAddonQty(svc.id);
+                          return (
+                            <motion.div
+                              key={svc.id}
+                              layout
+                              className="rounded-2xl border border-border/50 bg-muted/20 p-4 flex items-start justify-between gap-3"
+                            >
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-semibold text-foreground leading-snug">{svc.name}</p>
+                                {svc.duration_minutes && (
+                                  <p className="text-[11px] text-muted-foreground mt-0.5">{svc.duration_minutes} min</p>
+                                )}
+                                <p className="text-sm font-bold text-primary mt-1">{cur}{svc.price.toLocaleString()}</p>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0">
+                                {qty > 0 ? (
+                                  <>
+                                    <motion.button
+                                      whileTap={{ scale: 0.9 }}
+                                      onClick={() => decrementAddon(svc.id)}
+                                      className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-foreground"
+                                      aria-label="Remove one"
+                                    >
+                                      <Minus className="w-3.5 h-3.5" />
+                                    </motion.button>
+                                    <span className="text-sm font-bold text-foreground w-4 text-center">{qty}</span>
+                                  </>
+                                ) : null}
+                                <motion.button
+                                  whileTap={{ scale: 0.9 }}
+                                  onClick={() => incrementAddon(svc.id)}
+                                  className="w-7 h-7 rounded-full bg-primary flex items-center justify-center text-primary-foreground"
+                                  aria-label="Add one"
+                                >
+                                  <Plus className="w-3.5 h-3.5" />
+                                </motion.button>
+                              </div>
+                            </motion.div>
+                          );
+                        })}
+                      </div>
+                      <div className="px-5 pt-3 pb-[max(1.5rem,env(safe-area-inset-bottom))] shrink-0 border-t border-border/30">
+                        <motion.button
+                          whileTap={{ scale: 0.97 }}
+                          onClick={() => setShowPairWith(false)}
+                          className="btn-next w-full"
+                        >
+                          Close
                         </motion.button>
                       </div>
                     </motion.div>
-                  );
-                })}
-              </div>
-              <div className="px-5 pt-3 pb-[max(1.5rem,env(safe-area-inset-bottom))] shrink-0 border-t border-border/30">
-                <motion.button
-                  whileTap={{ scale: 0.97 }}
-                  onClick={() => setShowPairWith(false)}
-                  className="btn-next w-full"
-                >
-                  Close
-                </motion.button>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-
+                  </>
+                )}
+              </AnimatePresence>,
+        document.body
+      )}
       {/* Terms dialog is portalled outside the animated booking-step layer. */}
       {createPortal(
                 <AnimatePresence>
