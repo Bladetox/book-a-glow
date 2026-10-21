@@ -225,12 +225,12 @@
       "source": "/demo/admin-embed",
       "headers": [
         {
-          "key": "X-Frame-Options",
-          "value": "SAMEORIGIN"
+          "key": "Cache-Control",
+          "value": "no-cache, must-revalidate"
         },
         {
           "key": "Content-Security-Policy",
-          "value": "frame-ancestors 'self'"
+          "value": "frame-ancestors 'self' https://nextslot.co.za https://www.nextslot.co.za"
         },
         {
           "key": "X-Robots-Tag",
