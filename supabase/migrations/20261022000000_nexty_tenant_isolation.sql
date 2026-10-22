@@ -245,6 +245,7 @@ AS $function$
     FROM public.bookings
     WHERE tenant_id = p_tenant_id
       AND status IN ('completed', 'confirmed')
+      AND booking_date < CURRENT_DATE + INTERVAL '1 day'
       AND COALESCE(client_phone, guest_phone) IS NOT NULL
   ),
   this_month AS (
@@ -327,7 +328,9 @@ AS $function$
         FROM public.bookings
         WHERE tenant_id = p_tenant_id
           AND booking_date >= CURRENT_DATE - INTERVAL '90 days'
-          AND status != 'cancelled'
+          AND booking_date < CURRENT_DATE + INTERVAL '1 day'
+          AND status IN ('completed', 'confirmed', 'no_show')
+        HAVING COUNT(*) >= 5
       ),
       false
     ) AS is_mobile_business,
@@ -640,16 +643,21 @@ AS $function$
         THEN ROUND(s.price::numeric / s.duration_minutes::numeric, 2)
       ELSE 0
     END AS revenue_per_minute,
-    COALESCE(SUM(bi.price), 0)::numeric AS total_revenue,
-    (COUNT(bi.id) * s.duration_minutes)::numeric AS total_minutes,
-    COUNT(bi.id) AS booking_count
+    COALESCE(SUM(bi.price) FILTER (WHERE b.id IS NOT NULL), 0)::numeric AS total_revenue,
+    (COUNT(b.id) * s.duration_minutes)::numeric AS total_minutes,
+    COUNT(b.id) AS booking_count
   FROM public.services s
-  LEFT JOIN public.booking_items bi ON bi.service_id = s.id
-  LEFT JOIN public.bookings b       ON b.id = bi.booking_id
+  LEFT JOIN public.booking_items bi
+    ON bi.service_id = s.id AND bi.tenant_id = p_tenant_id
+  LEFT JOIN public.bookings b
+    ON b.id = bi.booking_id
+   AND b.tenant_id = p_tenant_id
+   AND b.booking_date >= CURRENT_DATE - INTERVAL '90 days'
+   AND b.booking_date < CURRENT_DATE + INTERVAL '1 day'
+   AND b.status = 'completed'
   WHERE s.tenant_id = p_tenant_id
-    AND (b.status IS NULL OR b.status NOT IN ('cancelled', 'no_show'))
   GROUP BY s.name, s.price, s.duration_minutes
-  HAVING COUNT(bi.id) > 0
+  HAVING COUNT(b.id) > 0
   ORDER BY revenue_per_minute DESC;
 $function$
 
