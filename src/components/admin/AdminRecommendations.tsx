@@ -84,19 +84,41 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
   const [isRescanning, setIsRescanning] = useState(false);
   const [dismissed,    setDismissed]    = useState<Set<string>>(new Set());
   const [expanded,     setExpanded]     = useState<Set<string>>(new Set());
+  const [actionError,  setActionError]  = useState<string | null>(null);
 
-  const persistAction = async (insightId: string, actionType: "dismissed" | "actioned") => {
+  const persistAction = async (insightId: string, actionType: "dismissed" | "actioned"): Promise<boolean> => {
+    if (!tenantId) {
+      setActionError("Nexty could not save this action because no business is selected. Please refresh and try again.");
+      return false;
+    }
+
     const now     = new Date();
     const expires = actionType === "dismissed"
       ? new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString()
       : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
-    await supabase.from("nexty_insight_actions").upsert({
+    const { error } = await supabase.from("nexty_insight_actions").upsert({
       tenant_id:   tenantId,
       insight_id:  insightId,
       action_type: actionType,
       acted_at:    now.toISOString(),
       expires_at:  expires,
     }, { onConflict: "tenant_id,insight_id,action_type" });
+
+    if (error) {
+      setActionError("Nexty could not save this action. The insight has been kept so you can retry.");
+      return false;
+    }
+
+    setActionError(null);
+    return true;
+  };
+
+  const handleInsightAction = async (insight: NextyInsight, actionType: "dismissed" | "actioned") => {
+    const saved = await persistAction(insight.id, actionType);
+    if (!saved) return;
+
+    setDismissed(prev => new Set(prev).add(insight.id));
+    if (actionType === "actioned") onNavigate(insight.actionView ?? "Dashboard");
   };
   const scrollRef   = useRef<HTMLDivElement>(null);
   const updatedAtRef = useRef<number>(Date.now());
@@ -216,6 +238,12 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
           <style>{`@keyframes nexty-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}.nexty-filter-scroll::-webkit-scrollbar{display:none}`}</style>
         </button>
       </div>
+
+      {actionError && (
+        <div role="alert" style={{ margin: "12px 16px 0", padding: "10px 12px", border: "1px solid rgba(255,87,87,0.3)", borderRadius: 8, color: "#ff9a9a", fontSize: 12 }}>
+          {actionError}
+        </div>
+      )}
 
       {/* -- Impact Banner -- */}
       {totalImpact > 0 && (
@@ -429,7 +457,7 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     {ins.actionLabel && (
                       <button
-                        onClick={() => { persistAction(ins.id, "actioned"); setDismissed(prev => new Set(prev).add(ins.id)); onNavigate(ins.actionView ?? "Dashboard"); }}
+                        onClick={() => { void handleInsightAction(ins, "actioned"); }}
                         style={{
                           display: "inline-flex", alignItems: "center", gap: 6,
                           padding: "0 12px", minHeight: 44,
@@ -463,7 +491,7 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
                     )}
                   </div>
                   <button
-                    onClick={() => { setDismissed(prev => new Set(prev).add(ins.id)); persistAction(ins.id, "dismissed"); }}
+                    onClick={() => { void handleInsightAction(ins, "dismissed"); }}
                     aria-label="Dismiss this insight"
                     style={{
                       fontSize: 11, color: S.faint,
