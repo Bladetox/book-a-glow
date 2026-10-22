@@ -117,9 +117,9 @@ export function useNextyInsights() {
 
       // -- 0. Business Context -----------------------------------------------
       // All advice branches on this: mobile vs fixed, deposits on/off.
-      await supabase.rpc("get_nexty_business_context", {
+      const { data: ctx, error: ctxError } = await supabase.rpc("get_nexty_business_context", {
         p_tenant_id: tenantId,
-      });
+      });;
       if (ctxError) throw ctxError;
       const isMobile      = ctx?.[0]?.is_mobile_business ?? false;
       const depositPct    = Number(ctx?.[0]?.deposit_percent ?? 0);
@@ -129,19 +129,19 @@ export function useNextyInsights() {
 
       // -- Solo operator check ----------------------------------------------
       // If only one active staff profile exists, suppress "staff" framing.
-      await supabase
+      const { data: staffRows, error: staffRowsError } = await supabase
         .from("profiles")
         .select("id")
         .eq("tenant_id", tenantId)
-        .in("role", ["owner", "admin", "staff"]);
+        .in("role", ["owner", "admin", "staff"]);;
       if (staffRowsError) throw staffRowsError;
       const isSolo = !staffRows || staffRows.length <= 1;
 
       // -- 1. Revenue Per Minute Audit ----------------------------------------
       // Fires when top service earns more than 2x per minute vs bottom service.
-      await supabase.rpc<RevenuePerMinuteRow>("get_revenue_per_minute", {
+      const { data: rpm, error: rpmError } = await supabase.rpc<RevenuePerMinuteRow>("get_revenue_per_minute", {
         p_tenant_id: tenantId,
-      });
+      });;
       if (rpmError) throw rpmError;
       if (rpm && rpm.length > 1) {
         const top       = rpm[0];
@@ -174,9 +174,9 @@ export function useNextyInsights() {
       // -- 2. Quiet Day Audit ------------------------------------------------
       // Fires when the quietest day is below 75% of the busiest day.
       // RPC returns rows ordered quietest first.
-      await supabase.rpc<QuietDayRow>("get_quiet_day_analysis", {
+      const { data: quietDays, error: quietDaysError } = await supabase.rpc<QuietDayRow>("get_quiet_day_analysis", {
         p_tenant_id: tenantId,
-      });
+      });;
       if (quietDaysError) throw quietDaysError;
       if (quietDays && quietDays.length > 0) {
         const slowest = quietDays[0];
@@ -218,9 +218,9 @@ export function useNextyInsights() {
       // -- 3. No-Show Audit --------------------------------------------------
       // Deposit-aware: advice differs based on whether deposits are configured.
       // total_lost_revenue is already net of collected deposits.
-      await supabase.rpc("get_no_show_leakage", {
+      const { data: noShowData, error: noShowDataError } = await supabase.rpc("get_no_show_leakage", {
         p_tenant_id: tenantId,
-      });
+      });;
       if (noShowDataError) throw noShowDataError;
       if (noShowData && noShowData[0]) {
         const d            = noShowData[0];
@@ -269,9 +269,9 @@ export function useNextyInsights() {
 
       // -- 4. Loyalty Gap Audit ----------------------------------------------
       // Returns actual client names from the DB. Never fabricated.
-      await supabase.rpc("get_loyalty_gap_analysis", {
+      const { data: loyaltyGap, error: loyaltyGapError } = await supabase.rpc("get_loyalty_gap_analysis", {
         p_tenant_id: tenantId,
-      });
+      });;
       if (loyaltyGapError) throw loyaltyGapError;
       if (loyaltyGap && loyaltyGap[0] && loyaltyGap[0].ghost_regular_count > 0) {
         const g            = loyaltyGap[0];
@@ -304,9 +304,9 @@ export function useNextyInsights() {
 
       // -- 5. Rebooking Rate Audit -------------------------------------------
       // Fires when first-time rebooking rate < 55% with at least 3 qualifying clients.
-      await supabase.rpc("get_rebooking_rate_analysis", {
+      const { data: rebookData, error: rebookDataError } = await supabase.rpc("get_rebooking_rate_analysis", {
         p_tenant_id: tenantId,
-      });
+      });;
       if (rebookDataError) throw rebookDataError;
       if (rebookData && rebookData[0] && Number(rebookData[0].total_first_time_clients) >= 3) {
         const r           = rebookData[0];
@@ -346,12 +346,12 @@ export function useNextyInsights() {
       // -- 6. Cancellation Leakage -------------------------------------------
       // Only fires when there are real cancelled bookings with lost revenue.
       // Data source: bookings table, last 90 days, status = cancelled.
-      await supabase
+      const { data: cancelData, error: cancelDataError } = await supabase
         .from("bookings")
         .select("total_amount, status, booking_date, deposit_paid, deposit_amount")
         .eq("tenant_id", tenantId)
         .eq("status", "cancelled")
-        .gte("booking_date", new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10));
+        .gte("booking_date", new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10));;
       if (cancelDataError) throw cancelDataError;
 
       if (cancelData && cancelData.length > 0) {
@@ -391,9 +391,9 @@ export function useNextyInsights() {
 
       // -- 7. Peak Time / Quiet Day Opportunity ---------------------------
       // Fires when the quietest day has under 40% of peak day bookings.
-      await supabase.rpc("get_peak_time_analysis", {
+      const { data: peakData, error: peakDataError } = await supabase.rpc("get_peak_time_analysis", {
         p_tenant_id: tenantId,
-      });
+      });;
       if (peakDataError) throw peakDataError;
       if (peakData && peakData[0]) {
         const p = peakData[0];
@@ -429,9 +429,9 @@ export function useNextyInsights() {
       const NON_ACQUISITION_CHANNELS = new Set(["Returning Client", "Unknown"]);
       const CHANNEL_MIN_BOOKINGS = 5;
 
-      await supabase.rpc<ChannelRoiRow>("get_channel_roi", {
+      const { data: channelData, error: channelDataError } = await supabase.rpc<ChannelRoiRow>("get_channel_roi", {
         p_tenant_id: tenantId,
-      });
+      });;
       if (channelDataError) throw channelDataError;
 
       if (channelData && channelData.length > 0) {
@@ -498,9 +498,9 @@ export function useNextyInsights() {
 
       // -- 9. New Client Conversion Rate ------------------------------------
       // Fires when new client conversion < 50% over the last 90 days.
-      await supabase.rpc("get_new_client_conversion", {
+      const { data: convData, error: convDataError } = await supabase.rpc("get_new_client_conversion", {
         p_tenant_id: tenantId,
-      });
+      });;
       if (convDataError) throw convDataError;
       if (convData && convData[0]) {
         const c = convData[0];
@@ -530,9 +530,9 @@ export function useNextyInsights() {
       // -- 10. Outside-Settings Regulars ------------------------------------
       // Clients with 2+ bookings who never book the qualifying service.
       // Named individually so the tenant can act immediately in Loyalty Tracker.
-      await supabase.rpc("get_nexty_outside_candidates", {
+      const { data: outsideData, error: outsideDataError } = await supabase.rpc("get_nexty_outside_candidates", {
         p_tenant_id: tenantId,
-      });
+      });;
       if (outsideDataError) throw outsideDataError;
       if (outsideData && outsideData.length > 0) {
         const count     = outsideData.length;
@@ -559,7 +559,7 @@ export function useNextyInsights() {
       }
 
       // -- 11. Unattributed Revenue ------------------------------------------
-      await supabase.rpc("get_unattributed_revenue", { p_tenant_id: tenantId });
+      const { data: unattr, error: unattrError } = await supabase.rpc("get_unattributed_revenue", { p_tenant_id: tenantId });;
       if (unattrError) throw unattrError;
       if (unattr?.[0] && Number(unattr[0].booking_count) >= 5) {
         const uCount = Number(unattr[0].booking_count);
@@ -581,7 +581,7 @@ export function useNextyInsights() {
       }
 
       // -- 12. SA Salary Cycle Dead Zones ------------------------------------
-      await supabase.rpc("get_salary_cycle_analysis", { p_tenant_id: tenantId });
+      const { data: salaryData, error: salaryDataError } = await supabase.rpc("get_salary_cycle_analysis", { p_tenant_id: tenantId });;
       if (salaryDataError) throw salaryDataError;
       if (salaryData && salaryData.length >= 2) {
         const sorted = [...salaryData].sort((a: any, b: any) => Number(b.window_revenue) - Number(a.window_revenue));
@@ -609,7 +609,7 @@ export function useNextyInsights() {
       }
 
       // -- 13. Top Client Concentration Risk ---------------------------------
-      await supabase.rpc("get_top_client_concentration", { p_tenant_id: tenantId });
+      const { data: topClients, error: topClientsError } = await supabase.rpc("get_top_client_concentration", { p_tenant_id: tenantId });;
       if (topClientsError) throw topClientsError;
       if (topClients && topClients.length >= 3) {
         const top5Rev   = topClients.reduce((s: number, c: any) => s + Number(c.total_spend), 0);
@@ -637,7 +637,7 @@ export function useNextyInsights() {
       }
 
       // -- 14. Repeat Cancellers ---------------------------------------------
-      await supabase.rpc("get_repeat_cancellers", { p_tenant_id: tenantId });
+      const { data: cancellers, error: cancellersError } = await supabase.rpc("get_repeat_cancellers", { p_tenant_id: tenantId });;
       if (cancellersError) throw cancellersError;
       if (cancellers && cancellers.length > 0) {
         const names = cancellers.slice(0, 3).map((c: any) => c.client_name.trim()).join(", ");
@@ -659,7 +659,7 @@ export function useNextyInsights() {
       }
 
       // -- 15. Basket Trend --------------------------------------------------
-      await supabase.rpc<BasketTrendRow>("get_basket_trend", { p_tenant_id: tenantId });
+      const { data: basketData, error: basketDataError } = await supabase.rpc<BasketTrendRow>("get_basket_trend", { p_tenant_id: tenantId });;
       if (basketDataError) throw basketDataError;
       if (basketData && basketData.length >= 4) {
         const weeks = basketData as BasketTrendRow[];
@@ -709,8 +709,8 @@ export function useNextyInsights() {
 
       // -- 16. Travel Efficiency (Mobile operators only) --------------------
       if (isMobile) {
-        await supabase.rpc("get_travel_efficiency", { p_tenant_id: tenantId });
-      if (travelDataError) throw travelDataError;
+        const { data: travelData, error: travelDataError } = await supabase.rpc("get_travel_efficiency", { p_tenant_id: tenantId });;
+        if (travelDataError) throw travelDataError;
         if (travelData?.[0] && Number(travelData[0].total_callout_bookings) >= 5) {
           const t = travelData[0];
           const lowCount = Number(t.low_margin_count);
@@ -743,20 +743,20 @@ export function useNextyInsights() {
       // Seasonal prompts are intentionally omitted until they can be supported by this tenant's own booking history.
 
       // -- 19. Google Review Velocity ----------------------------------------
-      await supabase
+      const { data: ctxFull, error: ctxFullError } = await supabase
         .from("app_settings").select("key, value")
         .eq("tenant_id", tenantId)
-        .in("key", ["google_review_url", "gmb_connected"]);
+        .in("key", ["google_review_url", "gmb_connected"]);;
       if (ctxFullError) throw ctxFullError;
       const ctxMap = Object.fromEntries((ctxFull ?? []).map((r: any) => [r.key, r.value]));
       const hasGmb = ctxMap.gmb_connected === "true" && ctxMap.google_review_url;
       if (hasGmb) {
-        await supabase
+        const { data: recentBks, error: recentBksError } = await supabase
           .from("bookings").select("id")
           .eq("tenant_id", tenantId)
           .not("status", "in", "(cancelled,pending)")
-          .gte("booking_date", new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10));
-      if (recentBksError) throw recentBksError;
+          .gte("booking_date", new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10));;
+        if (recentBksError) throw recentBksError;
         const recentCount = recentBks?.length ?? 0;
         if (recentCount >= 8) {
           push({
@@ -783,9 +783,9 @@ export function useNextyInsights() {
       const ATTACH_MIN_BOOKINGS = 10;
       const ATTACH_RATE_THRESHOLD = 40; // percent
 
-      await supabase.rpc<AttachRateRow>("get_attach_rate", {
+      const { data: attachRows, error: attachRowsError } = await supabase.rpc<AttachRateRow>("get_attach_rate", {
         p_tenant_id: tenantId,
-      });
+      });;
       if (attachRowsError) throw attachRowsError;
 
       if (attachRows && attachRows.length > 0) {
