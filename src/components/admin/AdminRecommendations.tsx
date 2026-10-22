@@ -136,7 +136,7 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
   };
 
   const allInsights   = (insights ?? []).filter(i => !dismissed.has(i.id));
-  const totalImpact   = (insights ?? []).reduce((s, i) => s + (i.impactRand ?? 0), 0);
+  const totalImpact   = (insights ?? []).reduce((s, i) => s + (i.estimatedUncollectedRand ?? 0), 0);
   const displayedCount = useCounter(totalImpact, showCards);
 
   const FILTERS = [
@@ -228,10 +228,10 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
         }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontSize: 11, color: S.faint, textTransform: "uppercase", letterSpacing: "0.08em", lineHeight: 1.4 }}>
-              Total Recoverable Revenue Identified
+              Estimated Uncollected No-Show Balance
             </div>
             <div style={{ fontSize: 10, color: S.faint, marginTop: 2 }}>
-              Based on last 90 days · {updatedLabel}
+              Recorded no-shows after deposits · {updatedLabel}
             </div>
           </div>
           <div style={{
@@ -386,7 +386,7 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
                         <span style={{ width: 5, height: 5, borderRadius: "50%", background: p.dot, flexShrink: 0 }} />
                         {p.label}
                       </div>
-                      {ins.impactRand && (
+                      {ins.estimatedUncollectedRand && (
                         <div style={{
                           display: "inline-flex", alignItems: "center", gap: 3,
                           padding: "2px 7px",
@@ -396,7 +396,7 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
                           color: S.gold, whiteSpace: "nowrap", flexShrink: 0,
                         }}>
                           <TrendingUp size={9} />
-                          R{ins.impactRand.toLocaleString("en-ZA")}
+                          R{ins.estimatedUncollectedRand.toLocaleString("en-ZA")}
                         </div>
                       )}
                     </div>
