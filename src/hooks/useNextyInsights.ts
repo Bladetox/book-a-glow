@@ -12,7 +12,7 @@ export interface NextyInsight {
   message: string;
   actionLabel?: string;
   actionView?: string;
-  impactRand?: number;
+  estimatedUncollectedRand?: number;
 }
 
 export type RevenuePerMinuteRow = {
@@ -74,6 +74,7 @@ export function useNextyInsights() {
 
   return useQuery({
     queryKey: ["nexty-insights", tenantId],
+    enabled: Boolean(tenantId),
     queryFn: async () => {
       const insights: NextyInsight[] = [];
 
@@ -158,7 +159,7 @@ export function useNextyInsights() {
               `That is a ${multiplier}x gap for the same amount of ${isMobile ? "travel and appointment" : "chair"} time. ` +
               `"${top.service_name}" has ${topCount} booking${topCount === 1 ? "" : "s"} vs ${bottomCount} for "${bottom.service_name}". ` +
               `To recover this: go to Services and move "${top.service_name}" to position 1 on your booking page. ` +
-              `Clients book what they see first. This takes under 30 seconds and requires no price changes.`,
+              `Treat the reorder as a test, then compare service-level booking counts and revenue over a defined period.`,
             actionLabel: "Reorder Services",
             actionView: "Services",
           });
@@ -186,7 +187,7 @@ export function useNextyInsights() {
 
           const recoveryStep = isMobile
             ? `The evening before a ${slowName}, open your Loyalty Tracker, identify 3 to 5 clients in the area you will be travelling to and send them a personal WhatsApp. ` +
-              `You already have their numbers. A direct message from a known contact converts far better than any broadcast.`
+              `You already have their numbers. Use booking history to select clients who previously booked on this day, then track responses before repeating the approach.`
             : `The evening of ${prevDay}, send a personal WhatsApp to loyalty clients who are overdue for a visit. ` +
               `Open the Loyalty Tracker, filter by "Time to Book" or "Overdue" and message them directly. ` +
               `A personal message from you converts at a much higher rate than a broadcast.`;
@@ -232,14 +233,14 @@ export function useNextyInsights() {
               `The ${formatRand(Math.round(lost))} lost is the unpaid balance on those ${count} ${apptWord}${count === 1 ? "" : "s"} after deposits were applied. ` +
               `To reduce this further: go to Bookings, find confirmed ${apptWord}s for the next 7 days ` +
               `and send a personal reminder WhatsApp the day before each one. ` +
-              `${isMobile ? "For a mobile service, a reminder also confirms the address and saves wasted travel." : "A personal reminder from a known number reduces no-shows by 40 to 60%."}`;
+              `${isMobile ? "For a mobile service, a reminder also confirms the address and saves wasted travel." : "A personal reminder gives you a chance to confirm attendance before reserving the slot."}`;
           } else {
             // No deposit configured. Full amount is at risk.
             recoveryStep =
               `No deposit was collected on any of these ${apptWord}s, so the full ${formatRand(Math.round(lost))} was lost. ` +
               `To recover: go to Settings and activate the deposit requirement. ` +
               `Set it to at least 30%${isMobile ? " to cover your travel costs in addition to your time" : ""}. ` +
-              `This single change eliminates most no-shows because clients with a financial commitment show up.`;
+              `A deposit may reduce the amount at risk. Compare your no-show rate before and after changing the setting.`;
           }
 
           push({
@@ -253,7 +254,7 @@ export function useNextyInsights() {
               recoveryStep,
             actionLabel: noShowDpct > 0 ? "View Bookings" : "Open Settings",
             actionView:  noShowDpct > 0 ? "Bookings" : "Settings",
-            impactRand: Math.round(lost),
+            estimatedUncollectedRand: Math.round(lost),
           });
         }
         // Rate <= 5%: healthy record. No card rendered.
@@ -290,7 +291,6 @@ export function useNextyInsights() {
             recoveryStep,
           actionLabel: count === 1 ? "Enroll Client" : "Enroll Clients",
           actionView: "Loyalty",
-          impactRand: annualRev > 0 ? Math.round(annualRev) : undefined,
         });
       }
 
@@ -311,11 +311,11 @@ export function useNextyInsights() {
           const recoveryStep = isMobile
             ? `Within 48 hours of completing a first ${apptWord}, send a personal WhatsApp from your own number. ` +
               `You have their contact in Clients. A message like "Hi [name], great to meet you today. ` +
-              `Would you like to lock in your next session?" recovers approximately 1 in 3 first-time clients. ` +
+              `Would you like to lock in your next session?" may help some clients return. Track rebookings from contacted clients before repeating the approach. ` +
               `${notReturned} client${notReturned === 1 ? "" : "s"} from this period are still recoverable.`
             : `Within 48 hours of a first visit, send a personal WhatsApp. ` +
               `Go to Clients, filter by most recent first-timers and message the ${notReturned} who have not returned. ` +
-              `A direct message from you converts approximately 1 in 3 first-time clients back into repeat bookings.`;
+              `Track how many contacted first-time clients rebook before making this a standard process.`;
 
           push({
             id: "rebooking_rate",
@@ -446,7 +446,7 @@ export function useNextyInsights() {
                   ? `This usually means the referring client is recommending a specific entry-level service. ` +
                     `Create a referral incentive that is tied to a combo or premium service specifically. ` +
                     `A message like "refer a friend for a Hollywood + leg combo and both of you get 10% off" ` +
-                    `lifts the referred basket while still rewarding the existing client.`
+                    `is a hypothesis to test. Compare referred booking values before and after introducing the offer.`
                   : `Review what you're actually promoting through this channel — if it consistently highlights your cheapest service, that's likely why the basket size is lower here than elsewhere.`;
 
               push({
@@ -464,7 +464,7 @@ export function useNextyInsights() {
             } else if (avg > overallAvg * 1.15) {
               const specificAdvice =
                 channel === "TikTok"
-                  ? `Posting consistently (3 to 4 times per week) is the single most effective way to scale it further without any additional cost.`
+                  ? `Your booking data shows this channel has an above-average basket size. Test a modest increase in posts and compare channel bookings and revenue over the next 30 days.`
                   : `Since this channel already converts well, putting a little more consistent effort behind it is likely to pay off faster than starting a new one.`;
 
               push({
@@ -720,47 +720,7 @@ export function useNextyInsights() {
       // Referral-specific low-basket logic now runs generically inside Rule 8
       // for every acquisition channel, including Referral.
 
-      // -- 18. SA Seasonal Countdown -----------------------------------------
-      // Static SA dates. No RPC needed. Fires 21 days before key events.
-      const SA_SEASONAL: { name: string; date: string; type: "holiday" | "seasonal" }[] = [
-        { name: "Mother's Day",           date: "2026-05-11", type: "seasonal" },
-        { name: "Youth Day",               date: "2026-06-16", type: "holiday" },
-        { name: "Father's Day",           date: "2026-06-21", type: "seasonal" },
-        { name: "Women's Day",            date: "2026-08-09", type: "holiday" },
-        { name: "Heritage Day",            date: "2026-09-24", type: "holiday" },
-        { name: "Black Friday",            date: "2026-11-27", type: "seasonal" },
-        { name: "December peak season",    date: "2026-12-01", type: "seasonal" },
-        { name: "Day of Reconciliation",   date: "2026-12-16", type: "holiday" },
-        { name: "Christmas",               date: "2026-12-25", type: "holiday" },
-      ];
-      const today = new Date();
-      const upcomingEvent = SA_SEASONAL.find(e => {
-        const d     = new Date(e.date);
-        const diff  = Math.floor((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-        return diff >= 0 && diff <= 21;
-      });
-      if (upcomingEvent) {
-        const eventDate = new Date(upcomingEvent.date);
-        const daysLeft  = Math.floor((eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-        const isHoliday = upcomingEvent.type === "holiday";
-        push({
-          id: `seasonal_${upcomingEvent.date}`,
-          type: "growth",
-          priority: daysLeft <= 7 ? "important" : "info",
-          title: `${upcomingEvent.name} Is ${daysLeft} Day${daysLeft === 1 ? "" : "s"} Away`,
-          message: isHoliday
-            ? `${upcomingEvent.name} falls on ${eventDate.toLocaleDateString("en-ZA", { weekday: "long", day: "numeric", month: "long" })}. ` +
-              `This is a South African public holiday. Decide now whether to block the day or promote availability. ` +
-              `Clients who see your content in the days leading up to a public holiday often book the slot before it or after it, not on the day itself. ` +
-              `Post your availability decision on your story today to capture that window.`
-            : `${upcomingEvent.name} is ${daysLeft} days away and is one of the highest-demand periods in the SA beauty calendar. ` +
-              `If your slots are not already filling, a single story or WhatsApp broadcast to your client list today ` +
-              `referencing ${upcomingEvent.name} by name will convert faster than any other content you post this week. ` +
-              `Clients respond to date-specific prompts because they create natural urgency.`,
-          actionLabel: "View Schedule",
-          actionView: "Availability",
-        });
-      }
+      // Seasonal prompts are intentionally omitted until they can be supported by this tenant's own booking history.
 
       // -- 19. Google Review Velocity ----------------------------------------
       const { data: ctxFull } = await supabase
