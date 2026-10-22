@@ -28,7 +28,7 @@ export type QuietDayRow = {
   day_name: string;
   booking_count: number;
   avg_daily_bookings: number;
-  capacity_percentage: number;
+  relative_demand_pct: number;
 };
 
 export type ChannelRoiRow = {
@@ -159,9 +159,9 @@ export function useNextyInsights() {
             priority: "important",
             title: "Revenue Per Minute Gap",
             message:
-              `"${top.service_name}" earns ${formatRpm(topRpm)} per minute. ` +
+              `"${top.service_name}" is listed at ${formatRpm(topRpm)} per service minute. ` +
               `"${bottom.service_name}" earns ${formatRpm(bottomRpm)} per minute. ` +
-              `That is a ${multiplier}x gap for the same amount of ${isMobile ? "travel and appointment" : "chair"} time. ` +
+              `That is a ${multiplier}x difference in listed price per service minute, not profit or realised revenue. ` +
               `"${top.service_name}" has ${topCount} booking${topCount === 1 ? "" : "s"} vs ${bottomCount} for "${bottom.service_name}". ` +
               `To recover this: go to Services and move "${top.service_name}" to position 1 on your booking page. ` +
               `Treat the reorder as a test, then compare service-level booking counts and revenue over a defined period.`,
@@ -181,7 +181,7 @@ export function useNextyInsights() {
       if (quietDays && quietDays.length > 0) {
         const slowest = quietDays[0];
         const busiest = quietDays[quietDays.length - 1];
-        const pct     = Math.round(Number(slowest.capacity_percentage));
+        const pct     = Math.round(Number(slowest.relative_demand_pct));
 
         if (pct < 75) {
           const slowAvg   = Number(slowest.avg_daily_bookings);
@@ -196,7 +196,7 @@ export function useNextyInsights() {
               `You already have their numbers. Use booking history to select clients who previously booked on this day, then track responses before repeating the approach.`
             : `The evening of ${prevDay}, send a personal WhatsApp to loyalty clients who are overdue for a visit. ` +
               `Open the Loyalty Tracker, filter by "Time to Book" or "Overdue" and message them directly. ` +
-              `A personal message from you converts at a much higher rate than a broadcast.`;
+              `Track how many contacted clients return before deciding whether this outreach works for your business.`;
           void isSolo; // isSolo available for future staff-specific branching
 
           push({
@@ -207,7 +207,7 @@ export function useNextyInsights() {
             message:
               `${slowName} averages ${slowAvg.toFixed(1)} booking${slowAvg === 1 ? "" : "s"} per week ` +
               `vs ${fastAvg.toFixed(1)} on ${fastName}. ` +
-              `That is ${weeklyGap} fewer paid ${apptWord}s every ${slowName}. ` +
+              `That is ${weeklyGap} fewer recorded ${apptWord}s per week on ${slowName}. ` +
               recoveryStep,
             actionLabel: "View Loyalty Tracker",
             actionView: "Loyalty",
@@ -497,14 +497,14 @@ export function useNextyInsights() {
       }
 
       // -- 9. New Client Conversion Rate ------------------------------------
-      // Fires when new client conversion < 50% over the last 90 days.
+      // Uses only first-time clients whose full 60-day return window has elapsed.
       const { data: convData, error: convDataError } = await supabase.rpc("get_new_client_conversion", {
         p_tenant_id: tenantId,
       });;
       if (convDataError) throw convDataError;
       if (convData && convData[0]) {
         const c = convData[0];
-        const newCount  = Number(c.new_clients_90d ?? 0);
+        const newCount  = Number(c.new_clients_matured ?? 0);
         const converted = Number(c.converted_to_repeat ?? 0);
         const rate      = Number(c.conversion_rate_pct ?? 0);
         const missed    = newCount - converted;
@@ -516,7 +516,7 @@ export function useNextyInsights() {
             priority: rate < 30 ? "important" : "info",
             title: "New Clients Are Not Coming Back",
             message:
-              `${converted} of ${newCount} new clients from the last 90 days booked a second ${apptWord}. ` +
+              `${converted} of ${newCount} first-time clients with a full 60-day follow-up window booked a second ${apptWord}. ` +
               `That is a ${rate.toFixed(0)}% conversion rate. ` +
               `The ${missed} who did not return likely had a great first experience but had no prompt to rebook. ` +
               `A personal WhatsApp within 48 hours of a first visit, asking if they would like to lock in the next session, recovers roughly 1 in 3 of those clients. ` +
