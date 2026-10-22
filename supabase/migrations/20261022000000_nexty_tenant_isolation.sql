@@ -46,7 +46,8 @@ DECLARE
     'get_revenue_per_minute',
     'get_salary_cycle_analysis',
     'get_top_client_concentration',
-    'get_travel_efficiency'
+    'get_travel_efficiency',
+    'get_unattributed_revenue'
   ];
 BEGIN
   FOR fn IN
@@ -63,7 +64,7 @@ BEGIN
     END IF;
 
     EXECUTE format('REVOKE ALL ON FUNCTION %s FROM PUBLIC, anon', fn.signature);
-    EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO authenticated', fn.signature);
+    EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO authenticated, service_role', fn.signature);
   END LOOP;
 END;
 $migration$;
