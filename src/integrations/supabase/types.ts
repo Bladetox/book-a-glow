@@ -2838,7 +2838,7 @@ export type Database = {
           avg_days_to_return: number
           conversion_rate_pct: number
           converted_to_repeat: number
-          new_clients_90d: number
+          new_clients_matured: number
         }[]
       }
       get_new_vs_returning_clients:
@@ -2916,7 +2916,7 @@ export type Database = {
         Returns: {
           avg_daily_bookings: number
           booking_count: number
-          capacity_percentage: number
+          relative_demand_pct: number
           day_name: string
           day_of_week: number
         }[]
