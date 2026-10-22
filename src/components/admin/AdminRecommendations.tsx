@@ -77,7 +77,7 @@ function useCounter(target: number, run: boolean) {
 
 // -- Main Component -----------------------------------------------------------
 export default function AdminRecommendations({ onNavigate }: { onNavigate: (view: string) => void }) {
-  const { data: insights, isLoading, refetch } = useNextyInsights();
+  const { data: insights, isLoading, isError, refetch } = useNextyInsights();
   const { tenantId } = useTenant();
   const [activeFilter, setActiveFilter] = useState("all");
   const [showCards,    setShowCards]    = useState(false);
@@ -124,6 +124,12 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
   const updatedAtRef = useRef<number>(Date.now());
   const [updatedLabel, setUpdatedLabel] = useState("Updated just now");
 
+
+  useEffect(() => {
+    setDismissed(new Set());
+    setExpanded(new Set());
+    setActionError(null);
+  }, [tenantId]);
 
   useEffect(() => {
     if (isLoading) return;
@@ -239,6 +245,11 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
         </button>
       </div>
 
+      {isError && !isLoading && (
+        <div role="alert" style={{ margin: "12px 16px 0", padding: "10px 12px", border: "1px solid rgba(255,87,87,0.3)", borderRadius: 8, color: "#ff9a9a", fontSize: 12 }}>
+          Nexty could not complete its analysis. No new recommendations are being shown from incomplete data. Please re-scan in a moment.
+        </div>
+      )}
       {actionError && (
         <div role="alert" style={{ margin: "12px 16px 0", padding: "10px 12px", border: "1px solid rgba(255,87,87,0.3)", borderRadius: 8, color: "#ff9a9a", fontSize: 12 }}>
           {actionError}
