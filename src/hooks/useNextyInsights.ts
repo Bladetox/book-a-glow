@@ -80,10 +80,12 @@ export function useNextyInsights() {
 
       // -- Persistence: load dismissed/actioned insight IDs from DB --------
       // dismissed = skip for 7 days; actioned = skip for 30 days
-      const { data: actionRows } = await supabase
+      const { data: actionRows, error: actionRowsError } = await supabase
         .from("nexty_insight_actions")
         .select("insight_id, action_type, expires_at")
         .eq("tenant_id", tenantId);
+
+      if (actionRowsError) throw actionRowsError;
 
       const suppressedIds = new Set<string>(
         (actionRows ?? [])
