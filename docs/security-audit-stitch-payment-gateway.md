@@ -296,6 +296,72 @@ The live Supabase migration history includes entries through 2026-10-06, includi
 **Remediation:** Reconcile live migration history with supabase/migrations using a read-only schema diff and repository inventory. Recover missing migration SQL from source control/history or generate a reviewed baseline without reapplying already-applied migrations. Do not blindly replay production migrations.
 
 
+
+### P1: A second public Yoco webhook-management endpoint can rotate a tenant webhook without authentication
+
+Deployed yoco-manage-webhook is active with verify_jwt=false. It accepts tenant_id (defaulting to phenomebeauty), reads that tenant's stored Yoco secret with a service-role client, deletes the stored webhook subscription if present, registers a new one, and writes the new webhook secret back to the tenant row. The inspected handler does not authenticate the caller or verify tenant ownership.
+
+**Impact:** Any caller can attempt a privileged webhook-management operation against a tenant. This can disrupt payment processing or rotate webhook credentials without an authorized tenant-admin action.
+
+**Remediation:** Require a verified tenant owner/admin, remove the hard-coded default tenant, avoid returning provider error payloads containing sensitive data, and route webhook registration through one authenticated implementation. Review whether this endpoint is still needed alongside register-yoco-webhook and save-secret; remove redundant paths after confirming callers.
+
+### P1: Legacy initiate-deposit-checkout creates checkout sessions from a booking UUID alone
+
+Deployed initiate-deposit-checkout is active with verify_jwt=false. It accepts only booking_id, reads the booking and tenant with service-role access, and can create and persist a Yoco checkout without authenticating a caller or requiring booking-specific guest proof. The amount is derived from the stored deposit, which is positive, but the endpoint remains callable for another guest's booking when its UUID is known.
+
+**Remediation:** Confirm whether any current frontend still calls this legacy function. If unused, disable it through a controlled deployment. If required, apply the same booking-capability validation as the guest checkout flow and enforce duplicate/state checks server-side.
+
+### P1: iKhokha webhook can re-confirm a cancelled booking and lacks an explicit terminal-state guard
+
+The deployed ikhokha-webhook verifies the iKhokha HMAC and scopes its booking update to the tenant resolved from the app ID, which are useful controls. However, on a SUCCESS callback it unconditionally writes status='confirmed' and payment flags for the payment type without checking whether the booking was cancelled or whether the state transition is permitted. It also does not explicitly check that the callback's paylink ID matches the stored paylink for the booking when the booking UUID parses successfully from externalTransactionID.
+
+**Impact:** A late success for a previously cancelled booking can reactivate it. A valid but stale provider callback can overwrite a newer booking state.
+
+**Remediation:** Match both the provider transaction/paylink reference and booking/tenant, enforce monotonic allowed state transitions, and handle late success after cancellation as a reconciliation/refund/manual-review case without silently re-confirming the booking. Make repeated callbacks idempotent, including notification side effects.
+
+### P2: Public Yoco payment lookup is an unauthenticated provider proxy
+
+The deployed yoco-payment-lookup endpoint has verify_jwt=false and accepts secret_key plus checkout IDs in the request body, then calls Yoco and returns the response data. The caller supplies the key, so this does not by itself demonstrate that NextSlot leaks a stored tenant secret, but it creates an unauthenticated proxy that can expose payment details associated with any valid key supplied to it and encourages passing provider secrets through client requests.
+
+**Remediation:** Remove if obsolete. Otherwise require a server-side stored secret reference, authenticate/authorize the tenant, accept only checkout IDs belonging to that tenant, and return a minimal normalized status instead of raw provider payloads.
+
+### Payment-flow inventory reviewed
+
+**Frontend and tenant admin**
+- src/components/ReviewStep.tsx
+- src/components/booking/IkhokhaPaymentSheet.tsx
+- src/components/booking/PayshapPaymentSheet.tsx
+- src/pages/PaymentSuccess.tsx
+- src/components/admin/AdminBookings.tsx
+- src/hooks/usePayshapPayments.ts
+- src/hooks/useSupabaseSettings.ts
+- src/hooks/usePublicBusinessConfig.ts
+- src/components/admin/AdminIntegrations.tsx
+- src/components/admin/IkhokhaCard.tsx
+- src/components/admin/SetupChecklistPaymentGate.tsx
+- src/components/superadmin/views/SAPaymentConfig.tsx
+- src/components/superadmin/views/payment-config/YocoKeysCard.tsx
+- src/components/superadmin/views/payment-config/YocoWebhookCard.tsx
+- src/components/superadmin/views/payment-config/IkhokhaKeysCard.tsx
+- src/hooks/useFeatureFlags.ts and src/lib/featureFlags/registry.ts
+
+**Deployed Edge Functions reviewed for payment/security boundaries**
+- yoco-checkout, booking-payment-webhook, yoco-webhook, platform-payment-webhook
+- confirm-booking, initiate-deposit-checkout, yoco-balance, yoco-payment-lookup, yoco-manage-webhook, register-yoco-webhook
+- save-secret, save-tenant-secret, save-yoco-keys, save-ikhokha-keys, save-payfast-keys
+- ikhokha-checkout, ikhokha-webhook, payfast-checkout, payfast-itn
+- platform-billing-checkout, platform-billing-webhook, platform-monthly-billing, platform-monthly-billing-test
+
+**Live database objects reviewed**
+- RLS policies, grants and sensitive columns on bookings, booking_items, payments, tenants, app_settings, tenant_secrets, platform_settings, platform_billing_config, platform_invoices, platform_payments, platform_events, billing_queue, slot_holds, profiles and user_roles
+- Relevant views including bookings_with_client, public_tenant_view and sa_platform_billing_overview
+- Relevant triggers including protect_booking_fields and booking event/notification triggers
+- Relevant SECURITY DEFINER RPCs, including create_booking_with_consultation, create_platform_invoice, get_booking_consistency_quote, reschedule_booking, increment_webhook_retry, acquire_slot_hold, release_slot_hold and availability helpers
+- Live migration history and Supabase security-advisor output
+
+This is a targeted payment/security inventory, not a claim that every unrelated application file or every database object outside these payment dependencies has received a line-by-line security review.
+
+
 ### Positive controls observed
 
 - RLS is enabled on the inspected booking/payment/secret tables.
