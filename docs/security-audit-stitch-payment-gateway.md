@@ -380,6 +380,16 @@ The deployed code for these functions was inspected through the Supabase functio
 **Remediation:** Recover and commit the exact deployed source for every active function, or deliberately retire the function after verifying no callers/provider callbacks depend on it. Reconcile function names, callers, supabase/config.toml, deployment workflows and deployed verify_jwt settings. Do not deploy an assumed replacement based only on similar names.
 
 
+
+### P1: Any authenticated user can trigger a global cancellation RPC
+
+Live database inspection found public.cancel_expired_pending_bookings() is SECURITY DEFINER and executable by authenticated users. Its function body globally updates every booking matching status='pending', deposit_paid=false, a non-null yoco_checkout_id, and created_at older than 30 minutes. It contains no caller role or tenant authorization check and accepts no tenant parameter. The function was not found as a caller in the application source beyond generated database types, so it may be intended for scheduled/internal use.
+
+**Impact:** Any signed-in user who calls the RPC can cancel qualifying bookings across all tenants, creating a cross-tenant denial-of-service path.
+
+**Remediation:** Revoke direct authenticated EXECUTE and expose the operation only through a trusted scheduled/internal worker, or add an explicit platform-admin authorization check. Keep the global cancellation criteria and timing unchanged until the owner-approved operational behavior is confirmed.
+
+
 ### Positive controls observed
 
 - RLS is enabled on the inspected booking/payment/secret tables.
