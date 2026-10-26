@@ -264,6 +264,38 @@ Confirmed review points:
 
 **Remediation:** Maintain an explicit, reviewed function security matrix in the repository and verify deployed settings during release. For every public function, document whether it is a guest-facing API or a provider callback, what proves caller authority, what data it can mutate, how it validates inputs, and how secrets are retrieved.
 
+
+### P0: Public confirm-booking endpoint confirms by booking UUID without payment verification
+
+**Live deployed evidence**
+- confirm-booking is active with verify_jwt=false.
+- It accepts booking_id as a URL query parameter, fetches the booking using the service-role key, and sets status='confirmed' for any booking that is not already confirmed/completed/in progress.
+- The function does not verify a provider webhook/signature, persisted payment transaction, paid amount, tenant, authenticated caller, or booking-specific guest capability before changing status.
+- It also dispatches a booking-confirmation email after the update.
+
+**Impact:** Anyone who obtains a booking UUID can call the endpoint to confirm the booking without proving that the required deposit/payment was received. This is a booking/payment-integrity vulnerability.
+
+**Remediation:** Remove or disable the endpoint if obsolete. If a confirmation endpoint is still needed, require a verified provider event or authenticated tenant-admin action and validate the payment state server-side. Do not use a return redirect or booking UUID as proof of payment.
+
+### P2: Payment return page can show success before authoritative payment state is confirmed
+
+**Repository evidence**
+- src/pages/PaymentSuccess.tsx reads payment=success and can initialize client-side booking display state with deposit_paid: true from URL-derived values before the database poll returns.
+- The page subsequently polls the database, which is the correct direction, but a return URL is attacker-controlled and should never be the basis for a paid/confirmed claim.
+
+**Impact:** A forged or replayed success URL can initially display a successful payment state even when the database has not confirmed it. This is a UI-trust issue; the reviewed component does not itself persist the paid flag.
+
+**Remediation:** Render “payment processing” until the database reports a verified paid state. Never infer paid status from query parameters. Keep all state transitions in verified provider webhook/verification paths.
+
+### P1/P2: Live migration history is ahead of the migration files found in the repository
+
+The live Supabase migration history includes entries through 2026-10-06, including grant_tenants_status_columns_to_authenticated, fix_superadmin_tenant_visibility, sa_delete_tenant_and_sa_read_access, and guest_consultation_write_path. Searches of the audited branch did not find matching migration files for those names.
+
+**Impact:** The branch's migration directory may not fully reproduce the live database. This makes future RLS review and rollback harder and can conceal policy/grant changes that exist only in production.
+
+**Remediation:** Reconcile live migration history with supabase/migrations using a read-only schema diff and repository inventory. Recover missing migration SQL from source control/history or generate a reviewed baseline without reapplying already-applied migrations. Do not blindly replay production migrations.
+
+
 ### Positive controls observed
 
 - RLS is enabled on the inspected booking/payment/secret tables.
