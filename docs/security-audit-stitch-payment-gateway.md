@@ -362,6 +362,24 @@ The deployed yoco-payment-lookup endpoint has verify_jwt=false and accepts secre
 This is a targeted payment/security inventory, not a claim that every unrelated application file or every database object outside these payment dependencies has received a line-by-line security review.
 
 
+
+### P1: Several active payment-related Edge Functions are deployed but absent from the repository
+
+A direct path check against feature/stitch-payment-gateway found no matching source file for these active deployed functions:
+- initiate-deposit-checkout
+- yoco-manage-webhook
+- platform-payment-webhook
+- yoco-payment-lookup
+- payfast-checkout
+- platform-billing-webhook
+
+The deployed code for these functions was inspected through the Supabase function source interface, but the repository cannot reproduce or review those deployed versions through its normal source tree. The repository contains payfast-create-checkout instead of payfast-checkout, so the deployed function name and repository function name also differ.
+
+**Impact:** Production behavior may diverge from source control, security fixes can be missed by deployment, and a future deploy may fail to update or remove a vulnerable endpoint. This also makes incident response and rollback less reliable.
+
+**Remediation:** Recover and commit the exact deployed source for every active function, or deliberately retire the function after verifying no callers/provider callbacks depend on it. Reconcile function names, callers, supabase/config.toml, deployment workflows and deployed verify_jwt settings. Do not deploy an assumed replacement based only on similar names.
+
+
 ### Positive controls observed
 
 - RLS is enabled on the inspected booking/payment/secret tables.
