@@ -26,4 +26,4 @@ Each successful waiver creates an immutable row in `public.booking_callout_fee_w
 
 ## Security and scope
 
-The RPC checks `auth.uid()` and tenant-admin membership inside the database, locks the booking row, and uses a fixed search path. The new audit table has RLS enabled. Existing booking RLS policies are unchanged. Guest booking access, anonymous booking creation, subscription plan gating, PayShap behaviour, and booking flow logic are unchanged. The action is available in admin booking details for call-out bookings with a paid deposit and an outstanding balance.
+The exposed RPC is SECURITY INVOKER. Its atomic implementation lives in the non-exposed `nextslot_private` schema, uses a fixed search path, checks `auth.uid()` and tenant-admin membership inside the database, and locks the booking row. The new audit table has RLS enabled. Existing booking RLS policies are unchanged. Guest booking access, anonymous booking creation, subscription plan gating, PayShap behaviour, and booking flow logic are unchanged. The action is available in admin booking details for call-out bookings with a paid deposit and an outstanding balance.
