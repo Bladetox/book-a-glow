@@ -405,6 +405,8 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
   const [confirmRequestBalance, setConfirmRequestBalance] = useState<BookingRow | null>(null);
   const [confirmWaiveCallOut, setConfirmWaiveCallOut] = useState<BookingRow | null>(null);
   const [waivingCallOutId, setWaivingCallOutId] = useState<string | null>(null);
+  const [confirmRestoreCallOut, setConfirmRestoreCallOut] = useState<BookingRow | null>(null);
+  const [restoringCallOutId, setRestoringCallOutId] = useState<string | null>(null);
 
   const [addServiceBooking, setAddServiceBooking] = useState<BookingRow | null>(null);
 
@@ -591,6 +593,33 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
       toast.error(e.message || "Unable to waive call-out fee");
     } finally {
       setWaivingCallOutId(null);
+    }
+  };
+
+  const handleRestoreCallOutFee = async (b: BookingRow) => {
+    if (restoringCallOutId === b.id) return;
+    setRestoringCallOutId(b.id);
+    try {
+      const { data, error } = await supabase.rpc("restore_call_out_fee", {
+        p_booking_id: b.id,
+        p_reason: "Restored by tenant admin",
+      });
+      if (error) throw error;
+
+      const result = data as unknown as { restored_amount?: number; balance_due?: number } | null;
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["bookings", tenantId] }),
+        queryClient.invalidateQueries({ queryKey: ["supabase-bookings"] }),
+        queryClient.invalidateQueries({ queryKey: ["dash-bookings", tenantId] }),
+        queryClient.invalidateQueries({ queryKey: ["dash-payments-current", tenantId] }),
+      ]);
+      toast.success(
+        `Call-out fee restored (R${Number(result?.restored_amount ?? 0).toFixed(2)}). Revised balance: R${Number(result?.balance_due ?? b.balance).toFixed(2)}.`
+      );
+    } catch (e: any) {
+      toast.error(e.message || "Unable to restore call-out fee");
+    } finally {
+      setRestoringCallOutId(null);
     }
   };
 
@@ -975,6 +1004,20 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
         }}
         onCancel={() => setConfirmWaiveCallOut(null)}
       />
+      <ConfirmDialog
+        open={!!confirmRestoreCallOut}
+        title="Restore call-out fee?"
+        description={confirmRestoreCallOut
+          ? `This will restore the exact fee recorded in the original waiver audit for ${confirmRestoreCallOut.client}'s booking. The fee will be added back to the booking total and outstanding balance. Completed payments remain unchanged. Restoration is blocked if payment records do not reconcile, the booking total has changed since the waiver, or this waiver has already been restored.`
+          : ""}
+        confirmLabel="Restore Fee"
+        confirmClass="bg-sky-500/20 border border-sky-500/30 text-sky-300 hover:bg-sky-500/30"
+        onConfirm={() => {
+          if (confirmRestoreCallOut) void handleRestoreCallOutFee(confirmRestoreCallOut);
+          setConfirmRestoreCallOut(null);
+        }}
+        onCancel={() => setConfirmRestoreCallOut(null)}
+      />
 
       <RescheduleModal
         booking={reschedulingBooking}
@@ -1319,6 +1362,36 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                           ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
                                           : <CircleDollarSign className="h-3.5 w-3.5" />}
                                         <span>{waivingCallOutId === b.id ? "Saving…" : "Waive fee"}</span>
+                                      </button>
+                                    </div>
+                                  )}
+
+                                {b.isCallOut &&
+                                  b.callOutFee === 0 &&
+                                  b.callOutDistanceKm > 0 &&
+                                  b.depositPaid &&
+                                  b.balance > 0 &&
+                                  !b.fullPaymentReceived &&
+                                  b.status !== "cancelled" && (
+                                    <div className="flex items-center justify-between gap-3 rounded-xl border border-sky-500/15 bg-sky-500/[0.04] px-3 py-3">
+                                      <div className="min-w-0">
+                                        <p className="text-xs font-medium text-white/75">Restore call-out fee</p>
+                                        <p className="mt-0.5 text-[11px] leading-relaxed text-white/35">
+                                          Restore the exact amount saved in the waiver audit. The amount already paid remains unchanged.
+                                        </p>
+                                      </div>
+                                      <button
+                                        disabled={restoringCallOutId === b.id}
+                                        onClick={e => {
+                                          e.stopPropagation();
+                                          setConfirmRestoreCallOut(b);
+                                        }}
+                                        className="shrink-0 flex items-center gap-1.5 rounded-xl border border-sky-500/25 bg-sky-500/[0.08] px-3 py-2 text-xs font-medium text-sky-300 hover:bg-sky-500/[0.15] transition-colors disabled:opacity-50"
+                                      >
+                                        {restoringCallOutId === b.id
+                                          ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                          : <CircleDollarSign className="h-3.5 w-3.5" />}
+                                        <span>{restoringCallOutId === b.id ? "Saving…" : "Restore fee"}</span>
                                       </button>
                                     </div>
                                   )}
