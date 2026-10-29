@@ -3232,6 +3232,10 @@ export type Database = {
         Args: { p_booking_id: string; p_reason?: string }
         Returns: Json
       }
+      restore_call_out_fee: {
+        Args: { p_booking_id: string; p_reason?: string }
+        Returns: Json
+      }
       upsert_tenant_secret: {
         Args: { p_key: string; p_tenant_id: string; p_value: string }
         Returns: undefined
