@@ -18,7 +18,7 @@ A tenant administrator may waive a call-out fee on an eligible booking after a d
 
 The operation locks the booking row and performs the price adjustment and audit insert in one database transaction. It sets the call-out fee to zero, reduces `total_amount` by the waived fee, and recalculates `balance_due` as the revised total less the sum of completed payment records. It never updates, deletes, or rewrites payment history, and it does not change the deposit amount or create a refund/credit.
 
-The operation clears stored Yoco and iKhokha final-checkout identifiers and links. Their webhooks accept a balance settlement only when the callback refers to the booking's currently stored final-checkout ID. An older external link that was cleared by a waiver or service-price change cannot settle the revised balance.
+The operation clears stored Yoco and iKhokha final-checkout identifiers and links. Their webhooks accept a balance settlement only when the callback refers to the booking's currently stored final-checkout ID. If an older external link nevertheless reports a successful payment after being superseded, the callback is recorded in `public.stale_payment_webhook_events` for manual reconciliation; it does not mark the revised booking balance as paid. This avoids silently applying an amount that was generated for an earlier total.
 
 ## Audit
 
