@@ -227,14 +227,34 @@ Deno.serve(async (req) => {
   // and service edits clear it; never let an older externally-held link settle
   // a booking after the amount due has changed.
   if (paymentType === "balance" && booking.yoco_final_checkout_id !== checkoutId) {
-    console.warn("booking-payment-webhook: stale balance checkout ignored", {
+    const staleAmountCents = (eventData as any)?.total_amount?.amount as number | undefined;
+    const { error: staleEventError } = await supabase
+      .from("stale_payment_webhook_events")
+      .insert({
+        tenant_id: tenantId,
+        booking_id: bookingId,
+        gateway: "yoco",
+        payment_type: "balance",
+        checkout_reference: checkoutId,
+        transaction_reference: (eventData as any)?.id ?? checkoutId,
+        amount: staleAmountCents !== undefined ? Number(staleAmountCents) / 100 : null,
+        event_payload: eventData,
+        review_status: "needs_review",
+      });
+
+    if (staleEventError) {
+      console.error("booking-payment-webhook: failed to record stale balance checkout", staleEventError);
+      return new Response("Could not record stale payment event", { status: 500 });
+    }
+
+    console.warn("booking-payment-webhook: stale balance checkout recorded for manual reconciliation", {
       bookingId,
       checkoutId,
     });
     return new Response(JSON.stringify({
       received: true,
       matched: true,
-      skipped: "stale_balance_checkout",
+      skipped: "stale_balance_checkout_requires_review",
     }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
