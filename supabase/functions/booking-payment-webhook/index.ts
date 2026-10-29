@@ -223,6 +223,24 @@ Deno.serve(async (req) => {
     });
   }
 
+  // A stored balance checkout ID is the current payment claim. Fee waivers
+  // and service edits clear it; never let an older externally-held link settle
+  // a booking after the amount due has changed.
+  if (paymentType === "balance" && booking.yoco_final_checkout_id !== checkoutId) {
+    console.warn("booking-payment-webhook: stale balance checkout ignored", {
+      bookingId,
+      checkoutId,
+    });
+    return new Response(JSON.stringify({
+      received: true,
+      matched: true,
+      skipped: "stale_balance_checkout",
+    }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
   // ── Idempotency guard ────────────────────────────────────────────────────────
   if (paymentType === "deposit" && booking.deposit_paid === true) {
     console.log("booking-payment-webhook: deposit already paid, skipping", bookingId);
