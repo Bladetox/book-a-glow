@@ -151,6 +151,46 @@ Deno.serve(async (req) => {
 
     // ── 6. Update bookings (column names match live schema) ─────────────────
     if (status === "SUCCESS") {
+      if (paymentType === "balance" && bookingId) {
+        const { data: currentBooking, error: currentBookingError } = await supabase
+          .from("bookings")
+          .select("id, ikhokha_final_checkout_id")
+          .eq("id", bookingId)
+          .eq("tenant_id", tenantId)
+          .maybeSingle();
+
+        if (currentBookingError) {
+          console.error("[ikhokha-webhook] failed to verify current balance paylink:", currentBookingError);
+          return new Response("Could not verify current balance paylink", { status: 500 });
+        }
+
+        if (!currentBooking || currentBooking.ikhokha_final_checkout_id !== paylinkID) {
+          const { error: staleEventError } = await supabase
+            .from("stale_payment_webhook_events")
+            .insert({
+              tenant_id: tenantId,
+              booking_id: bookingId,
+              gateway: "ikhokha",
+              payment_type: "balance",
+              checkout_reference: paylinkID,
+              transaction_reference: externalTransactionID,
+              amount: null,
+              event_payload: body,
+              review_status: "needs_review",
+            });
+
+          if (staleEventError) {
+            console.error("[ikhokha-webhook] failed to record stale balance paylink:", staleEventError);
+            return new Response("Could not record stale payment event", { status: 500 });
+          }
+
+          console.warn(
+            `[ikhokha-webhook] stale balance paylink recorded for manual reconciliation booking=${bookingId} paylinkID=${paylinkID}`
+          );
+          return new Response("OK", { status: 200 });
+        }
+      }
+
       const updateData: Record<string, unknown> = {
         payment_provider: "ikhokha",
         status: "confirmed",
