@@ -27,3 +27,14 @@ Each successful waiver creates an immutable row in `public.booking_callout_fee_w
 ## Security and scope
 
 The exposed RPC is SECURITY INVOKER. Its atomic implementation lives in the non-exposed `nextslot_private` schema, uses a fixed search path, checks `auth.uid()` and tenant-admin membership inside the database, and locks the booking row. The new audit table has RLS enabled. Existing booking RLS policies are unchanged. Guest booking access, anonymous booking creation, subscription plan gating, PayShap behaviour, and booking flow logic are unchanged. The action is available in admin booking details for call-out bookings with a paid deposit and an outstanding balance.
+
+
+## Restoration
+
+A tenant administrator can restore a previously waived fee from the booking details when the call-out booking still has an outstanding balance. Restoration reads the exact `waived_amount` from the original waiver audit; it never recalculates the amount from current distance or pricing settings.
+
+The restore RPC locks the booking, verifies tenant-admin authorization, finds the latest unrestored waiver, and rejects restoration if the booking is cancelled, fully paid, has no outstanding balance, its total has changed since the waiver, or the completed payment ledger does not reconcile. A unique constraint on `waiver_id` prevents the same waiver from being restored twice.
+
+On success, the stored call-out fee and booking total increase by the audited amount, and the outstanding balance is recalculated as the revised total less completed payments. Payment rows are not changed. Yoco and iKhokha final-checkout links and identifiers are cleared so a stale checkout cannot settle the revised balance. Each restoration is written to the separate immutable `public.booking_callout_fee_restorations` audit table, with the waiver reference, acting user, restored amount, before-and-after totals and balances, paid amount, reason, and timestamp.
+
+The restoration RPC uses the same private-schema SECURITY DEFINER pattern with explicit tenant-admin authorization as the waiver RPC. Browser roles have SELECT-only access to tenant-scoped restoration audit rows; direct inserts and updates are not granted. Booking RLS and anonymous guest booking remain unchanged.
