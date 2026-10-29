@@ -403,6 +403,8 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
   const [confirmMarkPaid, setConfirmMarkPaid] = useState<BookingRow | null>(null);
   const [confirmMarkServiced, setConfirmMarkServiced] = useState<BookingRow | null>(null);
   const [confirmRequestBalance, setConfirmRequestBalance] = useState<BookingRow | null>(null);
+  const [confirmWaiveCallOut, setConfirmWaiveCallOut] = useState<BookingRow | null>(null);
+  const [waivingCallOutId, setWaivingCallOutId] = useState<string | null>(null);
 
   const [addServiceBooking, setAddServiceBooking] = useState<BookingRow | null>(null);
 
@@ -562,6 +564,33 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
       if (expandedId === id) setExpandedId(null);
     } catch (e: any) {
       toast.error(e.message || "Failed to delete");
+    }
+  };
+
+  const handleWaiveCallOutFee = async (b: BookingRow) => {
+    if (waivingCallOutId === b.id) return;
+    setWaivingCallOutId(b.id);
+    try {
+      const { data, error } = await supabase.rpc("waive_call_out_fee", {
+        p_booking_id: b.id,
+        p_reason: "Waived by tenant admin",
+      });
+      if (error) throw error;
+
+      const result = data as unknown as { waived_amount?: number; balance_due?: number } | null;
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["bookings", tenantId] }),
+        queryClient.invalidateQueries({ queryKey: ["supabase-bookings"] }),
+        queryClient.invalidateQueries({ queryKey: ["dash-bookings", tenantId] }),
+        queryClient.invalidateQueries({ queryKey: ["dash-payments-current", tenantId] }),
+      ]);
+      toast.success(
+        `Call-out fee waived. Revised balance: R${Number(result?.balance_due ?? Math.max(0, b.balance - b.callOutFee)).toFixed(2)}.`
+      );
+    } catch (e: any) {
+      toast.error(e.message || "Unable to waive call-out fee");
+    } finally {
+      setWaivingCallOutId(null);
     }
   };
 
@@ -932,6 +961,20 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
         onConfirm={() => { if (confirmRequestBalance) handleRequestBalance(confirmRequestBalance); setConfirmRequestBalance(null); }}
         onCancel={() => setConfirmRequestBalance(null)}
       />
+      <ConfirmDialog
+        open={!!confirmWaiveCallOut}
+        title="Waive call-out fee?"
+        description={confirmWaiveCallOut
+          ? `This will remove R${confirmWaiveCallOut.callOutFee.toFixed(2)} from ${confirmWaiveCallOut.client}'s booking total and outstanding balance. The amount already paid will remain unchanged. NextSlot will block the waiver if payment records do not reconcile or if the revised total would be below the amount already paid. No refund, credit, or credit note will be created.`
+          : ""}
+        confirmLabel="Waive Fee"
+        confirmClass="bg-amber-500/20 border border-amber-500/30 text-amber-300 hover:bg-amber-500/30"
+        onConfirm={() => {
+          if (confirmWaiveCallOut) void handleWaiveCallOutFee(confirmWaiveCallOut);
+          setConfirmWaiveCallOut(null);
+        }}
+        onCancel={() => setConfirmWaiveCallOut(null)}
+      />
 
       <RescheduleModal
         booking={reschedulingBooking}
@@ -1250,6 +1293,35 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                     <DetailRow icon={Tag} label="Lead Source" value={b.leadSource} />
                                   )}
                                 </div>
+
+                                {b.isCallOut &&
+                                  b.callOutFee > 0 &&
+                                  b.depositPaid &&
+                                  b.balance > 0 &&
+                                  !b.fullPaymentReceived &&
+                                  b.status !== "cancelled" && (
+                                    <div className="flex items-center justify-between gap-3 rounded-xl border border-amber-500/15 bg-amber-500/[0.04] px-3 py-3">
+                                      <div className="min-w-0">
+                                        <p className="text-xs font-medium text-white/75">Call-out fee waiver</p>
+                                        <p className="mt-0.5 text-[11px] leading-relaxed text-white/35">
+                                          Waive R{b.callOutFee.toFixed(2)}. Amount already paid remains unchanged.
+                                        </p>
+                                      </div>
+                                      <button
+                                        disabled={waivingCallOutId === b.id}
+                                        onClick={e => {
+                                          e.stopPropagation();
+                                          setConfirmWaiveCallOut(b);
+                                        }}
+                                        className="shrink-0 flex items-center gap-1.5 rounded-xl border border-amber-500/25 bg-amber-500/[0.08] px-3 py-2 text-xs font-medium text-amber-300 hover:bg-amber-500/[0.15] transition-colors disabled:opacity-50"
+                                      >
+                                        {waivingCallOutId === b.id
+                                          ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                          : <CircleDollarSign className="h-3.5 w-3.5" />}
+                                        <span>{waivingCallOutId === b.id ? "Saving…" : "Waive fee"}</span>
+                                      </button>
+                                    </div>
+                                  )}
 
                                 {(b.status === "cancelled" || b.status === "no_show") && b.cancellationReason && (
                                   <div className="flex items-start gap-2 rounded-xl bg-red-500/[0.06] border border-red-500/[0.12] px-3 py-2.5">
