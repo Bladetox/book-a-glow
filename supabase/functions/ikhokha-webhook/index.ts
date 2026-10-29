@@ -181,6 +181,13 @@ Deno.serve(async (req) => {
         ? query.eq("id", bookingId)
         : query.or(`ikhokha_checkout_id.eq.${paylinkID},ikhokha_final_checkout_id.eq.${paylinkID}`);
 
+      // A balance paylink is valid only while its ID is still the booking's
+      // current final-payment checkout. Clearing that ID during a fee waiver
+      // or service-price change makes any older external link harmless.
+      if (paymentType === "balance") {
+        query = query.eq("ikhokha_final_checkout_id", paylinkID);
+      }
+
       const { data: updated, error: updateErr } = await query.select("id");
 
       if (updateErr) {
