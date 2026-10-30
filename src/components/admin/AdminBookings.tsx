@@ -994,7 +994,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
         open={!!confirmWaiveCallOut}
         title="Waive call-out fee?"
         description={confirmWaiveCallOut
-          ? `This will remove R${confirmWaiveCallOut.callOutFee.toFixed(2)} from ${confirmWaiveCallOut.client}'s booking total and outstanding balance. The amount already paid will remain unchanged. NextSlot will block the waiver if payment records do not reconcile or if the revised total would be below the amount already paid. No refund, credit, or credit note will be created.`
+          ? `This will remove R${confirmWaiveCallOut.callOutFee.toFixed(2)} from ${confirmWaiveCallOut.client}'s booking total and outstanding balance. The amount already paid will remain unchanged. Action will be blocked if payment records do not reconcile or if the revised total would be below the amount already paid. No refund, credit, or credit note will be created.`
           : ""}
         confirmLabel="Waive Fee"
         confirmClass="bg-amber-500/20 border border-amber-500/30 text-amber-300 hover:bg-amber-500/30"
