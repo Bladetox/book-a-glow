@@ -66,7 +66,7 @@ const ScheduleStep = ({
 
   const year = currentMonth.getFullYear();
   const month = currentMonth.getMonth() + 1;
-  const { data: monthAvailability, isLoading: loadingMonth } = useMonthAvailability(
+  const { data: monthAvailability, isLoading: loadingMonth, refetch: refetchMonthAvailability } = useMonthAvailability(
     year,
     month,
     totalDuration,
@@ -166,6 +166,13 @@ const ScheduleStep = ({
     setCalendarOpen(true);
   }, []);
 
+  const handleFindAnotherDate = useCallback(() => {
+    setAvailabilityNotice(null);
+    // Recalculate the complete booking horizon using the unchanged service duration.
+    void refetchMonthAvailability();
+    setCalendarOpen(true);
+  }, [refetchMonthAvailability]);
+
   /** Called when a time slot button is tapped */
   const handleSlotTap = useCallback(async (time: string) => {
     if (!selectedDate || acquiringSlot) return;
@@ -239,7 +246,7 @@ const ScheduleStep = ({
             <div className="mt-3 flex flex-wrap gap-2">
               <button
                 type="button"
-                onClick={() => setAvailabilityNotice(null)}
+                onClick={handleFindAnotherDate}
                 className="rounded-xl bg-primary px-3.5 py-2 text-xs font-semibold text-primary-foreground"
               >
                 Find another date
