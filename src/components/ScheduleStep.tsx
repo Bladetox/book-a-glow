@@ -478,8 +478,8 @@ const ScheduleStep = ({
 
       {noSuitableDatesInHorizon && !availabilityNotice && !refreshingAvailability && (
         <div className="rounded-2xl border border-border bg-card px-4 py-4" role="status" aria-live="polite">
-          <p className="text-sm font-semibold text-foreground">No dates can accommodate these services</p>
-          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Your selected services cannot currently be booked together within this business’s available dates. You can adjust your service selection and try again.</p>
+          <p className="text-sm font-semibold text-foreground">No available dates for these services</p>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">There are currently no bookable dates within this business’s booking window for your selected services. You can adjust your service selection and check again.</p>
           <button type="button" onClick={onReviewServices} className="mt-3 rounded-xl border border-border px-3.5 py-2 text-xs font-semibold text-foreground">Review services</button>
         </div>
       )}
