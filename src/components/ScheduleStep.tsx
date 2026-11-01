@@ -124,7 +124,7 @@ const ScheduleStep = ({
   // the new combined duration must still fit. Release the old hold and return
   // them to the calendar when the selected slot no longer qualifies.
   useEffect(() => {
-    if (!selectedDate || !selectedTime || loadingSlots) return;
+    if (!selectedDate || !selectedTime || loadingSlots || fetchingSlots) return;
     if (dateSlots.includes(selectedTime)) return;
 
     const status = monthAvailability?.[format(selectedDate, "yyyy-MM-dd")]?.status ?? "restricted";
@@ -275,7 +275,7 @@ const ScheduleStep = ({
               {availabilityNotice === "insufficient_time"
                 ? "Your selected services need more time than is available on this date. You can view other dates that can accommodate your appointment or adjust your service selection."
                 : availabilityNotice === "fully_booked"
-                ? "There is enough operating time for your selected services, however all suitable appointment times have already been taken. Please view another date or adjust your service selection."
+                ? "There is enough operating time for your selected services, however all suitable appointment times have already been taken. Please choose another date."
                 : "The available times on this date do not meet the current booking rules. Please view another date or adjust your service selection."}
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
@@ -286,13 +286,15 @@ const ScheduleStep = ({
               >
                 Find another date
               </button>
-              <button
-                type="button"
-                onClick={onReviewServices}
-                className="rounded-xl border border-border px-3.5 py-2 text-xs font-semibold text-foreground"
-              >
-                Review services
-              </button>
+              {availabilityNotice !== "fully_booked" && (
+                <button
+                  type="button"
+                  onClick={onReviewServices}
+                  className="rounded-xl border border-border px-3.5 py-2 text-xs font-semibold text-foreground"
+                >
+                  Review services
+                </button>
+              )}
             </div>
           </motion.div>
         )}
