@@ -28,9 +28,19 @@ function todayLocalStr(): string {
  * Fetch available slots for an entire month.
  * @param staffId - pass ownerId from PublicTenantContext to skip the extra DB lookup.
  */
+export interface MonthDateAvailability {
+  slots: string[];
+  status: "available" | "insufficient_time" | "fully_booked" | "restricted";
+}
+
+/**
+ * Fetches classified availability for the tenant's complete booking horizon.
+ * The server evaluates combined service duration, operating hours, date overrides,
+ * overrun, lead time, bookings, booking gaps and active slot holds.
+ */
 export function useMonthAvailability(
-  year: number,
-  month: number,
+  _year: number,
+  _month: number,
   durationMinutes: number = 60,
   staffId?: string
 ) {
@@ -38,23 +48,24 @@ export function useMonthAvailability(
   const resolvedStaffId = staffId || ownerId || null;
 
   return useQuery({
-    queryKey: ["public-month-availability", tenantId, year, month, durationMinutes],
+    queryKey: ["public-booking-horizon-availability", tenantId, durationMinutes],
     enabled: !!tenantId,
-    staleTime: 2 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       const sid = resolvedStaffId ?? await getStaffId(tenantId);
-      const { data, error } = await supabase.rpc("get_month_availability", {
+      const { data, error } = await supabase.rpc("get_booking_horizon_availability" as any, {
         p_staff_id: sid,
-        p_year: year,
-        p_month: month,
         p_duration_minutes: durationMinutes,
       });
       if (error) throw error;
-      const map: Record<string, string[]> = {};
+      const map: Record<string, MonthDateAvailability> = {};
       (data ?? []).forEach((row: any) => {
-        const key = row.date_text ?? row.date_str;
-        if (key) map[key] = row.slots ?? row.available_slots ?? [];
+        if (!row.date_str) return;
+        map[row.date_str] = {
+          slots: row.available_slots ?? [],
+          status: row.availability_status ?? "restricted",
+        };
       });
       return map;
     },
