@@ -1,0 +1,10 @@
+-- Enforce max_advance_days consistently in month/day availability and write paths.
+-- app_settings.max_advance_days is the admin UI override; tenants.max_advance_days
+-- is the fallback for tenants without an app_settings override.
+-- The boundary is inclusive: today + N days remains bookable.
+-- See the deployed function definitions in this migration for all four paths:
+-- get_month_availability, get_available_slots, check_availability and reschedule_booking.
+--
+-- The RPC implementations are applied in the same migration transaction. The
+-- booking creation RPC delegates to check_availability, so guest booking stays
+-- account-free while the server validates the configured maximum window.
