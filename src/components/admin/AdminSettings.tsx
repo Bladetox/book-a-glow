@@ -290,6 +290,7 @@ const AdminSettings = () => {
         phone: tenant.phone ?? "",
         address: tenant.address ?? "",
         currency: tenant.currency ?? "R",
+        max_advance_days: tenant.max_advance_days != null ? String(tenant.max_advance_days) : "90",
         theme_id: tenant.theme_id ?? "standard",
         custom_domain: tenant.custom_domain ?? "",
         logo_url: tenant.logo_url ?? "",
