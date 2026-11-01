@@ -29,6 +29,7 @@ interface ScheduleStepProps {
   bookingWindowReady: boolean;
   tenantId: string;
   slotHold: ReturnType<typeof useSlotHold>;
+  onReviewServices: () => void;
 }
 
 async function getStaffId(tenantId: string): Promise<string> {
@@ -51,10 +52,11 @@ const ScheduleStep = ({
   bookingWindowReady,
   tenantId,
   slotHold,
+  onReviewServices,
 }: ScheduleStepProps) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [calendarOpen, setCalendarOpen] = useState(true);
-  const [bookedPopup, setBookedPopup] = useState(false);
+  const [availabilityNotice, setAvailabilityNotice] = useState<"insufficient_time" | "fully_booked" | "restricted" | null>(null);
   const [acquiringSlot, setAcquiringSlot] = useState(false);
   const timeSlotsRef = useRef<HTMLDivElement>(null);
   const popupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -106,13 +108,12 @@ const ScheduleStep = ({
   const isDayAvailable = (day: Date) => {
     if (!monthAvailability) return false;
     const ds = format(day, "yyyy-MM-dd");
-    return (monthAvailability[ds]?.length ?? 0) > 0;
+    return monthAvailability[ds]?.status === "available";
   };
 
-  const showBookedPopup = useCallback(() => {
+  const showAvailabilityNotice = useCallback((status: "insufficient_time" | "fully_booked" | "restricted") => {
     if (popupTimerRef.current) clearTimeout(popupTimerRef.current);
-    setBookedPopup(true);
-    popupTimerRef.current = setTimeout(() => setBookedPopup(false), 3000);
+    setAvailabilityNotice(status);
   }, []);
 
   const handleSelectDate = useCallback(
@@ -134,13 +135,14 @@ const ScheduleStep = ({
       if (!bookingWindowReady || isPast || isBeyondBookingWindow) return;
       const isAvailable = isDayAvailable(day);
       if (!isAvailable && monthAvailability !== undefined) {
-        showBookedPopup();
+        const status = monthAvailability[format(day, "yyyy-MM-dd")]?.status ?? "restricted";
+        showAvailabilityNotice(status);
         return;
       }
       if (isAvailable) handleSelectDate(day);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [today, lastBookableDate, bookingWindowReady, monthAvailability, handleSelectDate, showBookedPopup]
+    [today, lastBookableDate, bookingWindowReady, monthAvailability, handleSelectDate, showAvailabilityNotice]
   );
 
   const handleChangeDate = useCallback(() => {
@@ -180,6 +182,9 @@ const ScheduleStep = ({
     }
   }, [selectedDate, selectedTime, acquiringSlot, tenantId, totalDuration, slotHold, onSelectTime]);
 
+  const hasAnyAvailableDate = Object.values(monthAvailability ?? {}).some((day) => day.status === "available");
+  const noSuitableDatesInHorizon = !loadingMonth && !!monthAvailability && !hasAnyAvailableDate;
+
   const mm = String(Math.floor(slotHold.secondsLeft / 60)).padStart(2, "0");
   const ss = String(slotHold.secondsLeft % 60).padStart(2, "0");
 
@@ -189,29 +194,49 @@ const ScheduleStep = ({
         Choose date &amp; time
       </h3>
 
-      {/* ── Fully-booked popup ── */}
+      {/* ── Date availability feedback ── */}
       <AnimatePresence>
-        {bookedPopup && (
+        {availabilityNotice && (
           <motion.div
-            key="booked-popup"
-            initial={{ opacity: 0, y: -10, scale: 0.97 }}
+            key="availability-notice"
+            initial={{ opacity: 0, y: -10, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -10, scale: 0.97 }}
-            transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-            className="flex items-center justify-between gap-3 rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3"
+            exit={{ opacity: 0, y: -8, scale: 0.98 }}
+            transition={{ duration: 0.2 }}
+            className="rounded-2xl border border-border bg-card px-4 py-4"
+            role="status"
+            aria-live="polite"
           >
-            <div className="flex items-center gap-2.5">
-              <span className="text-lg leading-none">📅</span>
-              <p className="text-sm font-medium text-foreground">
-                This day is fully booked — please try another date.
-              </p>
+            <p className="text-sm font-semibold text-foreground">
+              {availabilityNotice === "insufficient_time"
+                ? "Not enough time on this date"
+                : availabilityNotice === "fully_booked"
+                ? "This date is fully booked"
+                : "No suitable appointment times on this date"}
+            </p>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+              {availabilityNotice === "insufficient_time"
+                ? "Your selected services need more time than is available on this date. You can view other dates that can accommodate your appointment or adjust your service selection."
+                : availabilityNotice === "fully_booked"
+                ? "There is enough operating time for your selected services, however all suitable appointment times have already been taken. Please view another date or adjust your service selection."
+                : "The available times on this date do not meet the current booking rules. Please view another date or adjust your service selection."}
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setAvailabilityNotice(null)}
+                className="rounded-xl bg-primary px-3.5 py-2 text-xs font-semibold text-primary-foreground"
+              >
+                Find another date
+              </button>
+              <button
+                type="button"
+                onClick={onReviewServices}
+                className="rounded-xl border border-border px-3.5 py-2 text-xs font-semibold text-foreground"
+              >
+                Review services
+              </button>
             </div>
-            <button
-              onClick={() => setBookedPopup(false)}
-              className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
           </motion.div>
         )}
       </AnimatePresence>
@@ -336,7 +361,8 @@ const ScheduleStep = ({
                 {days.map((day) => {
                   const isPast = isBefore(day, today) && !isToday(day);
                   const isBeyondBookingWindow = isAfter(day, lastBookableDate);
-                  const isAvailable = !isBeyondBookingWindow && isDayAvailable(day);
+                  const dayStatus = monthAvailability?.[format(day, "yyyy-MM-dd")]?.status;
+                  const isAvailable = !isBeyondBookingWindow && dayStatus === "available";
                   const isActive = selectedDate && isSameDay(day, selectedDate);
                   const isHardDisabled = !bookingWindowReady || isPast || isBeyondBookingWindow;
 
@@ -354,7 +380,7 @@ const ScheduleStep = ({
                             ? "text-muted-foreground/20 cursor-not-allowed"
                             : isAvailable
                             ? "hover:bg-muted/50 cursor-pointer active:bg-muted"
-                            : "text-muted-foreground/30 cursor-pointer"
+                            : "text-muted-foreground/35 cursor-pointer hover:bg-muted/30"
                         }
                         ${isActive ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25" : "text-foreground"}
                       `}
@@ -369,6 +395,21 @@ const ScheduleStep = ({
                   ? `Bookings are available up to ${format(lastBookableDate, "d MMMM yyyy")}.`
                   : "Loading booking availability…"}
               </p>
+              {noSuitableDatesInHorizon && (
+                <div className="mt-3 rounded-xl bg-muted/60 px-3 py-3 text-center">
+                  <p className="text-xs font-semibold text-foreground">No suitable dates available</p>
+                  <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+                    There are no dates within this business's current booking window that can accommodate your selected services.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={onReviewServices}
+                    className="mt-2 text-xs font-semibold text-primary underline underline-offset-4"
+                  >
+                    Review services
+                  </button>
+                </div>
+              )}
             </div>
           </motion.div>
         )}
