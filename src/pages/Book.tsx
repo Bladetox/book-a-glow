@@ -265,6 +265,7 @@ const Index = () => {
                     onSelectTime={(t) => updateBooking({ selectedTime: t })}
                     totalDuration={durationForSlots}
                     maxAdvanceDays={config.maxAdvanceDays}
+                    bookingWindowReady={!config.loading}
                     tenantId={tenantId}
                     slotHold={slotHold}
                   />
