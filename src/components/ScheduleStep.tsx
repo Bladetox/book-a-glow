@@ -57,6 +57,8 @@ const ScheduleStep = ({
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [calendarOpen, setCalendarOpen] = useState(true);
   const [availabilityNotice, setAvailabilityNotice] = useState<"insufficient_time" | "fully_booked" | "restricted" | null>(null);
+  const [refreshingAvailability, setRefreshingAvailability] = useState(false);
+  const [availabilityRefreshError, setAvailabilityRefreshError] = useState(false);
   const [acquiringSlot, setAcquiringSlot] = useState(false);
   const timeSlotsRef = useRef<HTMLDivElement>(null);
   const popupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -75,7 +77,7 @@ const ScheduleStep = ({
 
   const selectedDateStr = selectedDate ? format(selectedDate, "yyyy-MM-dd") : null;
   // Pass sessionToken so the client's own hold never greys out their own slot
-  const { data: dateSlots = [], isLoading: loadingSlots } = useDateSlots(
+  const { data: dateSlots = [], isLoading: loadingSlots, isFetching: fetchingSlots, isError: slotsQueryError } = useDateSlots(
     selectedDateStr,
     totalDuration,
     slotHold.sessionToken,
@@ -113,6 +115,8 @@ const ScheduleStep = ({
 
   const showAvailabilityNotice = useCallback((status: "insufficient_time" | "fully_booked" | "restricted") => {
     if (popupTimerRef.current) clearTimeout(popupTimerRef.current);
+    setAvailabilityRefreshError(false);
+    setCalendarOpen(false);
     setAvailabilityNotice(status);
   }, []);
 
@@ -129,7 +133,24 @@ const ScheduleStep = ({
     void slotHold.releaseHold();
     setCalendarOpen(true);
     showAvailabilityNotice(status === "available" ? "restricted" : status);
-  }, [selectedDate, selectedTime, loadingSlots, dateSlots, monthAvailability, onSelectDate, onSelectTime, slotHold.releaseHold, showAvailabilityNotice]);
+  }, [selectedDate, selectedTime, loadingSlots, fetchingSlots, dateSlots, monthAvailability, onSelectDate, onSelectTime, slotHold.releaseHold, showAvailabilityNotice]);
+
+  // Revalidate a chosen date against its date-specific slot result. If it has
+  // become unavailable since the horizon was loaded, replace the calendar with
+  // the appropriate fallback instead of leaving an empty time-slot panel.
+  useEffect(() => {
+    if (!selectedDate || selectedTime || loadingSlots || fetchingSlots) return;
+    if (slotsQueryError) {
+      onSelectDate(null);
+      showAvailabilityNotice("restricted");
+      return;
+    }
+    if (dateSlots.length > 0) return;
+
+    const status = monthAvailability?.[format(selectedDate, "yyyy-MM-dd")]?.status ?? "restricted";
+    onSelectDate(null);
+    showAvailabilityNotice(status === "available" ? "fully_booked" : status);
+  }, [selectedDate, selectedTime, loadingSlots, fetchingSlots, slotsQueryError, dateSlots, monthAvailability, onSelectDate, showAvailabilityNotice]);
 
   const handleSelectDate = useCallback(
     (day: Date) => {
@@ -166,11 +187,25 @@ const ScheduleStep = ({
     setCalendarOpen(true);
   }, []);
 
-  const handleFindAnotherDate = useCallback(() => {
+  const handleFindAnotherDate = useCallback(async () => {
+    // Hide both interfaces while the complete booking horizon is recalculated.
+    // Never expose stale dates while the request is in flight.
     setAvailabilityNotice(null);
-    // Recalculate the complete booking horizon using the unchanged service duration.
-    void refetchMonthAvailability();
-    setCalendarOpen(true);
+    setAvailabilityRefreshError(false);
+    setCalendarOpen(false);
+    setRefreshingAvailability(true);
+    try {
+      const result = await refetchMonthAvailability();
+      if (result.isError || !result.data) {
+        throw result.error ?? new Error("Availability refresh failed");
+      }
+      setCalendarOpen(true);
+    } catch {
+      // Fail closed: keep the calendar hidden if fresh availability is unavailable.
+      setAvailabilityRefreshError(true);
+    } finally {
+      setRefreshingAvailability(false);
+    }
   }, [refetchMonthAvailability]);
 
   /** Called when a time slot button is tapped */
@@ -218,7 +253,7 @@ const ScheduleStep = ({
 
       {/* ── Date availability feedback ── */}
       <AnimatePresence>
-        {availabilityNotice && (
+        {availabilityNotice && !refreshingAvailability && (
           <motion.div
             key="availability-notice"
             initial={{ opacity: 0, y: -10, scale: 0.98 }}
@@ -263,6 +298,21 @@ const ScheduleStep = ({
         )}
       </AnimatePresence>
 
+      {refreshingAvailability && (
+        <div className="flex items-center justify-center gap-3 rounded-2xl border border-border bg-card px-4 py-5" role="status" aria-live="polite">
+          <Loader2 className="h-4 w-4 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">Checking available dates for your selected services…</p>
+        </div>
+      )}
+
+      {availabilityRefreshError && !refreshingAvailability && (
+        <div className="rounded-2xl border border-destructive/30 bg-destructive/5 px-4 py-4" role="alert">
+          <p className="text-sm font-semibold text-foreground">We couldn’t refresh availability</p>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Your previous availability has been hidden to avoid showing outdated dates. Please try again.</p>
+          <button type="button" onClick={handleFindAnotherDate} className="mt-3 rounded-xl bg-primary px-3.5 py-2 text-xs font-semibold text-primary-foreground">Try again</button>
+        </div>
+      )}
+
       {/* ── Slot hold error banner ── */}
       <AnimatePresence>
         {slotHold.error && (
@@ -303,7 +353,7 @@ const ScheduleStep = ({
 
       {/* Collapsed date strip */}
       <AnimatePresence>
-        {selectedDate && !calendarOpen && (
+        {selectedDate && !calendarOpen && !availabilityNotice && !refreshingAvailability && (
           <motion.button
             key="date-strip"
             initial={{ opacity: 0, y: -6 }}
@@ -329,7 +379,7 @@ const ScheduleStep = ({
 
       {/* Full calendar */}
       <AnimatePresence>
-        {calendarOpen && (
+        {calendarOpen && !availabilityNotice && !refreshingAvailability && !availabilityRefreshError && !noSuitableDatesInHorizon && (
           <motion.div
             key="calendar"
             initial={{ height: 0, opacity: 0 }}
@@ -387,13 +437,14 @@ const ScheduleStep = ({
                   const isAvailable = !isBeyondBookingWindow && dayStatus === "available";
                   const isActive = selectedDate && isSameDay(day, selectedDate);
                   const isHardDisabled = !bookingWindowReady || isPast || isBeyondBookingWindow;
+                  const isDateDisabled = isHardDisabled || !isAvailable;
 
                   return (
                     <motion.button
                       key={day.toISOString()}
-                      whileTap={!isHardDisabled ? { scale: 0.85 } : undefined}
-                      disabled={isHardDisabled}
-                      aria-disabled={isHardDisabled || !isAvailable}
+                      whileTap={!isDateDisabled ? { scale: 0.85 } : undefined}
+                      disabled={isDateDisabled}
+                      aria-disabled={isDateDisabled}
                       onClick={() => handleDayTap(day)}
                       className={`w-full aspect-square rounded-xl text-sm font-medium transition-all duration-200
                         ${
@@ -403,7 +454,7 @@ const ScheduleStep = ({
                             ? "text-muted-foreground/20 cursor-not-allowed"
                             : isAvailable
                             ? "hover:bg-muted/50 cursor-pointer active:bg-muted"
-                            : "text-muted-foreground/35 cursor-pointer hover:bg-muted/30"
+                            : "text-muted-foreground/25 cursor-not-allowed"
                         }
                         ${isActive ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25" : "text-foreground"}
                       `}
@@ -418,30 +469,23 @@ const ScheduleStep = ({
                   ? `Bookings are available up to ${format(lastBookableDate, "d MMMM yyyy")}.`
                   : "Loading booking availability…"}
               </p>
-              {noSuitableDatesInHorizon && (
-                <div className="mt-3 rounded-xl bg-muted/60 px-3 py-3 text-center">
-                  <p className="text-xs font-semibold text-foreground">No suitable dates available</p>
-                  <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-                    There are no dates within this business's current booking window that can accommodate your selected services.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={onReviewServices}
-                    className="mt-2 text-xs font-semibold text-primary underline underline-offset-4"
-                  >
-                    Review services
-                  </button>
-                </div>
-              )}
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
+      {noSuitableDatesInHorizon && !availabilityNotice && !refreshingAvailability && (
+        <div className="rounded-2xl border border-border bg-card px-4 py-4" role="status" aria-live="polite">
+          <p className="text-sm font-semibold text-foreground">No dates can accommodate these services</p>
+          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Your selected services cannot currently be booked together within this business’s available dates. You can adjust your service selection and try again.</p>
+          <button type="button" onClick={onReviewServices} className="mt-3 rounded-xl border border-border px-3.5 py-2 text-xs font-semibold text-foreground">Review services</button>
+        </div>
+      )}
+
       {/* Time slots */}
       <div ref={timeSlotsRef}>
         <AnimatePresence>
-          {selectedDate && !calendarOpen && (
+          {selectedDate && !calendarOpen && !availabilityNotice && !refreshingAvailability && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
