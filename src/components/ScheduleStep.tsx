@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useCallback } from "react";
+import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import {
   format,
   addMonths,
@@ -22,7 +22,7 @@ import { usePublicTenant } from "@/contexts/PublicTenantContext";
 interface ScheduleStepProps {
   selectedDate: Date | null;
   selectedTime: string | null;
-  onSelectDate: (date: Date) => void;
+  onSelectDate: (date: Date | null) => void;
   onSelectTime: (time: string) => void;
   totalDuration: number;
   maxAdvanceDays: number;
@@ -115,6 +115,21 @@ const ScheduleStep = ({
     if (popupTimerRef.current) clearTimeout(popupTimerRef.current);
     setAvailabilityNotice(status);
   }, []);
+
+  // If a client changes their service selection after choosing a date/time,
+  // the new combined duration must still fit. Release the old hold and return
+  // them to the calendar when the selected slot no longer qualifies.
+  useEffect(() => {
+    if (!selectedDate || !selectedTime || loadingSlots) return;
+    if (dateSlots.includes(selectedTime)) return;
+
+    const status = monthAvailability?.[format(selectedDate, "yyyy-MM-dd")]?.status ?? "restricted";
+    onSelectDate(null);
+    onSelectTime("");
+    void slotHold.releaseHold();
+    setCalendarOpen(true);
+    showAvailabilityNotice(status === "available" ? "restricted" : status);
+  }, [selectedDate, selectedTime, loadingSlots, dateSlots, monthAvailability, onSelectDate, onSelectTime, slotHold, showAvailabilityNotice]);
 
   const handleSelectDate = useCallback(
     (day: Date) => {
