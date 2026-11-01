@@ -8,6 +8,7 @@ import {
   eachDayOfInterval,
   getDay,
   isBefore,
+  isAfter,
   isToday,
   isSameDay,
 } from "date-fns";
@@ -24,6 +25,7 @@ interface ScheduleStepProps {
   onSelectDate: (date: Date) => void;
   onSelectTime: (time: string) => void;
   totalDuration: number;
+  maxAdvanceDays: number;
   tenantId: string;
   slotHold: ReturnType<typeof useSlotHold>;
 }
@@ -44,6 +46,7 @@ const ScheduleStep = ({
   onSelectDate,
   onSelectTime,
   totalDuration,
+  maxAdvanceDays,
   tenantId,
   slotHold,
 }: ScheduleStepProps) => {
@@ -80,6 +83,12 @@ const ScheduleStep = ({
     return t;
   }, []);
 
+  const lastBookableDate = useMemo(() => {
+    const lastDate = new Date(today);
+    lastDate.setDate(lastDate.getDate() + Math.max(0, maxAdvanceDays));
+    return lastDate;
+  }, [today, maxAdvanceDays]);
+
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
   const days = eachDayOfInterval({ start: monthStart, end: monthEnd });
@@ -88,6 +97,9 @@ const ScheduleStep = ({
   const isCurrentMonth =
     currentMonth.getFullYear() === today.getFullYear() &&
     currentMonth.getMonth() === today.getMonth();
+  const isLastBookableMonth =
+    currentMonth.getFullYear() === lastBookableDate.getFullYear() &&
+    currentMonth.getMonth() === lastBookableDate.getMonth();
 
   const isDayAvailable = (day: Date) => {
     if (!monthAvailability) return false;
@@ -116,7 +128,8 @@ const ScheduleStep = ({
   const handleDayTap = useCallback(
     (day: Date) => {
       const isPast = isBefore(day, today) && !isToday(day);
-      if (isPast) return;
+      const isBeyondBookingWindow = isAfter(day, lastBookableDate);
+      if (isPast || isBeyondBookingWindow) return;
       const isAvailable = isDayAvailable(day);
       if (!isAvailable && monthAvailability !== undefined) {
         showBookedPopup();
@@ -125,7 +138,7 @@ const ScheduleStep = ({
       if (isAvailable) handleSelectDate(day);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [today, monthAvailability, handleSelectDate, showBookedPopup]
+    [today, lastBookableDate, monthAvailability, handleSelectDate, showBookedPopup]
   );
 
   const handleChangeDate = useCallback(() => {
@@ -297,9 +310,10 @@ const ScheduleStep = ({
                 </span>
 
                 <motion.button
-                  whileTap={{ scale: 0.85 }}
+                  whileTap={!isLastBookableMonth ? { scale: 0.85 } : undefined}
+                  disabled={isLastBookableMonth || startOfMonth(addMonths(currentMonth, 1)) > startOfMonth(lastBookableDate)}
                   onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
-                  className="text-muted-foreground hover:text-foreground transition-colors p-1.5 rounded-full hover:bg-muted/50"
+                  className={`transition-colors p-1.5 rounded-full ${isLastBookableMonth ? "text-muted-foreground/20 cursor-not-allowed" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"}`}
                 >
                   <ChevronRight className="w-5 h-5" />
                 </motion.button>
@@ -319,9 +333,10 @@ const ScheduleStep = ({
                 ))}
                 {days.map((day) => {
                   const isPast = isBefore(day, today) && !isToday(day);
-                  const isAvailable = isDayAvailable(day);
+                  const isBeyondBookingWindow = isAfter(day, lastBookableDate);
+                  const isAvailable = !isBeyondBookingWindow && isDayAvailable(day);
                   const isActive = selectedDate && isSameDay(day, selectedDate);
-                  const isHardDisabled = isPast;
+                  const isHardDisabled = isPast || isBeyondBookingWindow;
 
                   return (
                     <motion.button
@@ -331,7 +346,9 @@ const ScheduleStep = ({
                       onClick={() => handleDayTap(day)}
                       className={`w-full aspect-square rounded-xl text-sm font-medium transition-all duration-200
                         ${
-                          isHardDisabled
+                          isBeyondBookingWindow
+                            ? "text-muted-foreground/15 cursor-not-allowed"
+                            : isHardDisabled
                             ? "text-muted-foreground/20 cursor-not-allowed"
                             : isAvailable
                             ? "hover:bg-muted/50 cursor-pointer active:bg-muted"
@@ -345,6 +362,9 @@ const ScheduleStep = ({
                   );
                 })}
               </div>
+              <p className="mt-3 text-[11px] text-muted-foreground text-center">
+                Bookings are available up to {format(lastBookableDate, "d MMMM yyyy")}.
+              </p>
             </div>
           </motion.div>
         )}
