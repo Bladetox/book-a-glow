@@ -266,6 +266,10 @@ const Index = () => {
                     totalDuration={durationForSlots}
                     maxAdvanceDays={config.maxAdvanceDays}
                     bookingWindowReady={!config.loading}
+                    onReviewServices={() => {
+                      setDirection(-1);
+                      setStep(0);
+                    }}
                     tenantId={tenantId}
                     slotHold={slotHold}
                   />
