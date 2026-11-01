@@ -129,7 +129,7 @@ const ScheduleStep = ({
     void slotHold.releaseHold();
     setCalendarOpen(true);
     showAvailabilityNotice(status === "available" ? "restricted" : status);
-  }, [selectedDate, selectedTime, loadingSlots, dateSlots, monthAvailability, onSelectDate, onSelectTime, slotHold, showAvailabilityNotice]);
+  }, [selectedDate, selectedTime, loadingSlots, dateSlots, monthAvailability, onSelectDate, onSelectTime, slotHold.releaseHold, showAvailabilityNotice]);
 
   const handleSelectDate = useCallback(
     (day: Date) => {
@@ -386,6 +386,7 @@ const ScheduleStep = ({
                       key={day.toISOString()}
                       whileTap={!isHardDisabled ? { scale: 0.85 } : undefined}
                       disabled={isHardDisabled}
+                      aria-disabled={isHardDisabled || !isAvailable}
                       onClick={() => handleDayTap(day)}
                       className={`w-full aspect-square rounded-xl text-sm font-medium transition-all duration-200
                         ${
