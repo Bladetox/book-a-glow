@@ -26,6 +26,7 @@ interface ScheduleStepProps {
   onSelectTime: (time: string) => void;
   totalDuration: number;
   maxAdvanceDays: number;
+  bookingWindowReady: boolean;
   tenantId: string;
   slotHold: ReturnType<typeof useSlotHold>;
 }
@@ -47,6 +48,7 @@ const ScheduleStep = ({
   onSelectTime,
   totalDuration,
   maxAdvanceDays,
+  bookingWindowReady,
   tenantId,
   slotHold,
 }: ScheduleStepProps) => {
@@ -129,7 +131,7 @@ const ScheduleStep = ({
     (day: Date) => {
       const isPast = isBefore(day, today) && !isToday(day);
       const isBeyondBookingWindow = isAfter(day, lastBookableDate);
-      if (isPast || isBeyondBookingWindow) return;
+      if (!bookingWindowReady || isPast || isBeyondBookingWindow) return;
       const isAvailable = isDayAvailable(day);
       if (!isAvailable && monthAvailability !== undefined) {
         showBookedPopup();
@@ -138,7 +140,7 @@ const ScheduleStep = ({
       if (isAvailable) handleSelectDate(day);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [today, lastBookableDate, monthAvailability, handleSelectDate, showBookedPopup]
+    [today, lastBookableDate, bookingWindowReady, monthAvailability, handleSelectDate, showBookedPopup]
   );
 
   const handleChangeDate = useCallback(() => {
@@ -336,7 +338,7 @@ const ScheduleStep = ({
                   const isBeyondBookingWindow = isAfter(day, lastBookableDate);
                   const isAvailable = !isBeyondBookingWindow && isDayAvailable(day);
                   const isActive = selectedDate && isSameDay(day, selectedDate);
-                  const isHardDisabled = isPast || isBeyondBookingWindow;
+                  const isHardDisabled = !bookingWindowReady || isPast || isBeyondBookingWindow;
 
                   return (
                     <motion.button
@@ -363,7 +365,9 @@ const ScheduleStep = ({
                 })}
               </div>
               <p className="mt-3 text-[11px] text-muted-foreground text-center">
-                Bookings are available up to {format(lastBookableDate, "d MMMM yyyy")}.
+                {bookingWindowReady
+                  ? `Bookings are available up to ${format(lastBookableDate, "d MMMM yyyy")}.`
+                  : "Loading booking availability…"}
               </p>
             </div>
           </motion.div>
