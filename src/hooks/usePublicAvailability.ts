@@ -48,6 +48,7 @@ export function useMonthAvailability(
         p_staff_id: sid,
         p_year: year,
         p_month: month,
+        p_duration_minutes: durationMinutes,
       });
       if (error) throw error;
       const map: Record<string, string[]> = {};
