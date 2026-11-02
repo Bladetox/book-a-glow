@@ -284,7 +284,7 @@ Deno.serve(async (req) => {
   const { data: booking, error: bookingErr } = await supabase
     .from("bookings")
     .select(
-      "id, client_id, tenant_id, deposit_amount, deposit_paid, " +
+      "id, client_id, tenant_id, status, deposit_amount, deposit_paid, " +
       "total_amount, balance_due, final_payment_paid"
     )
     .eq("id", resolvedBookingId)
@@ -335,6 +335,24 @@ Deno.serve(async (req) => {
     `[payfast-itn] All security checks passed. Processing ${paymentType} payment ` +
     `for booking ${resolvedBookingId} | R${itnAmount}`
   );
+
+  // A late success after the reservation was released must not revive it.
+  // Record it for manual reconciliation rather than creating an overlap.
+  if (booking.status === "cancelled") {
+    const { error: staleEventError } = await supabase.from("stale_payment_webhook_events").insert({
+      tenant_id: resolvedTenantId,
+      booking_id: booking.id,
+      gateway: "payfast",
+      payment_type: paymentType,
+      checkout_reference: mPaymentId,
+      transaction_reference: mPaymentId,
+      amount: itnAmount,
+      event_payload: itnData,
+      review_status: "needs_review",
+    });
+    if (staleEventError) console.error("[payfast-itn] Failed to record late success for cancelled booking:", staleEventError);
+    return new Response("OK", { status: 200 });
+  }
 
   // ════════════════════════════════════════
   // FULL PAYMENT

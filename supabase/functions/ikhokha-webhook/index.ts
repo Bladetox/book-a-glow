@@ -161,6 +161,36 @@ Deno.serve(async (req) => {
 
     // ── 6. Update bookings (column names match live schema) ─────────────────
     if (status === "SUCCESS") {
+      if (bookingId) {
+        const { data: bookingState, error: bookingStateError } = await supabase
+          .from("bookings")
+          .select("id, status")
+          .eq("id", bookingId)
+          .eq("tenant_id", tenantId)
+          .maybeSingle();
+
+        if (bookingStateError) {
+          console.error("[ikhokha-webhook] failed to verify booking state:", bookingStateError);
+          return new Response("Could not verify booking state", { status: 500 });
+        }
+        if (!bookingState) return new Response("OK", { status: 200 });
+
+        if (bookingState.status === "cancelled") {
+          const { error: staleEventError } = await supabase.from("stale_payment_webhook_events").insert({
+            tenant_id: tenantId,
+            booking_id: bookingId,
+            gateway: "ikhokha",
+            payment_type: paymentType,
+            checkout_reference: paylinkID,
+            transaction_reference: externalTransactionID,
+            amount: null,
+            event_payload: body,
+            review_status: "needs_review",
+          });
+          if (staleEventError) console.error("[ikhokha-webhook] Failed to record late success for cancelled booking:", staleEventError);
+          return new Response("OK", { status: 200 });
+        }
+      }
       if (paymentType === "balance" && bookingId) {
         const { data: currentBooking, error: currentBookingError } = await supabase
           .from("bookings")
