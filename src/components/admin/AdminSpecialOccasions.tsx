@@ -9,6 +9,8 @@ import {
 } from "lucide-react";
 import { format, addDays } from "date-fns";
 import { toast } from "sonner";
+import { buildWhatsAppMessage, waLink } from "@/lib/whatsapp";
+import { useWhatsAppTone } from "@/hooks/useWhatsAppTone";
 
 // ─── Types ───
 export interface OccasionRow {
@@ -45,20 +47,6 @@ function formatOccasionShort(dateStr: string): string {
   catch { return dateStr; }
 }
 
-function waLink(phone: string, msg: string): string {
-  const c = phone.replace(/\D/g, "");
-  const num = c.startsWith("27") && c.length >= 11 ? c : "27" + c.replace(/^0/, "");
-  return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
-}
-
-function buildBirthdayMsg(name: string, businessName: string, serviceLabel: string): string {
-  return `Hi ${name}! 🎂 Wishing you a wonderful birthday from everyone at ${businessName || "us"}! We'd love to treat you to your next ${serviceLabel || "appointment"} — reply to claim your birthday treat! 💖`;
-}
-
-function buildAnniversaryMsg(name: string, businessName: string): string {
-  return `Hi ${name}! 💖 Wishing you a wonderful anniversary! Thank you for being a valued client at ${businessName || "us"}. We'd love to celebrate with you — pop in soon! 🌸`;
-}
-
 // ─── TYPE_META ───
 const TYPE_META: Record<OccasionType, { label: string; Icon: React.ElementType; color: string; badgeCls: string }> = {
   birthday:    { label: "Birthday",    Icon: Cake,         color: "text-pink-400",   badgeCls: "bg-pink-500/10 text-pink-400 border border-pink-500/20" },
@@ -77,11 +65,11 @@ const FILTER_CHIPS: { key: FilterChip; label: string }[] = [
 
 // ─── OccasionCard ───
 const OccasionCard = ({
-  row, i, onDelete, businessName, serviceLabel,
+  row, i, onDelete, businessName, tone,
 }: {
   row: OccasionRow; i: number;
   onDelete: (id: string) => void;
-  businessName: string; serviceLabel: string;
+  businessName: string; tone: import("@/lib/whatsapp").WhatsAppTone;
 }) => {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const type = (row.type as OccasionType) in TYPE_META ? (row.type as OccasionType) : "other";
@@ -91,9 +79,10 @@ const OccasionCard = ({
   const isToday    = days === 0;
   const isThisWeek = days <= 7;
 
-  const msg = type === "birthday"
-    ? buildBirthdayMsg(row.client_name, businessName, serviceLabel)
-    : buildAnniversaryMsg(row.client_name, businessName);
+  const msg = buildWhatsAppMessage(type === "birthday" ? "birthday" : "anniversary", {
+    clientName: row.client_name,
+    businessName,
+  }, tone);
 
   const urgencyBorder = isToday
     ? "border-pink-500/40 border-l-2 border-l-pink-500"
@@ -306,29 +295,11 @@ const AdminSpecialOccasions = ({ onSendBirthdayWA }: AdminSpecialOccasionsProps)
 
   const [activeFilter, setActiveFilter] = useState<FilterChip>("all");
   const [showAddForm, setShowAddForm]   = useState(false);
+  const whatsappTone = useWhatsAppTone();
+  const { data: tenantInfo } = useQuery({ queryKey: ["communications-tenant", tenantId], enabled: !!tenantId, queryFn: async () => { const { data, error } = await supabase.from("tenants").select("name").eq("id", tenantId).maybeSingle(); if (error) throw error; return data; } });
+  const businessName = tenantInfo?.name ?? "";
 
-  const { data: settingsRows = [] } = useQuery({
-    queryKey: ["loyalty-settings", tenantId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("app_settings")
-        .select("key, value")
-        .eq("tenant_id", tenantId)
-        .in("key", ["loyalty_business_name", "loyalty_service_label"]);
-      if (error) throw error;
-      return data ?? [];
-    },
-    staleTime: 1000 * 60 * 5,
-  });
 
-  const { businessName, serviceLabel } = useMemo(() => {
-    const map: Record<string, string> = {};
-    settingsRows.forEach((r: any) => { map[r.key] = r.value; });
-    return {
-      businessName: map.loyalty_business_name || "",
-      serviceLabel: map.loyalty_service_label || "wax",
-    };
-  }, [settingsRows]);
 
   const { data: rows = [], isLoading } = useQuery({
     queryKey: ["client-occasions", tenantId],
@@ -471,7 +442,7 @@ const AdminSpecialOccasions = ({ onSendBirthdayWA }: AdminSpecialOccasionsProps)
               i={i}
               onDelete={id => deleteOccasion(id)}
               businessName={businessName}
-              serviceLabel={serviceLabel}
+              tone={whatsappTone}
             />
           ))}
         </div>
