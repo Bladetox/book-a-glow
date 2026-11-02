@@ -143,6 +143,15 @@ const ScheduleStep = ({
     }
   }, [slotHold.holdId, slotHold.error, selectedTime, onSelectTime]);
 
+  // Service selections can change while the guest is on another step. A hold
+  // for the old duration must never authorise a longer or different booking.
+  // Release it and require the guest to tap the time again for a fresh hold.
+  useEffect(() => {
+    if (!selectedTime || !slotHold.holdId || slotHold.durationMins === totalDuration) return;
+    onSelectTime("");
+    void slotHold.releaseHold();
+  }, [selectedTime, slotHold.holdId, slotHold.durationMins, slotHold.releaseHold, totalDuration, onSelectTime]);
+
   // Revalidate a chosen date against its date-specific slot result. If it has
   // become unavailable since the horizon was loaded, replace the calendar with
   // the appropriate fallback instead of leaving an empty time-slot panel.
