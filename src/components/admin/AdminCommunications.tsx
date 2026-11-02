@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, MessageCircle, Save } from "lucide-react";
+import { Check, MessageCircle } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
-import { AdminPageHeader } from "@/components/admin/AdminSharedUI";
+import { AdminPageHeader, SaveButton, SavedBadge } from "@/components/admin/AdminSharedUI";
 import { DEFAULT_WHATSAPP_TONE, WHATSAPP_TONE_KEY, WHATSAPP_TONES, normaliseWhatsAppTone, buildWhatsAppMessage, type WhatsAppTone } from "@/lib/whatsapp";
 
 export default function AdminCommunications() {
@@ -50,8 +50,10 @@ export default function AdminCommunications() {
         <p className="text-[10px] text-white/25 mt-3">Names, dates, times, services and payment details are filled in automatically for each message.</p>
       </div>
       <div className="flex items-center justify-between gap-3 pt-1">
-        <span className={`text-xs font-medium ${dirty ? "text-amber-300" : "text-emerald-400"}`}>{isLoading ? "Loading…" : isError ? "Unable to load preference" : save.isPending ? "Saving…" : dirty ? "Unsaved changes" : "Saved"}</span>
-        <button type="button" disabled={!dirty || isLoading || isError || save.isPending} onClick={() => save.mutate()} className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold bg-white text-black hover:bg-white/90 disabled:opacity-35 disabled:cursor-not-allowed"><Save className="w-4 h-4" /> Save changes</button>
+        <div className="flex items-center gap-2">
+          {isLoading ? <span className="text-xs text-white/35">Loading…</span> : isError ? <span className="text-xs text-red-300">Unable to load preference</span> : save.isPending ? <span className="text-xs text-amber-300">Saving…</span> : dirty ? <span className="text-xs text-amber-300">Unsaved changes</span> : <SavedBadge visible />}
+        </div>
+        <SaveButton label="Save changes" onClick={() => save.mutate()} loading={save.isPending} disabled={!dirty || isLoading || isError} />
       </div>
     </section>
   </div>;
