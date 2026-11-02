@@ -3,16 +3,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { CheckCircle2, XCircle, ExternalLink, Loader2, AlertTriangle, Clock, Eye } from "lucide-react";
 import { usePayshapClaimQueue, useConfirmPayshapBooking, useRejectPayshapBooking } from "@/hooks/usePayshapPayments";
 import { format } from "date-fns";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 
 const fadeUp = { initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 } };
@@ -99,8 +89,8 @@ const AdminPayshapQueue = () => {
         onSettled: () => setActiveId(null),
         onSuccess: () => {
           setReviewedIds(prev => { const next = new Set(prev); next.delete(bookingId); return next; });
-          toast.success("Payment declined", {
-            description: "Booking has been reset. The client's slot is released.",
+          toast.success("Booking cancelled", {
+            description: "The appointment slot is now available again. Please remember to notify the client via WhatsApp.",
           });
         },
         onError: (err) => {
@@ -129,31 +119,71 @@ const AdminPayshapQueue = () => {
 
   return (
     <>
-      {/* Reject confirmation dialog */}
-      <AlertDialog
-        open={!!rejectTarget}
-        onOpenChange={(open) => { if (!open) setRejectTarget(null); }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Decline this booking?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will reset the booking for{" "}
-              <strong>{rejectTarget?.clientName ?? "this client"}</strong> back to
-              awaiting payment and release their provisional slot. This cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleRejectConfirmed}
-              className="bg-red-600 hover:bg-red-700 text-white"
+      {/* Card-style decline confirmation */}
+      <AnimatePresence>
+        {rejectTarget && (
+          <motion.div
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onMouseDown={(event) => {
+              if (event.target === event.currentTarget) setRejectTarget(null);
+            }}
+          >
+            <motion.div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="payshap-decline-title"
+              aria-describedby="payshap-decline-description"
+              className="w-full max-w-md rounded-2xl border border-white/[0.10] bg-[#171717] p-5 shadow-2xl"
+              initial={{ opacity: 0, y: 12, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 8, scale: 0.98 }}
+              transition={{ duration: 0.18 }}
             >
-              Yes, decline
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+              <div className="flex items-start gap-3">
+                <div className="shrink-0 rounded-xl border border-red-500/20 bg-red-500/10 p-2">
+                  <AlertTriangle className="h-4 w-4 text-red-400" />
+                </div>
+                <div className="min-w-0">
+                  <h2 id="payshap-decline-title" className="text-sm font-semibold text-white/90">
+                    Decline this booking?
+                  </h2>
+                  <p id="payshap-decline-description" className="mt-1.5 text-xs leading-relaxed text-white/55">
+                    This will cancel the booking for{" "}
+                    <strong className="font-semibold text-white/80">{rejectTarget.clientName}</strong>{" "}
+                    and release the appointment slot for other clients.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 rounded-xl border border-sky-500/20 bg-sky-500/[0.06] px-3.5 py-3">
+                <p className="text-xs leading-relaxed text-sky-200/80">
+                  Please contact the client via WhatsApp to explain why their booking was declined.
+                </p>
+              </div>
+
+              <div className="mt-5 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setRejectTarget(null)}
+                  className="flex-1 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2.5 text-xs font-semibold text-white/65 transition-colors hover:bg-white/[0.08]"
+                >
+                  Keep booking
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRejectConfirmed}
+                  className="flex-1 rounded-lg border border-red-500/30 bg-red-500/15 px-3 py-2.5 text-xs font-semibold text-red-300 transition-colors hover:bg-red-500/25"
+                >
+                  Decline booking
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Queue card */}
       <motion.section {...fadeUp} transition={{ duration: 0.35 }}>
