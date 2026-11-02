@@ -29,7 +29,7 @@ type MessageData = {
 const money = (amount = 0) => `R${amount.toFixed(2)}`;
 const clean = (value?: string, fallback = "") => (value ?? "").trim() || fallback;
 const toLocalSaPhone = (raw?: string) => {
-  let digits = (raw ?? "").replace(/\\D/g, "");
+  let digits = (raw ?? "").replace(/\D/g, "");
   if (digits.startsWith("0027")) digits = digits.slice(4);
   else if (digits.startsWith("27") && digits.length >= 11) digits = digits.slice(2);
   else if (digits.startsWith("0")) return digits;
@@ -112,6 +112,6 @@ export function buildWhatsAppMessage(
 
 export function waLink(phone: string, message: string): string {
   const digits = (phone ?? "").replace(/\D/g, "");
-  const number = digits.startsWith("27") && digits.length >= 11 ? digits : `27${digits.replace(/^0/, "")}`;
+  const number = digits ? (digits.startsWith("27") && digits.length >= 11 ? digits : `27${digits.replace(/^0/, "")}`) : "";
   return `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
 }
