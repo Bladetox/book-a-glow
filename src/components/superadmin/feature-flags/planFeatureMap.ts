@@ -54,7 +54,7 @@ export const PLAN_GROUPS: PlanGroup[] = [
     subtitle: "Nexty, custom domain, guided growth",
     features: [
       { key: "suggested_addons",    label: "Smart Add-on Suggestions", desc: "Rule-based upsell suggestions at checkout (not AI)",                 status: "unwired" },
-      { key: "special_occasions",   label: "Special Occasions",        desc: "Birthday and anniversary tracker + WhatsApp templates",             status: "partial" },
+      { key: "special_occasions",   label: "Special Occasions",        desc: "Birthday and anniversary tracker with pre-filled WhatsApp messages",             status: "partial" },
       { key: "client_alerts",       label: "Re-engagement Alerts",     desc: "Inactive 90+ days, overdue loyalty, upcoming birthdays",            status: "unwired" },
       { key: "loyalty_module",      label: "Loyalty Tracker",          desc: "on_track / time_to_book / overdue / long_overdue statuses",        status: "partial" },
       { key: "consistency_pricing", label: "Consistency Pricing",      desc: "Streak-based rate for regulars, applied at checkout",              status: "partial" },
