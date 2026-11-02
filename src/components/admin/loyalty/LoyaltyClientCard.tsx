@@ -24,7 +24,7 @@ import { format, addDays } from "date-fns";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { STATUS_STYLE, STATUS_OPTIONS, PILL_LABEL } from "./loyaltyConstants";
-import { normaliseStatus, buildWaMessage, waLink } from "./loyaltyHelpers";
+import { normaliseStatus, buildWaMessage, waLink } from "./loyaltyHelpers";\nimport type { WhatsAppTone } from "@/lib/whatsapp";
 
 // ─ Status config: icon + pulse for urgent states ────────────────────────────────
 const STATUS_META: Record<string, { icon?: React.ReactNode; pulse?: boolean }> = {
@@ -538,7 +538,7 @@ export interface LoyaltyClientCardProps {
 export const LoyaltyClientCard = ({
   row, enrich, effStatus, reminderWeeks,
   isSelected, isExpanded,
-  tenantId, businessName, serviceLabel, waTemplates,
+  tenantId, businessName, serviceLabel, whatsappTone,
   onToggleSelect, onToggleExpand, onOptimisticUpdate, onUpdated, isoToDisplay,
 }: LoyaltyClientCardProps) => {
   const colour           = avatarColour(row.client_name ?? "?");
@@ -634,7 +634,7 @@ export const LoyaltyClientCard = ({
               phone={row.phone ?? ""}
               businessName={businessName}
               serviceLabel={serviceLabel}
-              templates={waTemplates}
+              tone={whatsappTone}
             />
             <button
               onClick={e => { e.stopPropagation(); onToggleExpand(); }}
