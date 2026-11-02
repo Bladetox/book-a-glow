@@ -25,35 +25,57 @@ export function useSlotHold() {
     holdId: null, expiresAt: null, secondsLeft: 0, isHolding: false, error: null,
   });
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const holdIdRef = useRef<string | null>(null);
   const sessionToken = useRef(getSessionToken());
 
-  const clearCountdown = () => {
-    if (intervalRef.current) clearInterval(intervalRef.current);
-  };
+  const clearCountdown = useCallback(() => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  }, []);
 
-  const startCountdown = (expiresAt: Date) => {
+  const startCountdown = useCallback((expiresAt: Date, holdId: string) => {
     clearCountdown();
     intervalRef.current = setInterval(() => {
-      const left = Math.max(0, Math.round((expiresAt.getTime() - Date.now()) / 1000));
+      const left = Math.max(0, Math.ceil((expiresAt.getTime() - Date.now()) / 1000));
       setState(prev => ({ ...prev, secondsLeft: left }));
-      if (left === 0) clearCountdown();
+      if (left === 0) {
+        clearCountdown();
+        if (holdIdRef.current === holdId) {
+          holdIdRef.current = null;
+          void supabase.rpc('release_slot_hold', {
+            p_hold_id: holdId,
+            p_session_token: sessionToken.current,
+          } as any);
+          setState({
+            holdId: null,
+            expiresAt: null,
+            secondsLeft: 0,
+            isHolding: false,
+            error: 'Your 10-minute slot hold expired. Please choose the time again.',
+          });
+        }
+      }
     }, 1000);
-  };
+  }, [clearCountdown]);
 
   const acquireHold = useCallback(async (params: {
     tenantId: string;
     staffId: string;
-    bookingDate: string;   // 'YYYY-MM-DD'
-    startTime: string;     // 'HH:MM:SS'
+    bookingDate: string;
+    startTime: string;
     durationMins: number;
   }) => {
+    clearCountdown();
     holdIdRef.current = null;
-    setState(prev => ({ ...prev, holdId: null, isHolding: true, error: null }));
+    setState(prev => ({ ...prev, holdId: null, expiresAt: null, secondsLeft: 0, isHolding: true, error: null }));
+
     const { data, error } = await supabase.rpc('acquire_slot_hold', {
-      p_tenant_id:     params.tenantId,
-      p_staff_id:      params.staffId,
-      p_booking_date:  params.bookingDate,
-      p_start_time:    params.startTime,
+      p_tenant_id: params.tenantId,
+      p_staff_id: params.staffId,
+      p_booking_date: params.bookingDate,
+      p_start_time: params.startTime,
       p_duration_mins: params.durationMins,
       p_session_token: sessionToken.current,
     } as any);
@@ -66,24 +88,42 @@ export function useSlotHold() {
 
     const row = (data as any)[0];
     const expiresAt = new Date(row.expires_at);
+    holdIdRef.current = row.hold_id;
     setState({ holdId: row.hold_id, expiresAt, secondsLeft: 600, isHolding: false, error: null });
-    startCountdown(expiresAt);
+    startCountdown(expiresAt, row.hold_id);
     return { success: true as const, holdId: row.hold_id as string };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [clearCountdown, startCountdown]);
 
   const releaseHold = useCallback(async () => {
-    if (!state.holdId) return;
+    const activeHoldId = holdIdRef.current;
+    if (!activeHoldId) return;
     clearCountdown();
-    await supabase.rpc('release_slot_hold', {
-      p_hold_id:       state.holdId,
+    holdIdRef.current = null;
+    const { error } = await supabase.rpc('release_slot_hold', {
+      p_hold_id: activeHoldId,
       p_session_token: sessionToken.current,
     } as any);
-    setState({ holdId: null, expiresAt: null, secondsLeft: 0, isHolding: false, error: null });
-  }, [state.holdId]);
+    setState({
+      holdId: null,
+      expiresAt: null,
+      secondsLeft: 0,
+      isHolding: false,
+      error: error ? 'Could not release the temporary slot hold. It will expire automatically.' : null,
+    });
+  }, [clearCountdown]);
 
-  // Release hold on unmount
-  useEffect(() => () => { releaseHold(); clearCountdown(); }, []);
+  // The cleanup reads the latest hold ID from a ref, not the initial render's null state.
+  useEffect(() => () => {
+    clearCountdown();
+    const activeHoldId = holdIdRef.current;
+    if (activeHoldId) {
+      void supabase.rpc('release_slot_hold', {
+        p_hold_id: activeHoldId,
+        p_session_token: sessionToken.current,
+      } as any);
+      holdIdRef.current = null;
+    }
+  }, [clearCountdown]);
 
   return { ...state, sessionToken: sessionToken.current, acquireHold, releaseHold };
 }
