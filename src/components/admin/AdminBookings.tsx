@@ -27,7 +27,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 import { toast } from "sonner";
 import { buildWhatsAppMessage, waLink } from "@/lib/whatsapp";
-import { useWhatsAppTone } from "@/hooks/useWhatsAppTone";
+import { useWhatsAppTone, useWhatsAppTemplates } from "@/hooks/useWhatsAppTone";
 
 const filters = ["All", "Today", "Pending", "Confirmed", "Completed", "Cancelled"] as const;
 type FilterType = typeof filters[number];
@@ -332,6 +332,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
   const { data: bookings = [], isLoading } = useSupabaseBookings();
   const { tenantId } = useTenant();
   const whatsappTone = useWhatsAppTone();
+  const whatsappTemplates = useWhatsAppTemplates();
   const { data: appSettings = {} } = useAppSettings();
   const { data: tenantSettings } = useTenantSettings();
   const isPayshap = appSettings["payshap_enabled"] === "true";
@@ -702,7 +703,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
           serviceName: b.service,
           amount: b.balance,
           tenantPhone,
-        }, whatsappTone)),
+        }, whatsappTone, whatsappTemplates)),
         "_blank",
         "noopener,noreferrer",
       );
@@ -718,7 +719,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
           serviceName: b.service,
           amount: b.balance,
           paymentUrl: b.yocoFinalLink,
-        }, whatsappTone)),
+        }, whatsappTone, whatsappTemplates)),
         "_blank",
         "noopener,noreferrer",
       );
@@ -758,7 +759,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
           serviceName: b.service,
           amount: b.balance,
           paymentUrl,
-        }, whatsappTone)),
+        }, whatsappTone, whatsappTemplates)),
         "_blank",
         "noopener,noreferrer",
       );
@@ -1542,6 +1543,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                             reference: b.ref ?? "",
                                           },
                                           whatsappTone,
+                                          whatsappTemplates,
                                         ))
                                       }
                                       target="_blank"

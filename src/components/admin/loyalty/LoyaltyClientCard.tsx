@@ -26,6 +26,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { STATUS_STYLE, STATUS_OPTIONS, PILL_LABEL } from "./loyaltyConstants";
 import { normaliseStatus, buildWaMessage, waLink } from "./loyaltyHelpers";
 import type { WhatsAppTone } from "@/lib/whatsapp";
+import { useWhatsAppTemplates } from "@/hooks/useWhatsAppTone";
 
 // ─ Status config: icon + pulse for urgent states ────────────────────────────────
 const STATUS_META: Record<string, { icon?: React.ReactNode; pulse?: boolean }> = {
@@ -72,7 +73,8 @@ export const WaButton = ({
   tone: WhatsAppTone;
 
 }) => {
-  const msg = buildWaMessage(name, status, businessName, serviceLabel, tone);
+  const whatsappTemplates = useWhatsAppTemplates();
+  const msg = buildWaMessage(name, status, businessName, serviceLabel, tone, whatsappTemplates);
   return (
     <a
       href={waLink(phone, msg)}

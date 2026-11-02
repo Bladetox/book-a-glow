@@ -41,7 +41,7 @@ import { useTenant } from '@/contexts/TenantContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { buildWhatsAppMessage, waLink } from '@/lib/whatsapp';
-import { useWhatsAppTone } from '@/hooks/useWhatsAppTone';
+import { useWhatsAppTone, useWhatsAppTemplates } from '@/hooks/useWhatsAppTone';
 
 interface Props {
   /** Pass AdminDashboard's onNavigate so checklist items can deep-link */
@@ -133,6 +133,7 @@ export function SetupChecklist({ onNavigate }: Props) {
   const { tenantId } = useTenant();
   const bookingUrl = useBookingUrl(tenantId);
   const whatsappTone = useWhatsAppTone();
+  const whatsappTemplates = useWhatsAppTemplates();
   const { data: tenantInfo } = useQuery({ queryKey: ["communications-tenant", tenantId], enabled: !!tenantId, queryFn: async () => { const { data, error } = await supabase.from("tenants").select("name").eq("id", tenantId).maybeSingle(); if (error) throw error; return data; } });
 
   // ── ALL hooks declared first, before any conditional return ────────────────
@@ -166,7 +167,7 @@ export function SetupChecklist({ onNavigate }: Props) {
   };
 
   const handleWhatsApp = () => {
-    const message = buildWhatsAppMessage('booking_link', { businessName: tenantInfo?.name ?? '', bookingUrl }, whatsappTone);
+    const message = buildWhatsAppMessage('booking_link', { businessName: tenantInfo?.name ?? '', bookingUrl }, whatsappTone, whatsappTemplates);
     window.open(waLink('', message), '_blank', 'noopener,noreferrer');
     checklist.markBookingLinkShared();
   };

@@ -1,6 +1,6 @@
 import { format, addDays, isAfter, parseISO, startOfDay, differenceInDays } from "date-fns";
 import type { LoyaltyRow, EnrichmentMap } from "./loyaltyTypes";
-import { buildWhatsAppMessage, type WhatsAppTone } from "@/lib/whatsapp";
+import { buildWhatsAppMessage, type WhatsAppTone, type WhatsAppTemplates } from "@/lib/whatsapp";
 export { waLink } from "@/lib/whatsapp";
 
 // ─── Date helpers ───
@@ -302,6 +302,7 @@ export function buildWaMessage(
   businessName: string,
   serviceLabel: string,
   tone: WhatsAppTone = "warm",
+  templates?: WhatsAppTemplates,
 ): string {
   const type = status === "LONG_OVERDUE" ? "loyalty_long_overdue"
     : status === "OVERDUE" ? "loyalty_overdue"
@@ -312,5 +313,5 @@ export function buildWaMessage(
     clientName: name,
     businessName,
     serviceName: serviceLabel || "appointment",
-  }, tone);
+  }, tone, templates);
 }

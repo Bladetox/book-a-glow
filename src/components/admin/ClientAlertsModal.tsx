@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 import type { OverdueLoyaltyClient, InactiveClient } from "@/hooks/useClientAlerts";
 import { waLink, buildWhatsAppMessage } from "@/lib/whatsapp";
-import { useWhatsAppTone } from "@/hooks/useWhatsAppTone";
+import { useWhatsAppTone, useWhatsAppTemplates } from "@/hooks/useWhatsAppTone";
 
 // ─── Types ───
 export interface BirthdayClient {
@@ -104,6 +104,7 @@ export default function ClientAlertsModal({
   const navigate = useNavigate();
 
   const whatsappTone = useWhatsAppTone();
+  const whatsappTemplates = useWhatsAppTemplates();
   const { data: tenantInfo } = useQuery({
     queryKey: ["communications-tenant", tenantId],
     enabled: !!tenantId,
@@ -254,7 +255,7 @@ export default function ClientAlertsModal({
               ) : alertType === "overdue_loyalty" ? (
                 overdueClients.map(client => {
                   const phone = client.phone ?? "";
-                  const msg = buildWhatsAppMessage("loyalty_overdue", { clientName: client.client_name, businessName, serviceName: serviceLabel }, whatsappTone);
+                  const msg = buildWhatsAppMessage("loyalty_overdue", { clientName: client.client_name, businessName, serviceName: serviceLabel }, whatsappTone, whatsappTemplates);
                   return (
                     <div key={client.id} className={`rounded-xl border ${accentBorder} ${accentBg} px-4 py-3 flex items-center justify-between gap-3`}>
                       <div className="flex flex-col gap-0.5 min-w-0 flex-1">
@@ -274,7 +275,7 @@ export default function ClientAlertsModal({
               ) : alertType === "inactive_90_days" ? (
                 inactiveClients.map(client => {
                   const phone = client.client_phone ?? "";
-                  const msg = buildWhatsAppMessage("loyalty_long_overdue", { clientName: client.client_name, businessName }, whatsappTone);
+                  const msg = buildWhatsAppMessage("loyalty_long_overdue", { clientName: client.client_name, businessName }, whatsappTone, whatsappTemplates);
                   return (
                     <div key={client.client_id} className={`rounded-xl border ${accentBorder} ${accentBg} px-4 py-3 flex items-center justify-between gap-3`}>
                       <div className="flex flex-col gap-0.5 min-w-0 flex-1">
@@ -294,7 +295,7 @@ export default function ClientAlertsModal({
               ) : alertType === "birthday" ? (
                 birthdayClients.map(client => {
                   const phone    = client.phone ?? "";
-                  const msg = buildWhatsAppMessage("birthday", { clientName: client.client_name, businessName }, whatsappTone);
+                  const msg = buildWhatsAppMessage("birthday", { clientName: client.client_name, businessName }, whatsappTone, whatsappTemplates);
                   const daysLeft = daysUntilOccasion(client.occasion_date);
                   const isToday  = daysLeft === 0;
                   return (

@@ -10,7 +10,7 @@ import {
 import { format, addDays } from "date-fns";
 import { toast } from "sonner";
 import { buildWhatsAppMessage, waLink } from "@/lib/whatsapp";
-import { useWhatsAppTone } from "@/hooks/useWhatsAppTone";
+import { useWhatsAppTone, useWhatsAppTemplates } from "@/hooks/useWhatsAppTone";
 
 // ─── Types ───
 export interface OccasionRow {
@@ -65,11 +65,12 @@ const FILTER_CHIPS: { key: FilterChip; label: string }[] = [
 
 // ─── OccasionCard ───
 const OccasionCard = ({
-  row, i, onDelete, businessName, tone,
+  row, i, onDelete, businessName, tone, templates,
 }: {
   row: OccasionRow; i: number;
   onDelete: (id: string) => void;
   businessName: string; tone: import("@/lib/whatsapp").WhatsAppTone;
+  templates: import("@/lib/whatsapp").WhatsAppTemplates;
 }) => {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const type = (row.type as OccasionType) in TYPE_META ? (row.type as OccasionType) : "other";
@@ -82,7 +83,7 @@ const OccasionCard = ({
   const msg = buildWhatsAppMessage(type === "birthday" ? "birthday" : "anniversary", {
     clientName: row.client_name,
     businessName,
-  }, tone);
+  }, tone, templates);
 
   const urgencyBorder = isToday
     ? "border-pink-500/40 border-l-2 border-l-pink-500"
@@ -292,6 +293,7 @@ const AdminSpecialOccasions = () => {
   const [activeFilter, setActiveFilter] = useState<FilterChip>("all");
   const [showAddForm, setShowAddForm]   = useState(false);
   const whatsappTone = useWhatsAppTone();
+  const whatsappTemplates = useWhatsAppTemplates();
   const { data: tenantInfo } = useQuery({ queryKey: ["communications-tenant", tenantId], enabled: !!tenantId, queryFn: async () => { const { data, error } = await supabase.from("tenants").select("name").eq("id", tenantId).maybeSingle(); if (error) throw error; return data; } });
   const businessName = tenantInfo?.name ?? "";
 
@@ -439,6 +441,7 @@ const AdminSpecialOccasions = () => {
               onDelete={id => deleteOccasion(id)}
               businessName={businessName}
               tone={whatsappTone}
+              templates={whatsappTemplates}
             />
           ))}
         </div>

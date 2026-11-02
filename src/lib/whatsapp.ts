@@ -4,6 +4,7 @@ export type WhatsAppMessageType =
   | "loyalty_overdue" | "loyalty_long_overdue" | "loyalty_time_to_book" | "loyalty_on_track"
   | "birthday" | "anniversary" | "booking_link" | "review_request";
 export const WHATSAPP_TONE_KEY = "communications.whatsapp_tone";
+export const WHATSAPP_TEMPLATES_KEY = "communications.whatsapp_templates";
 export const DEFAULT_WHATSAPP_TONE: WhatsAppTone = "warm";
 
 export const WHATSAPP_TONES: { value: WhatsAppTone; label: string; description: string }[] = [
@@ -40,7 +41,7 @@ const toLocalSaPhone = (raw?: string) => {
   return digits ? `0${digits}` : "";
 };
 
-export function buildWhatsAppMessage(
+function buildDefaultWhatsAppMessage(
   type: WhatsAppMessageType,
   data: MessageData,
   selectedTone: WhatsAppTone = DEFAULT_WHATSAPP_TONE,
@@ -112,6 +113,106 @@ export function buildWhatsAppMessage(
     default:
       return greeting;
   }
+}
+
+
+export type WhatsAppTemplates = Partial<Record<WhatsAppMessageType, string>>;
+
+export const WHATSAPP_TEMPLATE_DEFINITIONS: { type: WhatsAppMessageType; label: string; description: string; usedIn: string; active: boolean }[] = [
+  { type: "appointment_reminder", label: "Appointment reminder", description: "A reminder with the client's appointment date, time and reference.", usedIn: "Bookings · appointment WhatsApp action", active: true },
+  { type: "booking_support", label: "Booking support", description: "A helpful message when a booking needs follow-up.", usedIn: "Bookings · support WhatsApp action", active: true },
+  { type: "balance_payshap", label: "PayShap balance instructions", description: "Instructions for settling an outstanding balance using PayShap.", usedIn: "Bookings · balance action when PayShap is enabled", active: true },
+  { type: "balance_payment_link", label: "Balance payment link", description: "A message containing the secure payment link for an outstanding balance.", usedIn: "Bookings · Yoco balance payment action", active: true },
+  { type: "loyalty_overdue", label: "Loyalty · overdue", description: "A rebooking nudge for a client whose next visit is overdue.", usedIn: "Loyalty · overdue client actions and alerts", active: true },
+  { type: "loyalty_long_overdue", label: "Loyalty · long overdue", description: "A gentle re-engagement message for a client who has been away for a while.", usedIn: "Loyalty · long-overdue and inactive client actions", active: true },
+  { type: "loyalty_time_to_book", label: "Loyalty · time to book", description: "A reminder that a client's next visit is approaching.", usedIn: "Loyalty · time-to-book client actions", active: true },
+  { type: "loyalty_on_track", label: "Loyalty · on track", description: "A simple thank-you or check-in for clients who are on track.", usedIn: "Loyalty · on-track client actions", active: true },
+  { type: "birthday", label: "Birthday wishes", description: "A birthday greeting for a client.", usedIn: "Special occasions and client birthday alerts", active: true },
+  { type: "anniversary", label: "Anniversary wishes", description: "A thank-you message for a client anniversary.", usedIn: "Special occasions · anniversary actions", active: true },
+  { type: "booking_link", label: "Booking link", description: "A shareable message with the business's public booking link.", usedIn: "Setup checklist · share booking link", active: true },
+  { type: "review_request", label: "Review request", description: "A request for feedback with the business's review link.", usedIn: "Not currently connected to a WhatsApp action", active: false },
+];
+
+export const WHATSAPP_TEMPLATE_VARIABLES: Record<WhatsAppMessageType, string[]> = {
+  appointment_reminder: ["client_name", "business_name", "date", "time", "reference"],
+  booking_support: ["client_name", "business_name", "service_name"],
+  balance_payshap: ["client_name", "business_name", "service_name", "amount", "payshap_number"],
+  balance_payment_link: ["client_name", "business_name", "service_name", "amount", "payment_url"],
+  loyalty_overdue: ["client_name", "business_name", "service_name"],
+  loyalty_long_overdue: ["client_name", "business_name", "service_name"],
+  loyalty_time_to_book: ["client_name", "business_name", "service_name"],
+  loyalty_on_track: ["client_name", "business_name", "service_name"],
+  birthday: ["client_name", "business_name"],
+  anniversary: ["client_name", "business_name"],
+  booking_link: ["business_name", "booking_url"],
+  review_request: ["client_name", "business_name", "review_url"],
+};
+
+export const WHATSAPP_TEMPLATE_VARIABLE_LABELS: Record<string, string> = {
+  client_name: "Client name", business_name: "Business name", service_name: "Service name",
+  date: "Appointment date", time: "Appointment time", reference: "Booking reference",
+  amount: "Amount due", payshap_number: "PayShap number", payment_url: "Payment link",
+  booking_url: "Booking link", review_url: "Review link",
+};
+
+const TEMPLATE_SAMPLE_DATA: MessageData = {
+  clientName: "Sarah", businessName: "Your business", serviceName: "Deluxe Facial",
+  date: "Wednesday, 4 November", time: "14:00", reference: "NS-1042", amount: 123.45,
+  paymentUrl: "https://example.com/pay", tenantPhone: "0821234567",
+  bookingUrl: "https://example.com/book", reviewUrl: "https://example.com/review",
+};
+
+export function getWhatsAppTemplateDefault(type: WhatsAppMessageType, tone: WhatsAppTone = DEFAULT_WHATSAPP_TONE): string {
+  let message = buildDefaultWhatsAppMessage(type, TEMPLATE_SAMPLE_DATA, tone);
+  const replacements: [string, string][] = [
+    ["Wednesday, 4 November", "{{date}}"], ["https://example.com/pay", "{{payment_url}}"],
+    ["https://example.com/book", "{{booking_url}}"], ["https://example.com/review", "{{review_url}}"],
+    ["0821234567", "{{payshap_number}}"], ["R123.45", "{{amount}}"],
+    ["Deluxe Facial", "{{service_name}}"], ["Your business", "{{business_name}}"],
+    ["NS-1042", "{{reference}}"], ["Sarah", "{{client_name}}"], ["14:00", "{{time}}"],
+  ];
+  for (const [value, token] of replacements) message = message.split(value).join(token);
+  return message;
+}
+
+export function parseWhatsAppTemplates(value?: string | null): WhatsAppTemplates {
+  if (!value) return {};
+  try {
+    const parsed = JSON.parse(value) as Record<string, unknown>;
+    const result: WhatsAppTemplates = {};
+    for (const definition of WHATSAPP_TEMPLATE_DEFINITIONS) {
+      const candidate = parsed?.[definition.type];
+      if (typeof candidate === "string" && candidate.trim()) result[definition.type] = candidate;
+    }
+    return result;
+  } catch { return {}; }
+}
+
+export function validateWhatsAppTemplate(type: WhatsAppMessageType, template: string): string | null {
+  const tokens = Array.from(template.matchAll(/\{\{\s*([^{}]+?)\s*\}\}/g), match => match[1].trim());
+  const allowed = WHATSAPP_TEMPLATE_VARIABLES[type];
+  const invalid = tokens.find(token => !allowed.includes(token));
+  if (invalid) return "This message uses an unsupported placeholder: " + invalid;
+  const stripped = template.replace(/\{\{\s*[^{}]+\s*\}\}/g, "");
+  if (stripped.includes("{{") || stripped.includes("}}")) return "One of the placeholders is incomplete.";
+  return null;
+}
+
+export function buildWhatsAppMessage(
+  type: WhatsAppMessageType,
+  data: MessageData,
+  selectedTone: WhatsAppTone = DEFAULT_WHATSAPP_TONE,
+  templates?: WhatsAppTemplates,
+): string {
+  const custom = templates?.[type]?.trim();
+  if (!custom) return buildDefaultWhatsAppMessage(type, data, selectedTone);
+  const values: Record<string, string> = {
+    client_name: clean(data.clientName, "there"), business_name: clean(data.businessName, "us"),
+    service_name: clean(data.serviceName, "your appointment"), date: clean(data.date), time: clean(data.time),
+    reference: clean(data.reference), amount: money(data.amount), payshap_number: toLocalSaPhone(data.tenantPhone),
+    payment_url: clean(data.paymentUrl), booking_url: clean(data.bookingUrl), review_url: clean(data.reviewUrl),
+  };
+  return custom.replace(/\{\{\s*([a-z_]+)\s*\}\}/g, (_match, key: string) => values[key] ?? "");
 }
 
 export function waLink(phone: string, message: string): string {

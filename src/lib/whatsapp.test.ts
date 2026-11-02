@@ -3,6 +3,9 @@ import {
   buildWhatsAppMessage,
   normaliseWhatsAppTone,
   waLink,
+  getWhatsAppTemplateDefault,
+  parseWhatsAppTemplates,
+  validateWhatsAppTemplate,
 } from "./whatsapp";
 
 describe("WhatsApp message generation", () => {
@@ -46,5 +49,36 @@ describe("WhatsApp message generation", () => {
 
   it("creates a recipient link using international digits", () => {
     expect(waLink("+27 82 123 4567", "Hello")).toBe("https://wa.me/27821234567?text=Hello");
+  });
+});
+
+
+describe("editable WhatsApp templates", () => {
+  it("renders supported placeholders with real message data", () => {
+    const message = buildWhatsAppMessage(
+      "appointment_reminder",
+      { clientName: "Amina", businessName: "Studio One", date: "Friday", time: "10:30", reference: "NS-22" },
+      "warm",
+      { appointment_reminder: "Hi {{client_name}}, see you at {{business_name}} on {{date}} at {{time}}. Ref {{reference}}." },
+    );
+    expect(message).toBe("Hi Amina, see you at Studio One on Friday at 10:30. Ref NS-22.");
+  });
+
+  it("uses tone-specific suggestions with supported placeholders", () => {
+    const suggestion = getWhatsAppTemplateDefault("booking_link", "professional");
+    expect(suggestion).toContain("{{business_name}}");
+    expect(suggestion).toContain("{{booking_url}}");
+    expect(suggestion).not.toContain("Your business");
+  });
+
+  it("parses only known string templates and safely handles invalid JSON", () => {
+    expect(parseWhatsAppTemplates(JSON.stringify({ birthday: "Hello {{client_name}}", unknown: "ignored", anniversary: 42 }))).toEqual({ birthday: "Hello {{client_name}}" });
+    expect(parseWhatsAppTemplates("{invalid")).toEqual({});
+  });
+
+  it("rejects placeholders unavailable to the selected message", () => {
+    expect(validateWhatsAppTemplate("birthday", "Hello {{client_name}}")).toBeNull();
+    expect(validateWhatsAppTemplate("birthday", "Pay {{payment_url}}")).toContain("unsupported placeholder");
+    expect(validateWhatsAppTemplate("booking_link", "Book here {{booking_url")).toContain("incomplete");
   });
 });
