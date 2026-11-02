@@ -99,6 +99,9 @@ const Index = () => {
         return booking.selectedDate !== null && booking.selectedTime !== null && booking.selectedTime !== "" && !!slotHold.holdId && !slotHold.isHolding;
 
       case 2: {
+        const holdValid = !!slotHold.holdId && !slotHold.isHolding;
+        if (!holdValid) return false;
+
         const contactValid =
           booking.fullName.trim().length >= 2 &&
           /^\d{7,15}$/.test(booking.phone.replace(/\s/g, "")) &&
