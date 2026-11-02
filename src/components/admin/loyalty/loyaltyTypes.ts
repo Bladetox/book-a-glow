@@ -51,16 +51,6 @@ export interface EnrollCandidate {
   matchedServices?: string[];
 }
 
-export interface LoyaltySettings {
-  reminder_weeks: number;
-  service_label: string;
-  wa_template_overdue: string;
-  wa_template_time_to_book: string;
-  wa_template_on_track: string;
-  wa_template_birthday: string;
-  wa_template_long_overdue: string;
-}
-
 export interface ServiceOption {
   id: string;
   name: string;
