@@ -21,7 +21,8 @@ const AdminCalendar         = lazy(() => import("@/components/admin/AdminCalenda
 const AdminServices         = lazy(() => import("@/components/admin/AdminServices"));
 const AdminAvailability     = lazy(() => import("@/components/admin/AdminAvailability"));
 const AdminStock            = lazy(() => import("@/components/admin/AdminStock"));
-const AdminIntegrations     = lazy(() => import("@/components/admin/AdminIntegrations"));\nconst AdminCommunications  = lazy(() => import("@/components/admin/AdminCommunications"));
+const AdminIntegrations     = lazy(() => import("@/components/admin/AdminIntegrations"));
+const AdminCommunications  = lazy(() => import("@/components/admin/AdminCommunications"));
 const AdminSettings         = lazy(() => import("@/components/admin/AdminSettings"));
 const AdminTerms            = lazy(() => import("@/components/admin/AdminTerms"));
 const AdminClientManagement = lazy(() => import("@/components/admin/AdminClientManagement"));
@@ -162,7 +163,8 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
     if (view === "Special Occasions") return flags.special_occasions;
     if (view === "Loyalty")           return flags.loyalty_module;
     if (view === "Consistency Pricing") return flags.consistency_pricing;
-    if (view === "Integrations")      return flags.integrations_tab;\n    if (view === "Communications")    return true;
+    if (view === "Integrations")      return flags.integrations_tab;
+    if (view === "Communications")    return true;
     return false;
   });
 
@@ -276,7 +278,8 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
               {activeView === "Client Management" && <AdminClientManagement />}
               {activeView === "Loyalty"            && flags.loyalty_module    && <AdminLoyalty onNavigate={handleNavigate} />}
               {activeView === "Consistency Pricing" && flags.consistency_pricing && <AdminConsistencyPricing />}
-              {activeView === "Integrations"       && flags.integrations_tab  && <AdminIntegrations />}\n              {activeView === "Communications"    && <AdminCommunications />}
+              {activeView === "Integrations"       && flags.integrations_tab  && <AdminIntegrations />}
+              {activeView === "Communications"    && <AdminCommunications />}
               {activeView === "Settings"           && <AdminSettings />}
               {activeView === "Terms & Conditions" && <AdminTerms />}
               {activeView === "Help"               && <AdminHelp />}
