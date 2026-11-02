@@ -1,5 +1,7 @@
 import { format, addDays, isAfter, parseISO, startOfDay, differenceInDays } from "date-fns";
-import type { LoyaltyRow, EnrichmentMap } from "./loyaltyTypes";\nimport { buildWhatsAppMessage, type WhatsAppTone } from "@/lib/whatsapp";\nexport { waLink } from "@/lib/whatsapp";
+import type { LoyaltyRow, EnrichmentMap } from "./loyaltyTypes";
+import { buildWhatsAppMessage, type WhatsAppTone } from "@/lib/whatsapp";
+export { waLink } from "@/lib/whatsapp";
 
 // ─── Date helpers ───
 export function excelToISO(serial: number | string | null | undefined): string | null {
