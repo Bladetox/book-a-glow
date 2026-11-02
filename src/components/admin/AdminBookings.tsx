@@ -26,6 +26,8 @@ import { useSupabaseBookings, useUpdateBookingStatus, useRescheduleBooking, useU
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 import { toast } from "sonner";
+import { buildWhatsAppMessage, waLink } from "@/lib/whatsapp";
+import { useWhatsAppTone } from "@/hooks/useWhatsAppTone";
 
 const filters = ["All", "Today", "Pending", "Confirmed", "Completed", "Cancelled"] as const;
 type FilterType = typeof filters[number];
@@ -69,47 +71,6 @@ const WhatsAppIcon = ({ className }: { className?: string }) => (
     <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
   </svg>
 );
-
-// ── Normalise SA phone number for wa.me link ─────────────────────────────────
-const toWhatsAppHref = (phone: string, clientName: string, date: string, time: string, ref: string) => {
-  const digits = phone.replace(/\D/g, "").replace(/^0/, "27");
-  const text = encodeURIComponent(
-    `Hi ${clientName}, just a reminder about your appointment on ${date} at ${time} (Ref: ${ref}).`
-  );
-  return `https://wa.me/${digits}?text=${text}`;
-};
-
-// ── Support outreach for cancelled / abandoned bookings ───────────────────────
-const toWhatsAppSupportHref = (phone: string, clientName: string, serviceNames: string) => {
-  const digits = phone.replace(/\D/g, "").replace(/^0/, "27");
-  const text = encodeURIComponent(
-    `Hi ${clientName} 👋\n\nI noticed you tried to make a booking for ${serviceNames}, but it looks like it wasn't completed. Did you experience any challenges?\n\nPlease let me know and I'll be happy to assist! 😊`
-  );
-  return `https://wa.me/${digits}?text=${text}`;
-};
-
-// PayShap / banking apps reject +27 format; use local format (0844297240).
-const toLocalSaPhone = (raw: string): string => {
-  let digits = (raw ?? "").replace(/\D/g, "");
-  if (digits.startsWith("0027")) digits = digits.slice(4);
-  else if (digits.startsWith("27") && digits.length >= 11) digits = digits.slice(2);
-  else if (digits.startsWith("0")) return digits;
-  return digits ? `0${digits}` : "";
-};
-
-// ── Build WhatsApp balance request message ───────────────────────────────────
-const toWhatsAppBalanceHref = (
-  phone: string,
-  clientName: string,
-  balanceDue: number,
-  serviceNames: string,
-  tenantName: string,
-  tenantPhone: string,
-) => {
-  const digits = phone.replace(/\D/g, "").replace(/^0/, "27");
-  const text = `Hi ${clientName} 👋\n\nThank you for choosing ${tenantName} — it was a pleasure having you!\n\nYour remaining balance of *R${balanceDue.toFixed(2)}* for ${serviceNames} is now due.\n\nTo pay via PayShap:\n1️⃣ Copy this number: ${toLocalSaPhone(tenantPhone)}\n2️⃣ Open your banking app → PayShap or Instant EFT\n3️⃣ Send *R${balanceDue.toFixed(2)}* to the number above\n4️⃣ Use your full name as the payment reference\n\nAny questions? Reply here 😊`;
-  return `https://wa.me/${digits}?text=${encodeURIComponent(text)}`;
-};
 
 // ── OverflowMenu ─────────────────────────────────────────────────────────────
 interface OverflowMenuProps {
@@ -370,6 +331,7 @@ interface AdminBookingsProps {
 const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => {
   const { data: bookings = [], isLoading } = useSupabaseBookings();
   const { tenantId } = useTenant();
+  const whatsappTone = useWhatsAppTone();
   const { data: appSettings = {} } = useAppSettings();
   const { data: tenantSettings } = useTenantSettings();
   const isPayshap = appSettings["payshap_enabled"] === "true";
@@ -734,31 +696,32 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
       const tenantName  = appSettings["business_name"] ?? appSettings["name"] ?? "";
       const tenantPhone = tenantSettings?.phone ?? "";
       window.open(
-        toWhatsAppBalanceHref(b.phone, b.client, b.balance, b.service, tenantName, tenantPhone),
+        waLink(b.phone, buildWhatsAppMessage("balance_payshap", {
+          clientName: b.client,
+          businessName: tenantName,
+          serviceName: b.service,
+          amount: b.balance,
+          tenantPhone,
+        }, whatsappTone)),
         "_blank",
         "noopener,noreferrer",
       );
       return;
     }
 
-    // ── Helper: phenomebeauty-branded message, called once we HAVE a link ──
-    const sendPhenomeMessage = (paymentUrl: string) => {
-      const digits = b.phone.replace(/\D/g, "").replace(/^0/, "27");
-      const text = `Hi ${b.client} 💛\n\nThank you so much for your session today — it was an absolute pleasure having you!\n\nJust a gentle reminder that your balance of *R${b.balance.toFixed(2)}* for ${b.service} is ready to settle online:\n\n${paymentUrl}\n\nFeel free to reach out if you have any questions! 🌸\n– Phenome Beauty`;
-      window.open(`https://wa.me/${digits}?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
-    };
-
     // ── Yoco path: reuse existing link or generate a new one ─────────────────
     if (b.yocoFinalLink) {
-      if (tenantId === "phenomebeauty") {
-        sendPhenomeMessage(b.yocoFinalLink);
-      } else {
-        window.open(
-          toWhatsAppBalanceHref(b.phone, b.client, b.balance, b.service, b.yocoFinalLink, tenantId ?? ""),
-          "_blank",
-          "noopener,noreferrer",
-        );
-      }
+      window.open(
+        waLink(b.phone, buildWhatsAppMessage("balance_payment_link", {
+          clientName: b.client,
+          businessName: appSettings["business_name"] ?? appSettings["name"] ?? "",
+          serviceName: b.service,
+          amount: b.balance,
+          paymentUrl: b.yocoFinalLink,
+        }, whatsappTone)),
+        "_blank",
+        "noopener,noreferrer",
+      );
       return;
     }
 
@@ -788,15 +751,17 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
         })
         .eq("id", b.id);
       queryClient.invalidateQueries({ queryKey: ["supabase-bookings"] });
-      if (tenantId === "phenomebeauty") {
-        sendPhenomeMessage(paymentUrl);
-      } else {
-        window.open(
-          toWhatsAppBalanceHref(b.phone, b.client, b.balance, b.service, paymentUrl, tenantId ?? ""),
-          "_blank",
-          "noopener,noreferrer",
-        );
-      }
+      window.open(
+        waLink(b.phone, buildWhatsAppMessage("balance_payment_link", {
+          clientName: b.client,
+          businessName: appSettings["business_name"] ?? appSettings["name"] ?? "",
+          serviceName: b.service,
+          amount: b.balance,
+          paymentUrl,
+        }, whatsappTone)),
+        "_blank",
+        "noopener,noreferrer",
+      );
     } catch (err: any) {
       toast.error(err.message || "Failed to generate payment link");
     } finally {
@@ -1566,9 +1531,18 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                   {b.phone && (
                                     <a
                                       href={
-                                        isCancelledStatus
-                                          ? toWhatsAppSupportHref(b.phone, b.client, b.service)
-                                          : toWhatsAppHref(b.phone, b.client, b.date, b.time, b.ref ?? "")
+                                        waLink(b.phone, buildWhatsAppMessage(
+                                          isCancelledStatus ? "booking_support" : "appointment_reminder",
+                                          {
+                                            clientName: b.client,
+                                            businessName: appSettings["business_name"] ?? appSettings["name"] ?? "",
+                                            serviceName: b.service,
+                                            date: b.date,
+                                            time: b.time,
+                                            reference: b.ref ?? "",
+                                          },
+                                          whatsappTone,
+                                        ))
                                       }
                                       target="_blank"
                                       rel="noopener noreferrer"
