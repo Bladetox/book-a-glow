@@ -285,11 +285,7 @@ const AddOccasionForm = ({
 // ══════════════════════════════════════════════════
 // ─── AdminSpecialOccasions ───
 // ══════════════════════════════════════════════════
-interface AdminSpecialOccasionsProps {
-  onSendBirthdayWA?: (client: OccasionRow) => void;
-}
-
-const AdminSpecialOccasions = ({ onSendBirthdayWA }: AdminSpecialOccasionsProps) => {
+const AdminSpecialOccasions = () => {
   const { tenantId } = useTenant();
   const qc = useQueryClient();
 
