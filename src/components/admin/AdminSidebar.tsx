@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight, ChevronsLeft, ChevronsRight, Heart, CalendarDays } from "lucide-react";
+import { ChevronRight, ChevronsLeft, ChevronsRight, Heart, CalendarDays, MessageSquare } from "lucide-react";
 import {
   DashboardIcon,
   BookingsIcon,
@@ -29,7 +29,7 @@ const iconMap: Record<string, React.ElementType> = {
   "Client Management":  ClientManagementIcon,
   "Loyalty":            Heart,
   "Consistency Pricing": Heart,
-  "Integrations":       IntegrationsIcon,
+  "Integrations":       IntegrationsIcon,\n  "Communications":     MessageSquare,
   "Settings":           SettingsIcon,
   "Terms & Conditions": TermsIcon,
   "Help":               HelpCircle,
@@ -45,7 +45,7 @@ const NAV: NavItem[] = [
   { kind: "group",  label: "Schedule",          icon: BookingsIcon,        children: ["Bookings", "Availability"] },
   { kind: "group",  label: "Catalogue",         icon: ServicesIcon,        children: ["Services", "Stock"] },
   { kind: "group",  label: "Clients",           icon: ClientManagementIcon, children: ["Client Management", "Loyalty", "Consistency Pricing"] },
-  { kind: "group",  label: "Business",          icon: SettingsIcon,        children: ["Integrations", "Settings", "Terms & Conditions", "Help"] },
+  { kind: "group",  label: "Business",          icon: SettingsIcon,        children: ["Integrations", "Communications", "Settings", "Terms & Conditions", "Help"] },
 ];
 
 const parentGroupOf = (view: string): string | null => {
