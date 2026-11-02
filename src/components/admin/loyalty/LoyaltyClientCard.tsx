@@ -24,7 +24,8 @@ import { format, addDays } from "date-fns";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { STATUS_STYLE, STATUS_OPTIONS, PILL_LABEL } from "./loyaltyConstants";
-import { normaliseStatus, buildWaMessage, waLink } from "./loyaltyHelpers";\nimport type { WhatsAppTone } from "@/lib/whatsapp";
+import { normaliseStatus, buildWaMessage, waLink } from "./loyaltyHelpers";
+import type { WhatsAppTone } from "@/lib/whatsapp";
 
 // ─ Status config: icon + pulse for urgent states ────────────────────────────────
 const STATUS_META: Record<string, { icon?: React.ReactNode; pulse?: boolean }> = {
@@ -61,22 +62,17 @@ function initials(name: string) {
 
 // ─ WaButton ───────────────────────────────────────────────────────────────
 export const WaButton = ({
-  name, status, phone, businessName, serviceLabel, templates,
+  name, status, phone, businessName, serviceLabel, tone,
 }: {
   name: string;
   status: string;
   phone: string;
   businessName: string;
   serviceLabel: string;
-  templates: {
-    overdue: string;
-    timeToBook: string;
-    onTrack: string;
-    birthday: string;
-    longOverdue?: string;
-  };
+  tone: WhatsAppTone;
+
 }) => {
-  const msg = buildWaMessage(name, status, businessName, serviceLabel, templates);
+  const msg = buildWaMessage(name, status, businessName, serviceLabel, tone);
   return (
     <a
       href={waLink(phone, msg)}
@@ -521,13 +517,8 @@ export interface LoyaltyClientCardProps {
   tenantId: string;
   businessName: string;
   serviceLabel: string;
-  waTemplates: {
-    overdue: string;
-    timeToBook: string;
-    onTrack: string;
-    birthday: string;
-    longOverdue?: string;
-  };
+  whatsappTone: WhatsAppTone;
+
   onToggleSelect: () => void;
   onToggleExpand: () => void;
   onOptimisticUpdate: (newStatus: string) => void;
@@ -669,7 +660,7 @@ export const LoyaltyClientCard = ({
               phone={row.phone ?? ""}
               businessName={businessName}
               serviceLabel={serviceLabel}
-              templates={waTemplates}
+              tone={whatsappTone}
             />
           </div>
           <button
