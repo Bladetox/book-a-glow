@@ -1,5 +1,3 @@
-import { format } from "date-fns";
-
 export type WhatsAppTone = "warm" | "professional" | "concise";
 export const WHATSAPP_TONE_KEY = "communications.whatsapp_tone";
 export const DEFAULT_WHATSAPP_TONE: WhatsAppTone = "warm";
@@ -63,7 +61,7 @@ export function buildWhatsAppMessage(
         ? `Hello ${name}, thank you for choosing ${business}. Your outstanding balance for ${service} is ${amount}.\n\nTo pay via PayShap, send ${amount} to ${clean(data.tenantPhone, "the business PayShap number")} using your full name as the reference. Please contact us if you need assistance.`
         : tone === "concise"
         ? `Hi ${name}, your remaining balance for ${service} at ${business} is ${amount}. Pay via PayShap to ${clean(data.tenantPhone, "our business number")} using your full name as reference. Thank you!`
-        : `Hi ${name} 👋\n\nThank you for choosing ${business!} It was a pleasure having you. Your remaining balance of *${amount}* for ${service} is now due.\n\nTo pay via PayShap:\n1️⃣ Copy this number: ${clean(data.tenantPhone, "our PayShap number")}\n2️⃣ Open your banking app → PayShap\n3️⃣ Send *${amount}* using your full name as the reference.\n\nAny questions? Reply here 😊`;
+        : `Hi ${name} 👋\n\nThank you for choosing ${business} It was a pleasure having you. Your remaining balance of *${amount}* for ${service} is now due.\n\nTo pay via PayShap:\n1️⃣ Copy this number: ${clean(data.tenantPhone, "our PayShap number")}\n2️⃣ Open your banking app → PayShap\n3️⃣ Send *${amount}* using your full name as the reference.\n\nAny questions? Reply here 😊`;
     case "balance_payment_link":
       if (tone === "professional") return `Hello ${name}, thank you for choosing ${business}. Your remaining balance of ${amount} for ${service} is due. You can settle it securely using this link: ${paymentUrl} Please contact us if you need any assistance.`;
       if (tone === "concise") return `Hi ${name}, your remaining balance of ${amount} for ${service} at ${business} is due. Pay securely here: ${paymentUrl}`;
@@ -95,7 +93,7 @@ export function buildWhatsAppMessage(
     case "booking_link":
       if (tone === "professional") return `Hello! You can book your next appointment with ${business} using this link: ${bookingUrl}`;
       if (tone === "concise") return `Book with ${business}: ${bookingUrl}`;
-      return `Hi! 👋 Ready to book with ${business?} You can find a time that suits you here: ${bookingUrl} 💛`;
+      return `Hi! 👋 Ready to book with ${business} You can find a time that suits you here: ${bookingUrl} 💛`;
     case "review_request":
       if (tone === "professional") return `Hello ${name}, thank you for choosing ${business}. If you were happy with your experience, we would appreciate your feedback: ${reviewUrl}`;
       if (tone === "concise") return `Hi ${name}! Enjoyed your visit to ${business}? We'd appreciate your review: ${reviewUrl}`;
