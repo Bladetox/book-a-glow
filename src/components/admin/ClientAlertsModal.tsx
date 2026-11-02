@@ -115,6 +115,17 @@ export default function ClientAlertsModal({
     staleTime: 5 * 60 * 1000,
   });
   const businessName = tenantInfo?.name ?? "";
+  const { data: serviceSetting } = useQuery({
+    queryKey: ["loyalty-service-label", tenantId],
+    enabled: !!tenantId,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("app_settings").select("value").eq("tenant_id", tenantId).eq("key", "loyalty.service_label").maybeSingle();
+      if (error) throw error;
+      return data?.value ?? "appointment";
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+  const serviceLabel = serviceSetting || "appointment";
 
 
   // ─── Per-type config ───
@@ -243,7 +254,7 @@ export default function ClientAlertsModal({
               ) : alertType === "overdue_loyalty" ? (
                 overdueClients.map(client => {
                   const phone = client.phone ?? "";
-                  const msg = buildWhatsAppMessage("loyalty_overdue", { clientName: client.client_name, businessName }, whatsappTone);
+                  const msg = buildWhatsAppMessage("loyalty_overdue", { clientName: client.client_name, businessName, serviceName: serviceLabel }, whatsappTone);
                   return (
                     <div key={client.id} className={`rounded-xl border ${accentBorder} ${accentBg} px-4 py-3 flex items-center justify-between gap-3`}>
                       <div className="flex flex-col gap-0.5 min-w-0 flex-1">
