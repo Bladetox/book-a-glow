@@ -1,5 +1,5 @@
 import { format, addDays, isAfter, parseISO, startOfDay, differenceInDays } from "date-fns";
-import type { LoyaltyRow, EnrichmentMap } from "./loyaltyTypes";
+import type { LoyaltyRow, EnrichmentMap } from "./loyaltyTypes";\nimport { buildWhatsAppMessage, waLink, type WhatsAppTone } from "@/lib/whatsapp";\nexport { waLink } from "@/lib/whatsapp";
 
 // ─── Date helpers ───
 export function excelToISO(serial: number | string | null | undefined): string | null {
@@ -293,33 +293,22 @@ export function exportCSV(
   URL.revokeObjectURL(a.href);
 }
 
-// ─── WA helpers ───
+// ─── Tone-aware WhatsApp message generation ───
 export function buildWaMessage(
   name: string,
   status: string,
   businessName: string,
   serviceLabel: string,
-  templates: { overdue: string; timeToBook: string; onTrack: string; birthday: string; longOverdue?: string }
+  tone: WhatsAppTone = "warm",
 ): string {
-  const biz = businessName || "us";
-  const svc = serviceLabel || "appointment";
-  const sub = (tpl: string) =>
-    tpl.replace(/\{name\}/g, name).replace(/\{business\}/g, biz).replace(/\{service\}/g, svc);
-  if (status === "LONG_OVERDUE") return sub(templates.longOverdue ?? templates.overdue);
-  if (status === "OVERDUE")      return sub(templates.overdue);
-  if (status === "TIME TO BOOK") return sub(templates.timeToBook);
-  if (status === "BIRTHDAY")     return sub(templates.birthday);
-  return sub(templates.onTrack);
-}
-
-export function waLink(phone: string, msg: string): string {
-  // Phones are now stored in clean E.164 (+27XXXXXXXXX).
-  // Strip the leading + and pass the digits directly to wa.me.
-  const digits = phone.replace(/\D/g, "");
-  // Fallback for any legacy non-E.164 values still in the DB:
-  // if it looks like a local ZA number, prepend 27.
-  const num = (digits.startsWith("27") && digits.length >= 11)
-    ? digits
-    : "27" + digits.replace(/^0/, "");
-  return `https://wa.me/${num}?text=${encodeURIComponent(msg)}`;
+  const type = status === "LONG_OVERDUE" ? "loyalty_long_overdue"
+    : status === "OVERDUE" ? "loyalty_overdue"
+    : status === "TIME TO BOOK" ? "loyalty_time_to_book"
+    : status === "BIRTHDAY" ? "birthday"
+    : "loyalty_on_track";
+  return buildWhatsAppMessage(type, {
+    clientName: name,
+    businessName,
+    serviceName: serviceLabel || "appointment",
+  }, tone);
 }
