@@ -138,7 +138,7 @@ export default function ClientAlertsModal({
       accentBorder: "border-amber-500/25",
       accentBg:     "bg-amber-500/[0.04]",
       badgeColor:   "bg-amber-500/10 text-amber-400 border border-amber-500/20",
-      tipNote:      "Loyalty → Settings → WhatsApp Message Templates",
+      tipNote:      "Business → Communications",
       count:        inactiveClients.length,
       ctaLabel:     null as string | null,
       ctaRoute:     null as string | null,
@@ -223,7 +223,7 @@ export default function ClientAlertsModal({
             <div className="mx-5 mt-4 rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2.5 flex items-start gap-2 shrink-0">
               <MessageCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" style={{ color: "#25D366" }} />
               <p className="text-[11px] text-white/40 leading-relaxed">
-                Tap <span className="font-semibold" style={{ color: "#25D366" }}>WA</span> on any client to open a pre-filled WhatsApp message. Edit templates in{" "}
+                Tap <span className="font-semibold" style={{ color: "#25D366" }}>WA</span> to open a pre-filled message in WhatsApp. Choose your message tone in{" "}
                 <span className="text-white/55 font-medium">{tipNote}</span>.
               </p>
             </div>
