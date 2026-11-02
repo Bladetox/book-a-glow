@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Send, X, Loader2, MessageCircle, Users } from "lucide-react";
 import { buildWaMessage, waLink } from "./loyaltyHelpers";
-import type { LoyaltyRow } from "./loyaltyTypes";
+import type { LoyaltyRow } from "./loyaltyTypes";\nimport type { WhatsAppTone } from "@/lib/whatsapp";
 
 interface BulkBarProps {
   selected: string[];
@@ -10,7 +10,7 @@ interface BulkBarProps {
   effectiveStatusMap: Record<string, string>;
   businessName: string;
   serviceLabel: string;
-  templates: { overdue: string; timeToBook: string; onTrack: string; birthday: string };
+  tone: WhatsAppTone;
   onClear: () => void;
 }
 
@@ -104,7 +104,7 @@ const FallbackModal = ({
 
 // ─── LoyaltyBulkBar ───
 export const LoyaltyBulkBar = ({
-  selected, rows, effectiveStatusMap, businessName, serviceLabel, templates, onClear,
+  selected, rows, effectiveStatusMap, businessName, serviceLabel, tone, onClear,
 }: BulkBarProps) => {
   const [sending, setSending] = useState(false);
   const { sendAll, fallbackLinks, showFallback, setShowFallback } = useSequentialWaSend();
@@ -117,7 +117,7 @@ export const LoyaltyBulkBar = ({
       const row = rows.find(r => r.id === id);
       if (!row?.phone) return [];
       const status = effectiveStatusMap[id] ?? "ON TRACK";
-      const msg = buildWaMessage(row.client_name, status, businessName, serviceLabel, templates);
+      const msg = buildWaMessage(row.client_name, status, businessName, serviceLabel, tone);
       return [{ name: row.client_name, href: waLink(row.phone, msg) }];
     });
     await sendAll(links);
