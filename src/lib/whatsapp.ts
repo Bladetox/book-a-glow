@@ -1,4 +1,8 @@
 export type WhatsAppTone = "warm" | "professional" | "concise";
+export type WhatsAppMessageType =
+  | "appointment_reminder" | "booking_support" | "balance_payshap" | "balance_payment_link"
+  | "loyalty_overdue" | "loyalty_long_overdue" | "loyalty_time_to_book" | "loyalty_on_track"
+  | "birthday" | "anniversary" | "booking_link" | "review_request";
 export const WHATSAPP_TONE_KEY = "communications.whatsapp_tone";
 export const DEFAULT_WHATSAPP_TONE: WhatsAppTone = "warm";
 
@@ -37,7 +41,7 @@ const toLocalSaPhone = (raw?: string) => {
 };
 
 export function buildWhatsAppMessage(
-  type: string,
+  type: WhatsAppMessageType,
   data: MessageData,
   selectedTone: WhatsAppTone = DEFAULT_WHATSAPP_TONE,
 ): string {
@@ -111,7 +115,16 @@ export function buildWhatsAppMessage(
 }
 
 export function waLink(phone: string, message: string): string {
-  const digits = (phone ?? "").replace(/\D/g, "");
-  const number = digits ? (digits.startsWith("27") && digits.length >= 11 ? digits : `27${digits.replace(/^0/, "")}`) : "";
+  let digits = (phone ?? "").replace(/\D/g, "");
+  if (digits.startsWith("00")) digits = digits.slice(2);
+  const number = !digits
+    ? ""
+    : digits.startsWith("27")
+      ? digits
+      : digits.startsWith("0")
+        ? `27${digits.slice(1)}`
+        : digits.length === 9
+          ? `27${digits}`
+          : digits;
   return `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
 }
