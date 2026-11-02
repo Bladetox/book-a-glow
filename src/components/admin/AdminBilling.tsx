@@ -52,7 +52,7 @@ const PLAN_FEATURES: Record<string, string[]> = {
     "Automated bookings — ditch the pen and diary",
     "PayShap instant EFT for your clients",
     "Confirm bookings with one click",
-    "Email notifications and WhatsApp templates",
+    "Email notifications and pre-filled WhatsApp messages",
     "Essential dashboard",
   ],
   flow: [
@@ -67,7 +67,7 @@ const PLAN_FEATURES: Record<string, string[]> = {
     "Everything in Flow",
     "Call-out mode with travel fee calculation",
     "Loyalty tiers: New, Regular and VIP clients",
-    "WhatsApp templates per loyalty status",
+    "Tone-matched WhatsApp messages for client re-engagement",
     "Special occasions tracker (birthdays, etc.)",
     "Custom consultation form builder",
     "AI-powered add-on suggestions during booking",
