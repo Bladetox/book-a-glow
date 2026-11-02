@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, CalendarCheck, AlertTriangle, MessageCircle, Cake, ArrowRight } from "lucide-react";
@@ -8,7 +7,8 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 import type { OverdueLoyaltyClient, InactiveClient } from "@/hooks/useClientAlerts";
-import { waLink } from "@/components/admin/loyalty/loyaltyHelpers";
+import { waLink, buildWhatsAppMessage } from "@/lib/whatsapp";
+import { useWhatsAppTone } from "@/hooks/useWhatsAppTone";
 
 // ─── Types ───
 export interface BirthdayClient {
@@ -32,27 +32,6 @@ const SPRING = {
 
 /** layoutId shared between the card that opens the modal and the modal panel. */
 export const alertCardLayoutId = (type: string) => `client-alert-${type}`;
-
-// ─── WA helpers ───
-const DEFAULT_TPL_OVERDUE  = "Hi {name}! ✨ We miss you at {business}. You're overdue for your {service} — let's get you booked in! Reply to grab a slot.";
-const DEFAULT_TPL_INACTIVE = "Hi {name}! 👋 It's been a while since we've seen you at {business}. We'd love to welcome you back — reply to book your next {service}!";
-const DEFAULT_TPL_BIRTHDAY = "Hi {name}! 🎂 Wishing you a wonderful birthday from everyone at {business}! We'd love to treat you to your next {service} — reply to claim your birthday treat! 💖";
-
-const SETTING_KEYS = [
-  "loyalty_tpl_overdue",
-  "loyalty_tpl_timebook",
-  "loyalty_tpl_ontrack",
-  "loyalty_tpl_birthday",
-  "loyalty_service_label",
-  "loyalty_business_name",
-] as const;
-
-function buildMsg(name: string, template: string, businessName: string, serviceLabel: string): string {
-  return template
-    .replace(/\{name\}/g, name)
-    .replace(/\{business\}/g, businessName || "us")
-    .replace(/\{service\}/g, serviceLabel || "appointment");
-}
 
 function formatDate(dateStr: string | null | undefined): string {
   if (!dateStr) return "—";
@@ -124,32 +103,19 @@ export default function ClientAlertsModal({
   const { tenantId } = useTenant();
   const navigate = useNavigate();
 
-  const { data: settingsRows = [] } = useQuery({
-    queryKey: ["loyalty-settings", tenantId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("app_settings")
-        .select("key, value")
-        .eq("tenant_id", tenantId)
-        .in("key", SETTING_KEYS);
-      if (error) throw error;
-      return data ?? [];
-    },
+  const whatsappTone = useWhatsAppTone();
+  const { data: tenantInfo } = useQuery({
+    queryKey: ["communications-tenant", tenantId],
     enabled: !!tenantId,
-    staleTime: 1000 * 60 * 5,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("tenants").select("name").eq("id", tenantId).maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+    staleTime: 5 * 60 * 1000,
   });
+  const businessName = tenantInfo?.name ?? "";
 
-  const settings = useMemo(() => {
-    const map: Record<string, string> = {};
-    settingsRows.forEach((r: any) => { map[r.key] = r.value; });
-    return {
-      overdueTemplate:  map.loyalty_tpl_overdue  || DEFAULT_TPL_OVERDUE,
-      inactiveTemplate: map.loyalty_tpl_timebook || DEFAULT_TPL_INACTIVE,
-      birthdayTemplate: map.loyalty_tpl_birthday || DEFAULT_TPL_BIRTHDAY,
-      serviceLabel:     map.loyalty_service_label || "appointment",
-      businessName:     map.loyalty_business_name || "",
-    };
-  }, [settingsRows]);
 
   // ─── Per-type config ───
   const config = {
@@ -160,7 +126,7 @@ export default function ClientAlertsModal({
       accentBorder: "border-red-500/25",
       accentBg:     "bg-red-500/[0.04]",
       badgeColor:   "bg-red-500/10 text-red-400 border border-red-500/20",
-      tipNote:      "Loyalty → Settings → WhatsApp Message Templates",
+      tipNote:      "Business → Communications",
       count:        overdueClients.length,
       ctaLabel:     "Go to Loyalty",
       ctaRoute:     null as string | null,
@@ -277,7 +243,7 @@ export default function ClientAlertsModal({
               ) : alertType === "overdue_loyalty" ? (
                 overdueClients.map(client => {
                   const phone = client.phone ?? "";
-                  const msg   = buildMsg(client.client_name, settings.overdueTemplate, settings.businessName, settings.serviceLabel);
+                  const msg = buildWhatsAppMessage("loyalty_overdue", { clientName: client.client_name, businessName }, whatsappTone);
                   return (
                     <div key={client.id} className={`rounded-xl border ${accentBorder} ${accentBg} px-4 py-3 flex items-center justify-between gap-3`}>
                       <div className="flex flex-col gap-0.5 min-w-0 flex-1">
@@ -297,7 +263,7 @@ export default function ClientAlertsModal({
               ) : alertType === "inactive_90_days" ? (
                 inactiveClients.map(client => {
                   const phone = client.client_phone ?? "";
-                  const msg   = buildMsg(client.client_name, settings.inactiveTemplate, settings.businessName, settings.serviceLabel);
+                  const msg = buildWhatsAppMessage("loyalty_long_overdue", { clientName: client.client_name, businessName }, whatsappTone);
                   return (
                     <div key={client.client_id} className={`rounded-xl border ${accentBorder} ${accentBg} px-4 py-3 flex items-center justify-between gap-3`}>
                       <div className="flex flex-col gap-0.5 min-w-0 flex-1">
@@ -317,7 +283,7 @@ export default function ClientAlertsModal({
               ) : alertType === "birthday" ? (
                 birthdayClients.map(client => {
                   const phone    = client.phone ?? "";
-                  const msg      = buildMsg(client.client_name, settings.birthdayTemplate, settings.businessName, settings.serviceLabel);
+                  const msg = buildWhatsAppMessage("birthday", { clientName: client.client_name, businessName }, whatsappTone);
                   const daysLeft = daysUntilOccasion(client.occasion_date);
                   const isToday  = daysLeft === 0;
                   return (
