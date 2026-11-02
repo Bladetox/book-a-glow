@@ -12,7 +12,7 @@ export default function AdminCommunications() {
   const qc = useQueryClient();
   const [tone, setTone] = useState<WhatsAppTone>(DEFAULT_WHATSAPP_TONE);
   const [savedTone, setSavedTone] = useState<WhatsAppTone>(DEFAULT_WHATSAPP_TONE);
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["whatsapp-tone", tenantId],
     enabled: !!tenantId,
     queryFn: async () => {
@@ -38,19 +38,20 @@ export default function AdminCommunications() {
     <section className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-4 sm:p-5 flex flex-col gap-4">
       <div><h2 className="text-sm font-semibold text-white/85">WhatsApp message tone</h2><p className="text-xs text-white/35 mt-1">This preference applies to your WhatsApp messages. You can still make changes in WhatsApp before sending.</p></div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {WHATSAPP_TONES.map(option => <button key={option.value} type="button" onClick={() => setTone(option.value)} className={`rounded-xl border p-4 text-left transition-colors ${tone === option.value ? "border-amber-400/40 bg-amber-400/[0.07]" : "border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.04]"}`}>
+        {WHATSAPP_TONES.map(option => <button key={option.value} type="button" disabled={isLoading || isError || save.isPending} onClick={() => setTone(option.value)} className={`rounded-xl border p-4 text-left transition-colors ${tone === option.value ? "border-amber-400/40 bg-amber-400/[0.07]" : "border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.04]"}`}>
           <span className="flex items-center justify-between gap-2"><span className="text-sm font-semibold text-white/85">{option.label}</span>{tone === option.value && <Check className="w-4 h-4 text-amber-300" />}</span>
           <span className="block text-xs text-white/40 mt-2 leading-relaxed">{option.description}</span>
         </button>)}
       </div>
+      {isError && <div className="rounded-xl border border-red-400/20 bg-red-400/[0.05] p-3 flex items-center justify-between gap-3"><p className="text-xs text-red-200/80">We couldn’t load your saved tone preference.</p><button type="button" onClick={() => refetch()} className="text-xs font-semibold text-red-200 underline underline-offset-2">Try again</button></div>}
       <div className="rounded-xl border border-white/[0.07] bg-black/30 p-4">
         <div className="flex items-center gap-2 mb-3"><MessageCircle className="w-4 h-4 text-[#25D366]" /><span className="text-[10px] uppercase tracking-wider font-semibold text-white/35">Example WhatsApp message</span></div>
         <p className="text-sm text-white/75 leading-relaxed whitespace-pre-line">{preview}</p>
         <p className="text-[10px] text-white/25 mt-3">Names, dates, times, services and payment details are filled in automatically for each message.</p>
       </div>
       <div className="flex items-center justify-between gap-3 pt-1">
-        <span className={`text-xs font-medium ${dirty ? "text-amber-300" : "text-emerald-400"}`}>{save.isPending ? "Saving…" : dirty ? "Unsaved changes" : "Saved"}</span>
-        <button type="button" disabled={!dirty || save.isPending} onClick={() => save.mutate()} className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold bg-white text-black hover:bg-white/90 disabled:opacity-35 disabled:cursor-not-allowed"><Save className="w-4 h-4" /> Save changes</button>
+        <span className={`text-xs font-medium ${dirty ? "text-amber-300" : "text-emerald-400"}`}>{isLoading ? "Loading…" : isError ? "Unable to load preference" : save.isPending ? "Saving…" : dirty ? "Unsaved changes" : "Saved"}</span>
+        <button type="button" disabled={!dirty || isLoading || isError || save.isPending} onClick={() => save.mutate()} className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold bg-white text-black hover:bg-white/90 disabled:opacity-35 disabled:cursor-not-allowed"><Save className="w-4 h-4" /> Save changes</button>
       </div>
     </section>
   </div>;
