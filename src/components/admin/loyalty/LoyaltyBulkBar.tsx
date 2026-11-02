@@ -2,7 +2,8 @@ import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Send, X, Loader2, MessageCircle, Users } from "lucide-react";
 import { buildWaMessage, waLink } from "./loyaltyHelpers";
-import type { LoyaltyRow } from "./loyaltyTypes";\nimport type { WhatsAppTone } from "@/lib/whatsapp";
+import type { LoyaltyRow } from "./loyaltyTypes";
+import type { WhatsAppTone } from "@/lib/whatsapp";
 
 interface BulkBarProps {
   selected: string[];
