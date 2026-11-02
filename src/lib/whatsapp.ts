@@ -134,8 +134,8 @@ export const WHATSAPP_TEMPLATE_DEFINITIONS: { type: WhatsAppMessageType; label: 
 ];
 
 export const WHATSAPP_TEMPLATE_VARIABLES: Record<WhatsAppMessageType, string[]> = {
-  appointment_reminder: ["client_name", "business_name", "date", "time", "reference"],
-  booking_support: ["client_name", "business_name", "service_name"],
+  appointment_reminder: ["client_name", "business_name", "service_name", "date", "time", "reference"],
+  booking_support: ["client_name", "business_name", "service_name", "date", "time", "reference"],
   balance_payshap: ["client_name", "business_name", "service_name", "amount", "payshap_number"],
   balance_payment_link: ["client_name", "business_name", "service_name", "amount", "payment_url"],
   loyalty_overdue: ["client_name", "business_name", "service_name"],
@@ -209,7 +209,7 @@ export function buildWhatsAppMessage(
   const values: Record<string, string> = {
     client_name: clean(data.clientName, "there"), business_name: clean(data.businessName, "us"),
     service_name: clean(data.serviceName, "your appointment"), date: clean(data.date), time: clean(data.time),
-    reference: clean(data.reference), amount: money(data.amount), payshap_number: toLocalSaPhone(data.tenantPhone),
+    reference: clean(data.reference), amount: money(data.amount), payshap_number: toLocalSaPhone(data.tenantPhone) || "the business PayShap number",
     payment_url: clean(data.paymentUrl), booking_url: clean(data.bookingUrl), review_url: clean(data.reviewUrl),
   };
   return custom.replace(/\{\{\s*([a-z_]+)\s*\}\}/g, (_match, key: string) => values[key] ?? "");

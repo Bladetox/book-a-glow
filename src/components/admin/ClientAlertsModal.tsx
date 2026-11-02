@@ -275,7 +275,7 @@ export default function ClientAlertsModal({
               ) : alertType === "inactive_90_days" ? (
                 inactiveClients.map(client => {
                   const phone = client.client_phone ?? "";
-                  const msg = buildWhatsAppMessage("loyalty_long_overdue", { clientName: client.client_name, businessName }, whatsappTone, whatsappTemplates);
+                  const msg = buildWhatsAppMessage("loyalty_long_overdue", { clientName: client.client_name, businessName, serviceName: serviceLabel }, whatsappTone, whatsappTemplates);
                   return (
                     <div key={client.client_id} className={`rounded-xl border ${accentBorder} ${accentBg} px-4 py-3 flex items-center justify-between gap-3`}>
                       <div className="flex flex-col gap-0.5 min-w-0 flex-1">

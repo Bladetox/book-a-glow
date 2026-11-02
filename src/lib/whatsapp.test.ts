@@ -82,3 +82,15 @@ describe("editable WhatsApp templates", () => {
     expect(validateWhatsAppTemplate("booking_link", "Book here {{booking_url")).toContain("incomplete");
   });
 });
+
+
+it("renders the PayShap number placeholder with a safe fallback", () => {
+  const message = buildWhatsAppMessage(
+    "balance_payshap",
+    { clientName: "Amina", businessName: "Studio One", serviceName: "Facial", amount: 450, tenantPhone: "+27 82 123 4567" },
+    "professional",
+    { balance_payshap: "{{client_name}} owes {{amount}}. PayShap: {{payshap_number}}" },
+  );
+  expect(message).toContain("Amina owes R450.00");
+  expect(message).toContain("PayShap: 0821234567");
+});
