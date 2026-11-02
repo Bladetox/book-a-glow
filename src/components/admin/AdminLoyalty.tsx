@@ -408,17 +408,6 @@ function SettingCard({ icon, title, subtitle, accent, defaultOpen = false, badge
 }
 
 // ──────────────────────────────────────────────────────────────────
-// WA template key metadata
-// ──────────────────────────────────────────────────────────────────
-const WA_TEMPLATE_META: { key: keyof typeof DEFAULT_WA_TEMPLATES; label: string; hint: string; accent: string }[] = [
-  { key: "overdue",     label: "Overdue",            hint: "Sent when a client is past their reminder date",          accent: "text-red-400/70"     },
-  { key: "longOverdue", label: "Not Seen in a While", hint: "Sent to clients you haven't seen in a long time",        accent: "text-orange-400/70"  },
-  { key: "timeToBook",  label: "Time to Book",        hint: "Sent when it's nearly time for their next appointment",  accent: "text-amber-400/70"   },
-  { key: "onTrack",     label: "On Track",            hint: "Friendly check-in for clients who are keeping up",       accent: "text-emerald-400/70" },
-  { key: "birthday",    label: "Birthday 🎂",         hint: "Sent on or around the client's birthday",               accent: "text-pink-400/70"    },
-];
-
-// ──────────────────────────────────────────────────────────────────
 // Floating save bar (Von Restorff + Zeigarnik)
 // ──────────────────────────────────────────────────────────────────
 function FloatingSaveBar({
@@ -638,6 +627,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
 
   const markDirty = () => {
     if (!settingsDirty) {
+      setSnapshot({ reminderWeeks, serviceLabel, minBookings, lookbackDays, tenantCriteria });
     }
     setSettingsDirty(true);
   };
@@ -1204,6 +1194,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
           effectiveStatusMap={effectiveStatusMap}
           businessName={businessName}
           serviceLabel={serviceLabel}
+          tone={whatsappTone}
           onClear={() => setSelectedIds([])}
         />
 
@@ -1243,6 +1234,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                   tenantId={tenantId ?? ""}
                   businessName={businessName}
                   serviceLabel={serviceLabel}
+                  whatsappTone={whatsappTone}
                   onToggleSelect={() => toggleSelect(row.id)}
                   onToggleExpand={() => setExpandedCard(id => id === row.id ? null : row.id)}
                   onOptimisticUpdate={ns => setOptimisticStatus(m => ({ ...m, [row.id]: ns }))}
