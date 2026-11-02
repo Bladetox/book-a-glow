@@ -752,11 +752,21 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, holdId, sessio
         </button>
       )}
 
+      {!holdId && !pendingBookingId && (
+        <div className="rounded-xl border border-amber-500/25 bg-amber-500/5 p-4 text-sm">
+          <p className="font-medium">Your 10-minute slot hold has expired.</p>
+          <p className="mt-1 text-muted-foreground">Choose the appointment time again before confirming.</p>
+          <button type="button" className="mt-3 text-sm font-semibold underline underline-offset-4" onClick={() => onGoToStep(1)}>
+            Return to schedule
+          </button>
+        </div>
+      )}
+
       {/* CTA */}
       <motion.button
         onClick={handleConfirm}
-        disabled={submitting}
-        whileTap={submitting ? {} : { scale: 0.97 }}
+        disabled={submitting || (!holdId && !pendingBookingId)}
+        whileTap={submitting || (!holdId && !pendingBookingId) ? {} : { scale: 0.97 }}
         className="btn-next w-full flex items-center justify-center gap-2.5"
       >
         {submitting ? (
