@@ -24,6 +24,8 @@ interface ReviewStepProps {
   onUpdate: (updates: Partial<BookingState>) => void;
   onGoToStep: (step: number) => void;
   releaseHold: () => Promise<void>;
+  holdId: string | null;
+  sessionToken: string;
   onPayshapComplete: () => void;
 }
 
@@ -99,7 +101,7 @@ function GatewayLogo({ choice, className }: { choice: PaymentChoice; className?:
   return null;
 }
 
-const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, onPayshapComplete }: ReviewStepProps) => {
+const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, holdId, sessionToken, onPayshapComplete }: ReviewStepProps) => {
   const { data: allServices = [] } = usePublicServices();
   const { sections: termsSections } = usePublicTerms();
   const config = usePublicBusinessConfig();
@@ -313,6 +315,8 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, onPayshapCompl
           };
         });
 
+    if (!holdId) throw new Error("Your appointment hold has expired. Please choose your time again.");
+
     const bookingParams = {
       p_client_id: null,
       p_staff_id: staffId,
@@ -339,6 +343,9 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, onPayshapCompl
       p_guest_phone: guestPhone,
       p_total_amount: total,
       p_deposit_amount: (paymentChoice === "payshap_full" || paymentChoice === "full" || paymentChoice === "ikhokha_full") ? total : deposit,
+      p_tenant_id: tenantId,
+      p_hold_id: holdId,
+      p_session_token: sessionToken,
     };
 
     const consultationParams = {
@@ -350,7 +357,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, onPayshapCompl
     let { data, error } = await supabase.rpc("create_booking_with_consultation", {
       ...bookingParams,
       ...consultationParams,
-    });
+    } as any);
 
     if (error) throw error;
     const bookingId: string = data?.[0]?.booking_id;
