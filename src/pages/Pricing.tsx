@@ -190,7 +190,7 @@ const tiers = [
           "Ditch the pen and diary: automated bookings",
           "No manual EFT chasing: PayShap clears instantly in your bank account",
           "No back-and-forth WhatsApp chats: confirm the booking with one click",
-          "Email notifications and WhatsApp templates, one click away",
+          "Email notifications and pre-filled WhatsApp messages, one click away",
           "Essential dashboard: less noise, just the basics you need",
         ],
       },
@@ -243,7 +243,7 @@ const tiers = [
         features: [
           "Call-out mode with travel fee calculation",
           "Loyalty tiers: New, Regular and VIP clients",
-          "WhatsApp message templates per loyalty status",
+          "Tone-matched WhatsApp messages for client re-engagement",
           "Special occasions tracker (birthdays, etc.)",
           "Custom consultation form builder",
           "AI-powered add-on suggestions during booking",
@@ -428,7 +428,7 @@ const faqs = [
   },
   {
     q: "What is the loyalty module?",
-    a: "On Professional and Studio, NextSlot tracks each client's visit cadence and assigns them a status: New, Regular, or VIP. You get WhatsApp message templates tailored to each status so re-engaging quiet clients takes seconds, not a spreadsheet.",
+    a: "On Professional and Studio, NextSlot tracks each client's visit cadence and assigns them a status: New, Regular, or VIP. NextSlot prepares a message for each client status in your chosen tone, with their details filled in automatically. Re-engaging quiet clients takes seconds, not a spreadsheet.",
   },
   {
     q: "What is the Nexty add-on suggestion feature?",
