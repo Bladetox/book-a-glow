@@ -96,7 +96,7 @@ const Index = () => {
         return booking.selectedTreatments.length > 0;
 
       case 1:
-        return booking.selectedDate !== null && booking.selectedTime !== null && booking.selectedTime !== "";
+        return booking.selectedDate !== null && booking.selectedTime !== null && booking.selectedTime !== "" && !!slotHold.holdId && !slotHold.isHolding;
 
       case 2: {
         const contactValid =
@@ -113,7 +113,7 @@ const Index = () => {
       default:
         return true;
     }
-  }, [step, booking, config]);
+  }, [step, booking, config, slotHold.holdId, slotHold.isHolding]);
 
   const handleNext = useCallback(() => {
     if (!canProceed()) return;

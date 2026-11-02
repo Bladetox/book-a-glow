@@ -135,6 +135,14 @@ const ScheduleStep = ({
     showAvailabilityNotice(status === "available" ? "restricted" : status);
   }, [selectedDate, selectedTime, loadingSlots, fetchingSlots, dateSlots, monthAvailability, onSelectDate, onSelectTime, slotHold.releaseHold, showAvailabilityNotice]);
 
+  // A hold can expire while the guest is reviewing the details. Clear the
+  // selected time immediately so the booking cannot proceed without a live hold.
+  useEffect(() => {
+    if (!slotHold.holdId && slotHold.error && selectedTime) {
+      onSelectTime("");
+    }
+  }, [slotHold.holdId, slotHold.error, selectedTime, onSelectTime]);
+
   // Revalidate a chosen date against its date-specific slot result. If it has
   // become unavailable since the horizon was loaded, replace the calendar with
   // the appropriate fallback instead of leaving an empty time-slot panel.
