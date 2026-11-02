@@ -46,7 +46,7 @@ const NAV_GROUPS: NavGroup[] = [
     label:      "Business",
     icon:       SettingsIcon,
     targetView: "Settings",
-    views:      ["Integrations", "Settings", "Terms & Conditions"],
+    views:      ["Integrations", "Communications", "Settings", "Terms & Conditions"],
   },
 ];
 
