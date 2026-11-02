@@ -230,11 +230,6 @@ const AdminPayshapQueue = () => {
                         <p className="text-[9px] text-white/25 uppercase tracking-wide">
                           {amountLabel}
                         </p>
-                        {booking.payshapReference && (
-                          <p className="text-[10px] text-white/30 font-mono mt-0.5">
-                            Ref: {booking.payshapReference}
-                          </p>
-                        )}
                       </div>
                     </div>
 

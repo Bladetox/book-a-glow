@@ -939,7 +939,6 @@ Deno.serve(async (req) => {
         canonical_client_id,
         client_name, client_email, client_phone,
         guest_name,  guest_email,  guest_phone,
-        payshap_reference,
         client:profiles!bookings_client_id_fkey(full_name, email, phone)
       `)
       .eq("id", booking_id)
@@ -1024,7 +1023,6 @@ Deno.serve(async (req) => {
     const clientName  = escapeHtml((booking as any).client_name  || (booking as any).guest_name  || (booking.client as any)?.full_name || "Client");
     const clientEmail = (booking as any).client_email || (booking as any).guest_email || (booking.client as any)?.email    || null;
     const clientPhone = escapeHtml((booking as any).client_phone || (booking as any).guest_phone || (booking.client as any)?.phone    || "");
-    const payshapRef  = escapeHtml((booking as any).payshap_reference ?? "");
 
     const tenantName    = escapeHtml(tenant?.name ?? "Beauty Studio");
     const tenantAddress = escapeHtml(tenant?.address ?? "");
@@ -1178,8 +1176,8 @@ Deno.serve(async (req) => {
               <p style="margin:0 0 6px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#999;">Step 2 &mdash; Open your banking app</p>
               <p class="tl" style="margin:0 0 16px;font-size:13px;color:#555;line-height:1.6;">Go to the PayShap or Instant EFT section and send <strong>${amountValue}</strong> to the number above.</p>
 
-              <p style="margin:0 0 6px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#999;">Step 3 &mdash; Use your name as reference</p>
-              <p class="tl" style="margin:0 0 16px;font-size:13px;color:#555;line-height:1.6;">When prompted for a payment reference, enter your <strong>full name</strong> so we can match the payment.</p>
+              <p style="margin:0 0 6px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#999;">Step 3 &mdash; Keep your bank confirmation</p>
+              <p class="tl" style="margin:0 0 16px;font-size:13px;color:#555;line-height:1.6;">Keep the confirmation from your banking app. The business will verify the payment and confirm your appointment.</p>
 
               <p style="margin:0 0 6px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#999;">Step 4 — Check your email for confirmation</p>
               <p class="tl" style="margin:0;font-size:13px;color:#555;line-height:1.6;">Once ${tenantName} has confirmed your payment, we'll send you a booking confirmation email.</p>
@@ -1262,281 +1260,6 @@ Deno.serve(async (req) => {
           subject:  isFullPayment
             ? `⏳ New PayShap full-payment booking — ${clientName} on ${formattedDate}`
             : `⏳ New PayShap deposit booking — ${clientName} on ${formattedDate}`,
-          html:     ownerHtml,
-        });
-      }
-    }
-
-    // ======================================================================
-    // PAYSHAP PENDING
-    // Triggered immediately when the client submits their payment reference.
-    // Sends:
-    //   1. Client: receipt of reference + payment type (full/deposit) + amounts
-    //   2. Tenant: all booking details + WhatsApp confirm button + Add to Calendar
-    // ======================================================================
-    if (email_type === "payshap_proof_submitted") {
-
-      // 1. CLIENT email
-      if (clientEmail) {
-        const payshapClientPaymentRows = isFullPayment
-          ? detailTable(
-              detailRow("Service", serviceNames) +
-              detailRow("Date", formattedDate) +
-              detailRow("Time", formattedTime) +
-              detailRow("Full Payment", `${totalAmount} &#10003;`) +
-              detailRow("Your Reference", payshapRef || "(none submitted)", true)
-            )
-          : detailTable(
-              detailRow("Service", serviceNames) +
-              detailRow("Date", formattedDate) +
-              detailRow("Time", formattedTime) +
-              detailRow("Deposit Paid", `${depositAmount} &#10003;`) +
-              detailRow("Balance Due on Day", balanceDue) +
-              detailRow("Your Reference", payshapRef || "(none submitted)", true)
-            );
-
-        const payshapClientIntro = isFullPayment
-          ? `Your full payment of <strong>${totalAmount}</strong> has been received. Your studio will confirm your appointment shortly.`
-          : `Your deposit of <strong>${depositAmount}</strong> has been received. The remaining balance of <strong>${balanceDue}</strong> will be due on the day. Your studio will confirm your appointment shortly.`;
-
-        const clientBody = `
-          <tr><td style="padding:28px 36px 10px;">
-            <p class="tm" style="margin:0;font-size:15px;color:#000;line-height:1.5;">Hi <strong>${clientName}</strong>,</p>
-            <p class="tl" style="margin:10px 0 0;font-size:14px;color:#555;line-height:1.7;">${payshapClientIntro}</p>
-          </td></tr>
-          <tr><td style="padding:18px 36px 26px;">
-            <p class="tl" style="margin:0 0 10px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#999;">Booking Details</p>
-            ${payshapClientPaymentRows}
-          </td></tr>
-          <tr><td style="padding:0 36px 26px;">
-            <div style="background:#f7f7f7;border-radius:8px;border:1px solid #ebebeb;padding:14px 18px;border-left:3px solid #000;">
-              <p class="tm" style="margin:0;font-size:13px;font-weight:600;color:#000;line-height:1.5;">What happens next?</p>
-              <p class="tl" style="margin:6px 0 0;font-size:13px;color:#555;line-height:1.7;">Keep an eye on your email. Once your studio has verified your payment you will receive confirmation there.</p>
-            </div>
-          </td></tr>
-        `;
-        await send({
-          from:     `${tenantName} <bookings@nextslot.co.za>`,
-          reply_to: tenantEmail ?? undefined,
-          to:       [clientEmail],
-          subject:  isFullPayment
-            ? `Full payment received — awaiting confirmation`
-            : `Deposit received — awaiting confirmation`,
-          html:     emailWrapper(logoHtml, tenantName, isFullPayment ? "Full Payment Received" : "Deposit Received", clientBody, `&copy; ${new Date().getFullYear()} ${tenantName} &middot; Powered by NextSlot`),
-        });
-      }
-
-      // 2. TENANT email
-      if (tenantEmail) {
-        await new Promise((r) => setTimeout(r, 300));
-
-        const gcalOwnerLink = buildGcalLink({
-          title:     `${serviceNames} — ${clientName}`,
-          startDate: booking.booking_date,
-          startTime: booking.start_time,
-          endTime:   (booking.end_time as string | null),
-          details:   `Client: ${clientName} | Phone: ${clientPhone} | Ref: ${payshapRef}`,
-          location:  calendarLocation,
-        });
-
-        const waMessage = encodeURIComponent(
-          `Hi ${clientName.split(" ")[0]},\nYour booking for ${serviceNames} with ${tenantName} on ${formattedDate} has been confirmed.\nPlease add it to your calendar. We look forward to welcoming you at ${waLocation}.\nSee you soon!`
-        );
-        const rawPhone = clientPhone.replace(/[^0-9]/g, "");
-        const waNumber = rawPhone.startsWith("0") ? "27" + rawPhone.slice(1) : rawPhone;
-        const waLink = `https://wa.me/${waNumber}?text=${waMessage}&cb=${Date.now()}`;
-
-        const ownerPaymentHeading = isFullPayment
-          ? "New Payshap Full Payment 💳"
-          : "New Payshap Deposit 💳";
-        const ownerPaymentSubline = isFullPayment
-          ? `${clientName} has submitted a full payment reference. Review and confirm below.`
-          : `${clientName} has submitted a deposit reference. Review and confirm below.`;
-
-        const ownerHtml = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="color-scheme" content="light dark">
-  <meta name="supported-color-schemes" content="light dark">
-  <link rel="icon" href="https://nextslot.co.za/favicon.ico">
-  <style>${OWNER_STYLES}</style>
-</head>
-<body class="ob" style="margin:0;padding:24px 16px;background:#f2f2f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
-<table class="ow" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#fff;border-radius:10px;border:1px solid #e0e0e0;box-shadow:0 2px 12px rgba(0,0,0,0.06);overflow:hidden;">
-  <tr><td style="padding:28px 28px 10px;">
-    <p class="ot" style="margin:0 0 4px;font-size:18px;font-weight:700;color:#000;line-height:1.3;">${ownerPaymentHeading}</p>
-    <p class="ol" style="margin:0 0 20px;font-size:12px;color:#888;line-height:1.5;">${ownerPaymentSubline}</p>
-    <table width="100%" cellpadding="0" cellspacing="0">
-      ${row("Client",      clientName)}
-      ${row("Phone",       clientPhone || "—")}
-      ${row("Service",     serviceNames)}
-      ${row("Date",        formattedDate)}
-      ${row("Time",        formattedTime)}
-      ${row("Location",    tenantLocationDisplay || "—")}
-      ${row("Reference",   payshapRef || "—")}
-      ${row("Payment",     isFullPayment ? `Full Payment — ${totalAmount}` : `Deposit — ${depositAmount}`, true)}
-      ${!isFullPayment ? row("Balance Due on Day", balanceDue) : ""}
-    </table>
-  </td></tr>
-  <tr><td style="padding:16px 28px 22px;">
-    <table cellpadding="0" cellspacing="0"><tr>
-      <td style="padding-right:10px;">
-        ${calendarButton(gcalOwnerLink)}
-      </td>
-      <td>
-        <a href="${waLink}" target="_blank"
-          style="display:inline-block;padding:14px 26px;border-radius:10px;background:#25D366;color:#fff;font-size:13px;font-weight:600;text-decoration:none;letter-spacing:.04em;">
-          &#9989;&nbsp; Confirm via WhatsApp
-        </a>
-      </td>
-    </tr></table>
-    <p class="ol" style="margin:10px 0 0;font-size:11px;color:#aaa;line-height:1.5;">Clicking the WhatsApp button opens a pre-filled message to the client and confirms their booking. You can also confirm directly in your admin panel.</p>
-  </td></tr>
-  <tr><td style="padding:12px 28px 18px;background:#f7f7f7;border-top:1px solid #ebebeb;">
-    <p style="margin:0;font-size:11px;color:#999;letter-spacing:.02em;">Sent by NextSlot &middot; ${new Date().getFullYear()}</p>
-  </td></tr>
-</table>
-</body></html>`;
-
-        await send({
-          from:     `NextSlot <bookings@nextslot.co.za>`,
-          reply_to: "bookings@nextslot.co.za",
-          to:       [tenantEmail],
-          subject:  isFullPayment
-            ? `💳 Payshap Full Payment from ${clientName} — ${formattedDate}`
-            : `💳 Payshap Deposit from ${clientName} — ${formattedDate}`,
-          html:     ownerHtml,
-        });
-      }
-    }
-
-    // ======================================================================
-    // BOOKING CONFIRMED
-    // Triggered once the tenant confirms (or deposit is verified via Yoco).
-    // Sends:
-    //   1. Client: confirmation with all booking details + address link + Add to Calendar
-    //   2. Tenant: booking summary + Add to Calendar
-    // ======================================================================
-    if (email_type === "booking_confirmed") {
-
-      if (clientEmail) {
-        const icsContent = addToCalendar ? buildICS({
-          title:          `${serviceNames} at ${tenantName}`,
-          startDate:      booking.booking_date,
-          startTime:      booking.start_time,
-          endTime:        (booking.end_time as string | null) ?? booking.start_time,
-          location:       calendarLocation,
-          description:    isFullPayment
-            ? `Booking confirmed with ${tenantName}\nDate: ${formattedDate} at ${formattedTime}\nFull payment: ${totalAmount}`
-            : `Booking confirmed with ${tenantName}\nDate: ${formattedDate} at ${formattedTime}\nDeposit: ${depositAmount}\nBalance due on day: ${balanceDue}`,
-          organiserName:  tenantName,
-          organiserEmail: tenantEmail ?? "bookings@nextslot.co.za",
-        }) : null;
-
-        const locationDetailRow = clientMapsLink
-          ? detailRow(clientLocationLabel, `<a href="${clientMapsLink}" target="_blank" class="tlink" style="color:#111111;font-weight:600;text-decoration:underline;">${clientLocationValue}</a>`, true)
-          : detailRow(clientLocationLabel, clientLocationValue || tenantName, true);
-
-        const paymentRows = isFullPayment
-          ? detailTable(detailRow("Full Payment Paid", `${totalAmount} &#10003;`, true))
-          : detailTable(
-              detailRow("Deposit Paid", `${depositAmount} &#10003;`) +
-              detailRow("Balance Due on Day", balanceDue, true)
-            );
-
-        const clientBody = `
-          <tr><td style="padding:28px 36px 10px;">
-            <p class="tm" style="margin:0;font-size:15px;color:#000;line-height:1.5;">Hi <strong>${clientName}</strong>, your booking is confirmed! &#10003;</p>
-          </td></tr>
-          <tr><td style="padding:18px 36px 26px;">
-            <p class="tl" style="margin:0 0 10px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#999;">Booking Details</p>
-            ${detailTable(
-              detailRow("Service", serviceNames) +
-              detailRow("Date", formattedDate) +
-              detailRow("Time", formattedTime) +
-              (payshapRef ? detailRow("Your Reference", payshapRef) : "") +
-              locationDetailRow
-            )}
-          </td></tr>
-          <tr><td style="padding:0 36px 22px;">
-            <p class="tl" style="margin:0 0 10px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#999;">Payment</p>
-            ${paymentRows}
-          </td></tr>
-          ${consistencyEmailSection}
-          <tr><td style="padding:0 36px 26px;">
-            ${calendarButton(gcalBookingLink)}
-          </td></tr>
-          <tr><td style="padding:0 36px 26px;">
-            <p class="tl" style="margin:0;font-size:13px;color:#666;line-height:1.5;">Questions? <a href="tel:${tenantPhone}" class="tlink" style="color:#111111;font-weight:600;">${tenantPhone}</a></p>
-          </td></tr>
-        `;
-
-        const clientPayload: Record<string, unknown> = {
-          from:     `${tenantName} <bookings@nextslot.co.za>`,
-          reply_to: tenantEmail ?? undefined,
-          to:       [clientEmail],
-          subject:  `Booking Confirmed — ${formattedDate} at ${formattedTime}`,
-          html:     emailWrapper(logoHtml, tenantName, "Booking Confirmed", clientBody, `&copy; ${new Date().getFullYear()} ${tenantName} &middot; Powered by NextSlot`),
-          ...(icsContent ? { attachments: [{ filename: "appointment.ics", content: btoa(icsContent), content_type: "text/calendar; method=REQUEST" }] } : {}),
-        };
-        await send(clientPayload);
-      }
-
-      // Tenant notification
-      if (tenantEmail) {
-        await new Promise((r) => setTimeout(r, 300));
-
-        const gcalOwnerLink = buildGcalLink({
-          title:     `${serviceNames} — ${clientName}`,
-          startDate: booking.booking_date,
-          startTime: booking.start_time,
-          endTime:   (booking.end_time as string | null),
-          details:   `Client: ${clientName} | Phone: ${clientPhone} | Deposit: ${depositAmount} | Balance: ${balanceDue}`,
-          location:  calendarLocation,
-        });
-
-        const ownerHtml = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="color-scheme" content="light dark">
-  <meta name="supported-color-schemes" content="light dark">
-  <link rel="icon" href="https://nextslot.co.za/favicon.ico">
-  <style>${OWNER_STYLES}</style>
-</head>
-<body class="ob" style="margin:0;padding:24px 16px;background:#f2f2f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
-<table class="ow" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#fff;border-radius:10px;border:1px solid #e0e0e0;box-shadow:0 2px 12px rgba(0,0,0,0.06);overflow:hidden;">
-  <tr><td style="padding:28px 28px 10px;">
-    <p class="ot" style="margin:0 0 4px;font-size:18px;font-weight:700;color:#000;line-height:1.3;">Booking confirmed 🎉</p>
-    <p class="ol" style="margin:0 0 20px;font-size:12px;color:#888;line-height:1.5;">${isFullPayment ? "Full payment" : "Deposit"} confirmed — add to your calendar below.</p>
-    <table width="100%" cellpadding="0" cellspacing="0">
-      ${row("Client",           clientName)}
-      ${row("Phone",            clientPhone || "—")}
-      ${row("Service",          serviceNames)}
-      ${row("Date",             formattedDate)}
-      ${row("Time",             formattedTime)}
-      ${row("Location",         tenantLocationDisplay || "—")}
-      ${row(isFullPayment ? "Full payment received" : "Deposit received", isFullPayment ? totalAmount : depositAmount, true)}
-      ${!isFullPayment ? row("Balance due", balanceDue) : ""}
-    </table>
-  </td></tr>
-  <tr><td style="padding:16px 28px 22px;">
-    ${calendarButton(gcalOwnerLink)}
-  </td></tr>
-  <tr><td style="padding:12px 28px 18px;background:#f7f7f7;border-top:1px solid #ebebeb;">
-    <p style="margin:0;font-size:11px;color:#999;letter-spacing:.02em;">Sent by NextSlot &middot; ${new Date().getFullYear()}</p>
-  </td></tr>
-</table>
-</body></html>`;
-
-        await send({
-          from:     `NextSlot <bookings@nextslot.co.za>`,
-          reply_to: "bookings@nextslot.co.za",
-          to:       [tenantEmail],
-          subject:  `🎉 Booking confirmed — ${clientName} on ${formattedDate}`,
           html:     ownerHtml,
         });
       }
@@ -1746,8 +1469,8 @@ Deno.serve(async (req) => {
                 <p style="margin:0 0 6px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#999;">Step 2 &mdash; Open your banking app</p>
                 <p class="tl" style="margin:0 0 16px;font-size:13px;color:#555;line-height:1.6;">Go to the PayShap or Instant EFT section and send <strong>${balanceAmount}</strong> to the number above.</p>
 
-                <p style="margin:0 0 6px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#999;">Step 3 &mdash; Use your full name as reference</p>
-                <p class="tl" style="margin:0;font-size:13px;color:#555;line-height:1.6;">When prompted for a payment reference, enter your <strong>full name</strong> so we can match your payment.</p>
+                <p style="margin:0 0 6px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#999;">Step 3 &mdash; Keep your bank confirmation</p>
+                <p class="tl" style="margin:0 0 16px;font-size:13px;color:#555;line-height:1.6;">Keep the confirmation from your banking app. The business will verify the payment and confirm your appointment.</p>
 
               </div>
             </td></tr>

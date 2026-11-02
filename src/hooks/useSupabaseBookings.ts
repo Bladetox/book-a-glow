@@ -47,7 +47,6 @@ export interface BookingRow {
   cancelledAt: string | null;
   tenantId: string;
   // PayShap fields
-  payshapReference: string | null;
   payshapProofUrl: string | null;
   payshapClaimedAt: string | null;
 }
@@ -146,7 +145,6 @@ export function mapBooking(b: any): BookingRow {
     completedAt:           b.completed_at           ?? null,
     cancelledAt:           b.cancelled_at           ?? null,
     tenantId:              b.tenant_id              ?? "",
-    payshapReference:      b.payshap_reference      ?? null,
     payshapProofUrl:       b.payshap_proof_url      ?? null,
     payshapClaimedAt:      b.payshap_claimed_at     ?? null,
   };
@@ -203,7 +201,6 @@ export function useSupabaseBookings() {
           confirmed_at,
           completed_at,
           cancelled_at,
-          payshap_reference,
           payshap_proof_url,
           payshap_claimed_at,
           client:profiles!bookings_client_id_fkey(full_name, email, phone, address),

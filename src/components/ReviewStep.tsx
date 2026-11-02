@@ -352,12 +352,6 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, onPayshapCompl
       ...consultationParams,
     });
 
-    // Deploy-order safety: if the database has not been upgraded to accept the new
-    // consultation parameters yet (PostgREST PGRST202), retry with the original call.
-    if (error && (error as { code?: string }).code === "PGRST202") {
-      ({ data, error } = await supabase.rpc("create_booking_with_consultation", bookingParams));
-    }
-
     if (error) throw error;
     const bookingId: string = data?.[0]?.booking_id;
     if (!bookingId) throw new Error("Booking creation returned no ID.");

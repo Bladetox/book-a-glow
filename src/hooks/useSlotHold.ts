@@ -47,7 +47,8 @@ export function useSlotHold() {
     startTime: string;     // 'HH:MM:SS'
     durationMins: number;
   }) => {
-    setState(prev => ({ ...prev, isHolding: true, error: null }));
+    holdIdRef.current = null;
+    setState(prev => ({ ...prev, holdId: null, isHolding: true, error: null }));
     const { data, error } = await supabase.rpc('acquire_slot_hold', {
       p_tenant_id:     params.tenantId,
       p_staff_id:      params.staffId,

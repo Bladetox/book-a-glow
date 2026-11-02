@@ -189,8 +189,9 @@ Deno.serve(async (req) => {
   const webhookTimestamp = req.headers.get("webhook-timestamp");
   const signatureHeader  = req.headers.get("webhook-signature");
 
+  let hmacVerified = false;
   if (tenantRow?.yoco_webhook_secret) {
-    const hmacVerified = await verifyYocoSignature(
+    hmacVerified = await verifyYocoSignature(
       rawBody,
       webhookId,
       webhookTimestamp,
@@ -209,10 +210,26 @@ Deno.serve(async (req) => {
 
   // ── Handle payment.failed ────────────────────────────────────────────────────
   if (event === "payment.failed") {
-    console.log("booking-payment-webhook: payment.failed for booking", bookingId);
-    return new Response(JSON.stringify({ received: true, matched: true, action: "none" }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
+    if (!hmacVerified) {
+      console.warn("booking-payment-webhook: payment failure not acted on because tenant HMAC was not verified", bookingId);
+      return new Response(JSON.stringify({ received: true, matched: true, action: "not_released_unverified" }), {
+        status: 200, headers: { "Content-Type": "application/json" },
+      });
+    }
+    const { data: released, error: releaseError } = await supabase.rpc("release_failed_gateway_booking", {
+      p_booking_id: bookingId,
+      p_tenant_id: tenantId,
+      p_gateway: "yoco",
+      p_checkout_reference: checkoutId,
+      p_transaction_id: String(eventData.id ?? checkoutId),
+      p_reason: "Yoco reported payment.failed",
+    });
+    if (releaseError) {
+      console.error("booking-payment-webhook: failed to release failed-payment booking", releaseError);
+      return new Response("Could not process payment failure", { status: 500 });
+    }
+    return new Response(JSON.stringify({ received: true, matched: true, action: released ? "booking_cancelled" : "no_change" }), {
+      status: 200, headers: { "Content-Type": "application/json" },
     });
   }
 

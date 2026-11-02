@@ -49,7 +49,6 @@ updated_at,
 confirmed_at,
 completed_at,
 cancelled_at,
-payshap_reference,
 payshap_claimed_at,
 payshap_payment_intent,
 client:profiles!bookings_client_id_fkey(full_name, email, phone, address),
@@ -112,7 +111,6 @@ const { data, error } = await supabase
 if (error) throw error;
 return (data ?? []).map((b) => ({
 ...mapBooking(b),
-payshapReference: (b as any).payshap_reference as string | null,
 payshapClaimedAt: (b as any).payshap_claimed_at as string | null,
 payshapPaymentIntent: (b as any).payshap_payment_intent as string | null,
 }));
@@ -122,7 +120,6 @@ enabled: !!tenantId,
 }
 
 export type PayshapBookingRow = BookingRow & {
-payshapReference: string | null;
 payshapClaimedAt: string | null;
 payshapPaymentIntent: string | null;
 };
@@ -148,7 +145,7 @@ mutationFn: async ({ bookingId }: { bookingId: string }) => {
 // Step 1: Read the booking to determine payment amounts before confirming.
 const { data: bookingData, error: bookingReadError } = await supabase
 .from("bookings")
-.select("total_amount, deposit_amount, balance_due, deposit_paid, full_payment_received, payshap_payment_intent, payshap_reference")
+.select("total_amount, deposit_amount, balance_due, deposit_paid, full_payment_received, payshap_payment_intent")
 .eq("id", bookingId)
 .eq("tenant_id", tenantId)
 .single();
@@ -162,7 +159,6 @@ const balanceDue = Number(bookingData?.balance_due ?? 0);
 // If no deposit is configured (depositAmount === 0) OR balanceDue === 0
 // after deposit, the client paid in full via Payshap.
 const intentField = (bookingData as any)?.payshap_payment_intent as string | null;
-const referenceField = (bookingData as any)?.payshap_reference as string | null;
 const depositAlreadyPaid = (bookingData as any)?.deposit_paid === true;
 // NOTE: depositAlreadyPaid covers the final/balance claim for a deposit
 // booking — if the deposit was already marked paid before this claim,
@@ -224,7 +220,6 @@ payment_type: isFullPayment ? "full" : "deposit",
 payment_method: "payshap",
 status: "completed",
 gateway: "payshap",
-transaction_id: referenceField ?? undefined,
 notes: "Self-healed at confirmation — no pending payshap row found",
 });
 if (paymentInsertError) throw paymentInsertError;
@@ -298,10 +293,8 @@ qc.invalidateQueries({ queryKey: ["dash-payments", tenantId] });
 
 /**
 * Decline a PayShap booking.
-* 1. Resets booking status back to pending.
-* 2. Clears the payshap columns so a fresh payment can be made.
-* 3. Voids the orphaned payments row (sets status = voided) rather than
-* leaving it as pending, which would cause a duplicate on resubmission.
+* Atomically cancels the claimed booking and marks its pending PayShap payment failed.
+* The cancelled booking no longer blocks the appointment; a fresh attempt uses a new booking.
 */
 export function useRejectPayshapBooking() {
 const qc = useQueryClient();
@@ -313,36 +306,13 @@ bookingId,
 }: {
 bookingId: string;
 }) => {
-// Step 1: Reset booking status via RPC.
-const { data: rpcData, error: rpcError } = await supabase.rpc(
-"update_booking_status",
-{ p_booking_id: bookingId, p_new_status: "pending" },
-);
-if (rpcError) throw rpcError;
-const rpcResult = (rpcData as any)?.[0];
-if (rpcResult && !rpcResult.success)
-throw new Error(rpcResult.message ?? "Status reset failed");
-
-// Step 2: Clear Payshap proof columns on the booking row.
-const { error: clearError } = await supabase
-.from("bookings")
-.update({
-payshap_reference: null,
-payshap_claimed_at: null,
-})
-.eq("id", bookingId)
-.eq("tenant_id", tenantId);
-if (clearError) throw clearError;
-
-// Step 3: Void the orphaned payments row so a future resubmission
-// does not create a duplicate pending row for the same booking.
-const { error: voidError } = await supabase
-.from("payments")
-.update({ status: "voided" })
-.eq("booking_id", bookingId)
-.eq("payment_method", "payshap")
-.eq("status", "pending");
-if (voidError) throw voidError;
+const { data, error } = await supabase.rpc("reject_payshap_booking", {
+  p_booking_id: bookingId,
+  p_tenant_id: tenantId,
+} as any);
+if (error) throw error;
+const result = (data as any)?.[0];
+if (!result?.success) throw new Error(result?.message ?? "Could not reject PayShap claim.");
 },
 onSuccess: () => {
 qc.invalidateQueries({ queryKey: PAYSHAP_QUERY_KEY(tenantId) });

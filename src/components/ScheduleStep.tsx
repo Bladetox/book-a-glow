@@ -215,6 +215,7 @@ const ScheduleStep = ({
     // Deselect if same slot tapped again
     if (selectedTime === time) {
       onSelectTime("");
+      await slotHold.releaseHold();
       return;
     }
 

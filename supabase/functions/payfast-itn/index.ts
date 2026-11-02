@@ -267,6 +267,15 @@ Deno.serve(async (req) => {
         transaction_id: mPaymentId,
         completed_at: new Date().toISOString(),
       });
+      const { error: releaseError } = await supabase.rpc("release_failed_gateway_booking", {
+        p_booking_id: resolvedBookingId,
+        p_tenant_id: resolvedTenantId,
+        p_gateway: "payfast",
+        p_checkout_reference: mPaymentId,
+        p_transaction_id: mPaymentId,
+        p_reason: `PayFast reported payment ${paymentStatus}`,
+      });
+      if (releaseError) console.error("[payfast-itn] Failed to release booking after verified failure:", releaseError);
     }
     return new Response("OK", { status: 200 });
   }

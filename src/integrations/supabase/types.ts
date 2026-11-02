@@ -332,7 +332,6 @@ export type Database = {
           payshap_claimed_at: string | null
           payshap_payment_intent: string | null
           payshap_proof_url: string | null
-          payshap_reference: string | null
           service_duration_minutes: number | null
           service_ids: string | null
           staff_id: string | null

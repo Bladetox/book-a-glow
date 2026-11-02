@@ -286,6 +286,8 @@ const Index = () => {
                       setStep(s);
                     }}
                     releaseHold={slotHold.releaseHold}
+                    holdId={slotHold.holdId}
+                    sessionToken={slotHold.sessionToken}
                     onPayshapComplete={() => setShowSplash(true)}
                   />
                 )}

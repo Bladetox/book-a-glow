@@ -132,12 +132,6 @@ Deno.serve(async (req) => {
       `txn=${externalTransactionID} rc=${responseCode}`
     );
 
-    // Non-00 response codes are declines/errors — acknowledge and exit
-    if (responseCode !== "00") {
-      console.log(`[ikhokha-webhook] Non-00 responseCode=${responseCode}, skipping`);
-      return new Response("OK", { status: 200 });
-    }
-
     // ── 5. Parse externalTransactionID → bookingId + paymentType ───────────
     // Format set by ikhokha-checkout: "<uuid>-<paymentType>-<timestamp>"
     // UUID is xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx (contains 4 dashes)
@@ -148,6 +142,22 @@ Deno.serve(async (req) => {
 
     const bookingId   = match ? match[1] : null;
     const paymentType = (match ? match[2] : "deposit").toLowerCase();
+
+    // Signature is verified above. Declines and failed status callbacks release
+    // only the matching, still-unpaid initial booking attempt.
+    if (bookingId && (responseCode !== "00" || status !== "SUCCESS")) {
+      const { error: releaseError } = await supabase.rpc("release_failed_gateway_booking", {
+        p_booking_id: bookingId,
+        p_tenant_id: tenantId,
+        p_gateway: "ikhokha",
+        p_checkout_reference: paylinkID,
+        p_transaction_id: externalTransactionID,
+        p_reason: `iKhokha reported failure status=${status}, responseCode=${responseCode}`,
+      });
+      if (releaseError) console.error("[ikhokha-webhook] Failed to release declined booking:", releaseError);
+      return new Response("OK", { status: 200 });
+    }
+    if (responseCode !== "00") return new Response("OK", { status: 200 });
 
     // ── 6. Update bookings (column names match live schema) ─────────────────
     if (status === "SUCCESS") {
