@@ -92,6 +92,7 @@ const ALL_VIEWS = [
   "Loyalty",
   "Consistency Pricing",
   "Integrations",
+  "Communications",
   "Settings",
   "Terms & Conditions",
   "Help",
