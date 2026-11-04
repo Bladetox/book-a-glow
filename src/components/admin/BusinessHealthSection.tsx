@@ -67,23 +67,23 @@ export interface ExpandedCard extends MetricEntry {
 
 export const HEALTH_METRIC_COPY = {
   fillRate: {
-    title: "Fill Rate (Capacity Utilisation)",
-    explain: "The % of your available time that was actually booked.",
-    benchmark: "Target: 70%+. Below 50% means you're losing revenue to empty slots.",
+    title: "Monthly Capacity Utilisation",
+    explain: "Booked appointment minutes divided by available staff minutes across the full calendar month. Future confirmed bookings and no-shows count because they reserve capacity.",
+    benchmark: "Use this to understand how much of your available appointment time has been committed.",
   },
   avgBasket: {
-    title: "Average Transaction Value (ATV)",
-    explain: "Average revenue per appointment. Lifting it by 10% compounds fast.",
-    benchmark: "Tip: add one upsell per appointment to grow this.",
+    title: "Average Booking Value",
+    explain: "Average listed value of completed, confirmed and pending appointments this month. This is booked value, not money collected.",
+    benchmark: "Increase booking value through appropriate service combinations and add-ons.",
   },
   appointments: {
     title: "Monthly Appointment Volume",
-    explain: "Total confirmed bookings this month.",
+    explain: "Completed, confirmed and pending appointments this month. Cancelled and no-show appointments are excluded.",
   },
   cancellations: {
     title: "Cancellation Rate",
-    explain: "% of bookings cancelled. High rates destroy revenue predictability.",
-    benchmark: "Target: below 10%. Above 20% = take action.",
+    explain: "Cancelled bookings divided by all booking outcomes. No-shows are tracked separately and are not counted as cancellations.",
+    benchmark: "Target: below 10%. Above 20% warrants attention.",
   },
   clients: {
     title: "Clients This Month",
@@ -91,8 +91,8 @@ export const HEALTH_METRIC_COPY = {
   },
   returning: {
     title: "Returning Clients",
-    explain: "Clients who booked this month and also booked last month — your retained base.",
-    benchmark: "Aim: at least 30–40% of this month's clients should be returning from last month.",
+    explain: "Clients who booked this month and had at least one earlier booking at any point. A client becomes returning after their first booking.",
+    benchmark: "Track the share of this month's clients who have booked before.",
   },
 } as const;
 
@@ -361,7 +361,7 @@ export default function BusinessHealthSection({
       ? "watch this"
       : "needs action";
 
-  const avgBasketSub = avgBasket > 0 ? "per appointment" : "no data yet";
+  const avgBasketSub = avgBasket > 0 ? "average listed booking value" : "no data yet";
 
   const appointmentsSub = totalAppointments > 0
     ? "this month"
@@ -373,7 +373,7 @@ export default function BusinessHealthSection({
     ? Math.round((returningCount / totalClients) * 100)
     : 0;
   const returningSub = totalClients > 0
-    ? `${retentionPct}% retention rate`
+    ? `${retentionPct}% repeat-client share`
     : "no data yet";
 
   return (
@@ -389,7 +389,7 @@ export default function BusinessHealthSection({
         <MetricCard
           id="mc-fill"
           icon={Percent}
-          label="Fill Rate"
+          label="Capacity Utilisation"
           value={fr.text}
           color={fr.color}
           sub={fillSub}
@@ -419,7 +419,7 @@ export default function BusinessHealthSection({
           <MetricCard
             id="mc-atv"
             icon={ShoppingBag}
-            label="Avg Basket"
+            label="Avg Booking Value"
             value={avgBasket > 0 ? `R ${Math.round(avgBasket)}` : "—"}
             sub={avgBasketSub}
             alertStatus="neutral"
