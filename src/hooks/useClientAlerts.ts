@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { subDays, format } from "date-fns";
+import { subDays, format, parseISO, differenceInCalendarDays } from "date-fns";
 import { buildClientIdentityKeys } from "@/lib/clientIdentity";
 
 export interface OverdueLoyaltyClient {
@@ -55,8 +55,8 @@ export function useClientAlerts(tenantIdProp?: string) {
       if (overdueError) throw overdueError;
 
       const overdueClients: OverdueLoyaltyClient[] = (overdueData || []).map((client) => {
-        const nextDue     = new Date(client.next_due_date!);
-        const daysOverdue = Math.floor((today.getTime() - nextDue.getTime()) / (1000 * 60 * 60 * 24));
+        const nextDue     = parseISO(client.next_due_date!);
+        const daysOverdue = differenceInCalendarDays(today, nextDue);
         return { ...client, days_overdue: daysOverdue };
       });
 
@@ -121,11 +121,9 @@ export function useClientAlerts(tenantIdProp?: string) {
       const inactiveClients: InactiveClient[] = [];
       activityByClient.forEach((activity, key) => {
         const lastDate = activity.lastCompletedDate;
-        if (!lastDate || activity.hasUpcomingBooking || lastDate >= ninetyDaysAgo) return;
+        if (!lastDate || activity.hasUpcomingBooking || lastDate > ninetyDaysAgo) return;
 
-        const daysSince = Math.floor(
-          (today.getTime() - new Date(`${lastDate}T00:00:00`).getTime()) / (1000 * 60 * 60 * 24)
-        );
+        const daysSince = differenceInCalendarDays(today, parseISO(lastDate));
         inactiveClients.push({
           client_id: key,
           client_name: activity.name,
