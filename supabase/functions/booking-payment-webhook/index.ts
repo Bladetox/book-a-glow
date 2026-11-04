@@ -450,7 +450,7 @@ Deno.serve(async (req) => {
 
   const { data: existingPayment, error: existingPaymentError } = await supabase
     .from("payments")
-    .select("id,status")
+    .select("id,status,booking_id,tenant_id,amount,payment_type")
     .eq("gateway", "yoco")
     .eq("transaction_id", paymentIdRaw)
     .maybeSingle();
@@ -458,6 +458,34 @@ Deno.serve(async (req) => {
   if (existingPaymentError) {
     console.error("booking-payment-webhook: failed to check payment idempotency", existingPaymentError);
     return new Response("Could not verify payment ledger", { status: 500 });
+  }
+
+  if (existingPayment) {
+    if (
+      existingPayment.booking_id !== bookingId ||
+      existingPayment.tenant_id !== tenantId ||
+      existingPayment.payment_type !== paymentType ||
+      Math.abs(Number(existingPayment.amount) - amountRands) > 0.01
+    ) {
+      console.error("booking-payment-webhook: Yoco transaction is already linked to different payment details", {
+        bookingId,
+        transactionId: paymentIdRaw,
+      });
+      return new Response("Yoco transaction conflicts with existing payment ledger", { status: 409 });
+    }
+
+    if (existingPayment.status !== "completed") {
+      const { error: paymentUpdateError } = await supabase
+        .from("payments")
+        .update({ status: "completed", completed_at: new Date().toISOString() })
+        .eq("id", existingPayment.id)
+        .eq("tenant_id", tenantId);
+
+      if (paymentUpdateError) {
+        console.error("booking-payment-webhook: failed to complete existing payment ledger row", paymentUpdateError);
+        return new Response("Could not complete payment ledger", { status: 500 });
+      }
+    }
   }
 
   if (!existingPayment) {
@@ -479,12 +507,19 @@ Deno.serve(async (req) => {
       // after the lookup. Verify that exact ledger row before proceeding.
       const { data: racedPayment, error: racedPaymentError } = await supabase
         .from("payments")
-        .select("id,status")
+        .select("id,status,booking_id,tenant_id,amount,payment_type")
         .eq("gateway", "yoco")
         .eq("transaction_id", paymentIdRaw)
         .maybeSingle();
 
-      if (racedPaymentError || !racedPayment) {
+      if (
+        racedPaymentError ||
+        !racedPayment ||
+        racedPayment.booking_id !== bookingId ||
+        racedPayment.tenant_id !== tenantId ||
+        racedPayment.payment_type !== paymentType ||
+        Math.abs(Number(racedPayment.amount) - amountRands) > 0.01
+      ) {
         console.error("booking-payment-webhook: payments insert error", paymentErr);
         return new Response("Could not record completed payment", { status: 500 });
       }
