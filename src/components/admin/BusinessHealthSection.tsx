@@ -73,12 +73,12 @@ export const HEALTH_METRIC_COPY = {
   },
   avgBasket: {
     title: "Average Booking Value",
-    explain: "Average listed value of completed, confirmed and pending appointments this month. This is booked value, not money collected.",
+    explain: "Average listed value of this month's appointments that are not cancelled or marked no-show. This is booked value, not money collected.",
     benchmark: "Increase booking value through appropriate service combinations and add-ons.",
   },
   appointments: {
     title: "Monthly Appointment Volume",
-    explain: "Completed, confirmed and pending appointments this month. Cancelled and no-show appointments are excluded.",
+    explain: "Appointments this month that are not cancelled or marked no-show. This includes appointments awaiting payment confirmation.",
   },
   cancellations: {
     title: "Cancellation Rate",
