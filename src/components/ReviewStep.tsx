@@ -113,19 +113,18 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, holdId, sessio
   const [showTerms, setShowTerms] = useState(false);
   const [phase, setPhase] = useState<SubmitPhase>("idle");
   const submitting = phase !== "idle";
-  const [paymentChoice, setPaymentChoice] = useState<PaymentChoice>("deposit");
+  const [paymentChoice, setPaymentChoice] = useState<PaymentChoice>("full");
 
   useEffect(() => {
+    const chooseDeposit = config.requiresDeposit && config.depositPercent < 100;
     if (config.payshapEnabled) {
-      setPaymentChoice(
-        config.depositPercent >= 100 ? "payshap_full" : "payshap_deposit"
-      );
+      setPaymentChoice(chooseDeposit ? "payshap_deposit" : "payshap_full");
     } else if (config.ikhokhaEnabled) {
-      setPaymentChoice(
-        config.depositPercent >= 100 ? "ikhokha_full" : "ikhokha_deposit"
-      );
+      setPaymentChoice(chooseDeposit ? "ikhokha_deposit" : "ikhokha_full");
+    } else {
+      setPaymentChoice(chooseDeposit ? "deposit" : "full");
     }
-  }, [config.payshapEnabled, config.ikhokhaEnabled, config.depositPercent]);
+  }, [config.payshapEnabled, config.ikhokhaEnabled, config.depositPercent, config.requiresDeposit]);
 
   const [showPairWith, setShowPairWith] = useState(false);
   const [payshapSuccess, setPayshapSuccess] = useState(false);
@@ -196,7 +195,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, holdId, sessio
   const localTotal = servicesTotal + callOutFee;
 
   const depositPercent = config.depositPercent;
-  const localDeposit = Math.ceil(localTotal * (depositPercent / 100));
+  const localDeposit = config.requiresDeposit ? Math.ceil(localTotal * (depositPercent / 100)) : 0;
 
   const guestPhoneForQuote = booking.phone ? `${booking.phoneCode} ${booking.phone}`.trim() : null;
 
@@ -627,7 +626,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, holdId, sessio
       )}
 
       {/* iKhokha deposit / full toggle */}
-      {isIkhokha && config.depositPercent < 100 && (
+      {isIkhokha && config.requiresDeposit && config.depositPercent < 100 && (
         <div className="flex rounded-xl border border-border/50 overflow-hidden text-sm">
           <button
             onClick={() => setPaymentChoice("ikhokha_deposit")}
@@ -691,7 +690,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, holdId, sessio
       )}
 
       {/* Payment method toggle - Yoco / PayFast */}
-      {!isPayshap && !isIkhokha && depositPercent < 100 && (
+      {!isPayshap && !isIkhokha && config.requiresDeposit && depositPercent < 100 && (
         <div className="flex rounded-xl border border-border/50 overflow-hidden text-sm">
           <button
             onClick={() => setPaymentChoice("deposit")}
@@ -717,7 +716,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, holdId, sessio
       )}
 
       {/* Payment method toggle - PayShap */}
-      {isPayshap && config.depositPercent < 100 && (
+      {isPayshap && config.requiresDeposit && config.depositPercent < 100 && (
         <div className="flex rounded-xl border border-border/50 overflow-hidden text-sm">
           <button
             onClick={() => setPaymentChoice("payshap_deposit")}
