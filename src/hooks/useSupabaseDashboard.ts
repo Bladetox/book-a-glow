@@ -1,7 +1,7 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { buildClientIdentityKeys } from "@/lib/clientIdentity";
 import {
   format, startOfMonth, endOfMonth, subMonths, subDays,
@@ -132,6 +132,48 @@ function buildTopServices(
 // ─── main hook ──────────────────────────────────────────────────────────────
 export function useDashboardData() {
   const { tenantId } = useTenant();
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!tenantId) return;
+
+    const invalidate = (queryKey: unknown[]) => {
+      void queryClient.invalidateQueries({ queryKey });
+    };
+
+    const channel = supabase
+      .channel(`dashboard-data-${tenantId}`)
+      .on("postgres_changes", {
+        event: "*", schema: "public", table: "bookings",
+        filter: `tenant_id=eq.${tenantId}`,
+      }, () => {
+        invalidate(["dash-bookings", tenantId]);
+        invalidate(["dash-alltime-bookings", tenantId]);
+        invalidate(["client-alerts", tenantId]);
+      })
+      .on("postgres_changes", {
+        event: "*", schema: "public", table: "payments",
+        filter: `tenant_id=eq.${tenantId}`,
+      }, () => invalidate(["dash-payments", tenantId]))
+      .on("postgres_changes", {
+        event: "*", schema: "public", table: "staff_availability",
+        filter: `tenant_id=eq.${tenantId}`,
+      }, () => invalidate(["dash-availability", tenantId]))
+      .on("postgres_changes", {
+        event: "*", schema: "public", table: "stock_inventory",
+        filter: `tenant_id=eq.${tenantId}`,
+      }, () => invalidate(["dash-stock", tenantId]))
+      .on("postgres_changes", {
+        event: "*", schema: "public", table: "profiles",
+        filter: `tenant_id=eq.${tenantId}`,
+      }, () => invalidate(["dash-staff-profiles", tenantId]))
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [tenantId, queryClient]);
+
   const now          = new Date();
   const todayStr     = format(now, "yyyy-MM-dd");
   const monthStart   = format(startOfMonth(now), "yyyy-MM-dd");
