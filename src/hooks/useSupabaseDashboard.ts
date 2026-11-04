@@ -18,6 +18,18 @@ function isClientTypeLabel(src: string): boolean {
   return CLIENT_TYPE_LABELS.includes(src.toLowerCase().trim());
 }
 
+async function fetchAllPages(queryForRange: (from: number, to: number) => any): Promise<any[]> {
+  const pageSize = 500;
+  const rows: any[] = [];
+  for (let offset = 0; ; offset += pageSize) {
+    const { data, error } = await queryForRange(offset, offset + pageSize - 1);
+    if (error) throw error;
+    rows.push(...(data ?? []));
+    if (!data || data.length < pageSize) break;
+  }
+  return rows;
+}
+
 const HEAT_DAYS  = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const DOW_TO_IDX: Record<number, number> = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 0: 6 };
 
@@ -143,82 +155,54 @@ export function useDashboardData() {
   const { data: bookings = [], isLoading: l1 } = useQuery({
     queryKey:  ["dash-bookings", tenantId, monthStart],
     staleTime: 3 * 60 * 1000,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("bookings")
-        .select(`
-          id,
-          client_id,
-          staff_id,
-          booking_date,
-          start_time,
-          end_time,
-          status,
-          total_amount,
-          deposit_amount,
-          balance_due,
-          deposit_paid,
-          full_payment_received,
-          final_payment_paid,
-          is_call_out,
-          call_out_address,
-          call_out_fee,
-          lead_source,
-          client_name,
-          client_email,
-          client_phone,
-          guest_name,
-          guest_email,
-          guest_phone,
-          cancellation_reason,
-          client_notes,
-          staff_notes,
-          notes,
-          gcal_event_id,
-          created_at,
-          client:profiles!bookings_client_id_fkey(full_name, email, phone, address),
-          items:booking_items(service_name, price, duration_minutes, sort_order, quantity)
-        `)
-        .eq("tenant_id", tenantId)
-        .gte("booking_date", monthStart)
-        .lte("booking_date", monthEnd)
-        .order("booking_date", { ascending: true })
-        .order("start_time",   { ascending: true });
-      if (error) throw error;
-      return data ?? [];
-    },
+    queryFn: async () => fetchAllPages((from, to) => supabase
+      .from("bookings")
+      .select(`
+        id, client_id, canonical_client_id, staff_id, booking_date, start_time, end_time,
+        status, total_amount, deposit_amount, balance_due, deposit_paid,
+        full_payment_received, final_payment_paid, is_call_out, call_out_address,
+        call_out_fee, lead_source, client_name, client_email, client_phone,
+        guest_name, guest_email, guest_phone, cancellation_reason, client_notes,
+        staff_notes, notes, gcal_event_id, created_at,
+        client:profiles!bookings_client_id_fkey(full_name, email, phone, address),
+        items:booking_items(service_name, price, duration_minutes, sort_order, quantity)
+      `)
+      .eq("tenant_id", tenantId)
+      .gte("booking_date", monthStart)
+      .lte("booking_date", monthEnd)
+      .order("booking_date", { ascending: true })
+      .order("start_time", { ascending: true })
+      .order("id", { ascending: true })
+      .range(from, to)),
   });
 
   // 3. Payments — 180-day window
   const { data: allPayments = [], isLoading: l3 } = useQuery({
     queryKey:  ["dash-payments", tenantId, fetchFromDate, todayStr],
     staleTime: 3 * 60 * 1000,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("payments")
-        .select("amount, created_at, payment_type")
-        .eq("tenant_id", tenantId)
-        .in("status", ["completed", "paid"])
-        .gte("created_at", paymentsFromISO)
-        .lte("created_at", paymentsThroughISO);
-      if (error) throw error;
-      return data ?? [];
-    },
+    queryFn: async () => fetchAllPages((from, to) => supabase
+      .from("payments")
+      .select("id, amount, created_at, payment_type")
+      .eq("tenant_id", tenantId)
+      .in("status", ["completed", "paid"])
+      .gte("created_at", paymentsFromISO)
+      .lte("created_at", paymentsThroughISO)
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
+      .range(from, to)),
   });
 
   // 4. Stock alerts
   const { data: stockItems = [] } = useQuery({
     queryKey: ["dash-stock", tenantId],
     staleTime: 5 * 60 * 1000,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("stock_inventory")
-        .select("item_name, stock_on_hand, reorder_level")
-        .eq("tenant_id", tenantId)
-        .order("stock_on_hand");
-      if (error) throw error;
-      return data ?? [];
-    },
+    queryFn: async () => fetchAllPages((from, to) => supabase
+      .from("stock_inventory")
+      .select("id, item_name, stock_on_hand, reorder_level")
+      .eq("tenant_id", tenantId)
+      .order("stock_on_hand", { ascending: true })
+      .order("id", { ascending: true })
+      .range(from, to)),
   });
 
   const lowStockItems = useMemo(
@@ -232,15 +216,13 @@ export function useDashboardData() {
   const { data: staffProfiles = [], isLoading: l4 } = useQuery({
     queryKey:  ["dash-staff-profiles", tenantId],
     staleTime: 10 * 60 * 1000,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, full_name, role")
-        .eq("tenant_id", tenantId)
-        .in("role", STAFF_ROLES as unknown as string[]);
-      if (error) throw error;
-      return data ?? [];
-    },
+    queryFn: async () => fetchAllPages((from, to) => supabase
+      .from("profiles")
+      .select("id, full_name, role")
+      .eq("tenant_id", tenantId)
+      .in("role", STAFF_ROLES as unknown as string[])
+      .order("id", { ascending: true })
+      .range(from, to)),
   });
 
   // 6. Staff availability
@@ -250,15 +232,13 @@ export function useDashboardData() {
     queryKey:  ["dash-availability", tenantId, monthStart],
     staleTime: 5 * 60 * 1000,
     enabled:   staffIds.length > 0,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("staff_availability")
-        .select("staff_id, day_of_week, day_enabled, slot_start_time, slot_end_time, is_available, specific_date")
-        .eq("tenant_id", tenantId)
-        .in("staff_id", staffIds);
-      if (error) throw error;
-      return data ?? [];
-    },
+    queryFn: async () => fetchAllPages((from, to) => supabase
+      .from("staff_availability")
+      .select("id, staff_id, day_of_week, day_enabled, slot_start_time, slot_end_time, is_available, specific_date")
+      .eq("tenant_id", tenantId)
+      .in("staff_id", staffIds)
+      .order("id", { ascending: true })
+      .range(from, to)),
   });
 
   // All-time booking history powers service, client and original acquisition metrics.
