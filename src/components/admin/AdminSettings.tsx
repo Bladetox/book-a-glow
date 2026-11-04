@@ -3,6 +3,7 @@ import {
   Check, KeyRound, Palette, Building2, Clock,
   FileText, Loader2, Image, Sparkles, Link, Copy,
   Zap, Plus, ChevronDown, CreditCard, Bell, MapPin, Home, Star,
+  ArrowUp, ArrowDown, Trash2,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { businessThemes } from "@/data/themes";
@@ -265,6 +266,7 @@ const AdminSettings = () => {
   const [pwError, setPwError] = useState("");
   const [pwSuccess, setPwSuccess] = useState("");
   const [referralOptionsText, setReferralOptionsText] = useState("");
+  const [newReferralOption, setNewReferralOption] = useState("");
 
   const flash = useCallback((section: string) => {
     setSaved(section);
@@ -382,6 +384,30 @@ const AdminSettings = () => {
     );
   };
 
+  const referralChannels = referralOptionsText.split("\n").map((channel) => channel.trim()).filter(Boolean);
+
+  const moveReferralOption = (index: number, direction: -1 | 1) => {
+    const nextIndex = index + direction;
+    if (nextIndex < 0 || nextIndex >= referralChannels.length) return;
+    const reordered = [...referralChannels];
+    [reordered[index], reordered[nextIndex]] = [reordered[nextIndex], reordered[index]];
+    setReferralOptionsText(reordered.join("\n"));
+  };
+
+  const addReferralOption = () => {
+    const channel = newReferralOption.trim();
+    if (!channel) return;
+    if (referralChannels.some((item) => item.toLocaleLowerCase() === channel.toLocaleLowerCase())) {
+      toast.error("That acquisition channel already exists.");
+      return;
+    }
+    setReferralOptionsText([...referralChannels, channel].join("\n"));
+    setNewReferralOption("");
+  };
+
+  const removeReferralOption = (index: number) => {
+    setReferralOptionsText(referralChannels.filter((_, i) => i !== index).join("\n"));
+  };
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -529,53 +555,48 @@ const AdminSettings = () => {
           <SettingsCard title="Booking Page Theme" icon={Palette} gradient="from-white/[0.05] to-white/[0.02]" collapsible>
             <div className="grid grid-cols-2 gap-2">
               {businessThemes.map((t) => (
-                <button key={t.id} onClick={() => update("theme_id", t.id)}
-                  className={`p-3 rounded-xl border text-left transition-all flex flex-col gap-1.5 ${draft.theme_id === t.id ? "border-white/30 bg-white/[0.1]" : "border-white/[0.06] hover:border-white/[0.12]"}`}>
-                  <span className="text-xs font-bold text-white/80">{t.label}</span>
-                  <span className="text-[10px] text-white/30 truncate">{t.vibe}</span>
+                <button key={t.id} onClick={() => update("theme_id", t.id)} className={`p-3 rounded-xl border text-left transition-all flex flex-col gap-1.5 ${draft.theme_id === t.id ? "border-white/30 bg-white/[0.1]" : "border-white/[0.06] hover:border-white/[0.12]"}`}>
+                  <span className="text-xs font-bold text-white/80">{t.label}</span><span className="text-[10px] text-white/30 truncate">{t.vibe}</span>
                 </button>
               ))}
             </div>
-            <div className="flex items-center gap-3">
-              <SaveBtn onClick={() => saveTenantFields("theme", ["theme_id"])} loading={updateTenant.isPending} />
-              <SavedBadge section="theme" />
-            </div>
+            <div className="flex items-center gap-3"><SaveBtn onClick={() => saveTenantFields("theme", ["theme_id"])} loading={updateTenant.isPending} /><SavedBadge section="theme" /></div>
           </SettingsCard>
+        </div>
+      </section>
 
+      {/* ── SPLASH SCREEN ── */}
+      <section className="flex flex-col gap-3">
+        <SectionLabel label="Splash Screen" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <SettingsCard title="Splash Screen Content" icon={Sparkles} gradient="from-white/[0.05] to-white/[0.02]" collapsible>
             <SettingRow id="splash-welcome" label="Welcome Label" placeholder="Welcome to" value={draft.splash_welcome_label} onChange={(v) => update("splash_welcome_label", v)} />
             <SettingRow id="splash-tag1" label="Main Tagline" placeholder="The Future of Glow" value={draft.splash_tagline1} onChange={(v) => update("splash_tagline1", v)} />
             <SettingRow id="splash-tag2" label="Secondary Tagline" placeholder="Premium skincare services." value={draft.splash_tagline2} onChange={(v) => update("splash_tagline2", v)} />
             <SettingRow id="splash-cta" label="Button Label" placeholder="Book Your Session" value={draft.splash_cta_label} onChange={(v) => update("splash_cta_label", v)} />
-            <div className="flex items-center gap-3">
-              <SaveBtn onClick={() => saveSettings("splash", ["splash_welcome_label", "splash_tagline1", "splash_tagline2", "splash_cta_label"])} loading={upsertSetting.isPending} />
-              <SavedBadge section="splash" />
-            </div>
+            <div className="flex items-center gap-3"><SaveBtn onClick={() => saveSettings("splash", ["splash_welcome_label", "splash_tagline1", "splash_tagline2", "splash_cta_label"])} loading={upsertSetting.isPending} /><SavedBadge section="splash" /></div>
           </SettingsCard>
           <SettingsCard title="Acquisition Channels" icon={Star} gradient="from-white/[0.05] to-white/[0.02]" collapsible>
-            <p className="text-xs text-white/35 leading-relaxed">
-              Manage the options guests can select when booking. Enter one channel per line and keep names consistent for reliable reporting.
-            </p>
-            <textarea
-              id="acquisition-channels"
-              name="acquisition-channels"
-              value={referralOptionsText}
-              onChange={(e) => setReferralOptionsText(e.target.value)}
-              rows={7}
-              placeholder={"TikTok\nInstagram\nGoogle Search\nGoogle Maps\nWebsite\nReferral\nReturning Client"}
-              className="w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors resize-y"
-            />
-            <p className="text-[10px] text-white/25 leading-relaxed">
-              These are guest-reported answers, not independently verified referral data. Keep Returning Client as a separate repeat-client classification. Existing bookings retain their saved channel.
-            </p>
-            <div className="flex items-center gap-3">
-              <SaveBtn onClick={saveReferralOptions} loading={upsertSetting.isPending} />
-              <SavedBadge section="referral" />
+            <p className="text-xs text-white/35 leading-relaxed">Arrange channels in the order guests should see them. The first channel appears first on the splash screen.</p>
+            <div className="flex flex-col gap-2">
+              {referralChannels.map((channel, index) => (
+                <div key={`${channel}-${index}`} className="flex items-center gap-2 rounded-xl border border-white/[0.07] bg-white/[0.025] px-3 py-2">
+                  <span className="w-6 text-xs text-white/30 tabular-nums">{index + 1}.</span><span className="flex-1 text-sm text-white/80">{channel}</span>
+                  <button type="button" onClick={() => moveReferralOption(index, -1)} disabled={index === 0} aria-label={`Move ${channel} up`} className="p-1.5 rounded-lg text-white/50 hover:bg-white/[0.08] disabled:opacity-20"><ArrowUp className="w-3.5 h-3.5" /></button>
+                  <button type="button" onClick={() => moveReferralOption(index, 1)} disabled={index === referralChannels.length - 1} aria-label={`Move ${channel} down`} className="p-1.5 rounded-lg text-white/50 hover:bg-white/[0.08] disabled:opacity-20"><ArrowDown className="w-3.5 h-3.5" /></button>
+                  <button type="button" onClick={() => removeReferralOption(index)} aria-label={`Remove ${channel}`} className="p-1.5 rounded-lg text-red-300/60 hover:bg-red-400/10"><Trash2 className="w-3.5 h-3.5" /></button>
+                </div>
+              ))}
             </div>
+            <div className="flex gap-2">
+              <input id="new-acquisition-channel" value={newReferralOption} onChange={(e) => setNewReferralOption(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addReferralOption(); } }} placeholder="Add an acquisition channel" className="min-w-0 flex-1 px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors" />
+              <button type="button" onClick={addReferralOption} className="px-3 py-2 rounded-xl bg-white/[0.08] border border-white/[0.1] text-xs font-semibold text-white/80"><Plus className="w-3.5 h-3.5" /></button>
+            </div>
+            <p className="text-[10px] text-white/25 leading-relaxed">These are guest-reported answers, not independently verified referral data. Keep Returning Client as a separate repeat-client classification. Existing bookings retain their saved channel.</p>
+            <div className="flex items-center gap-3"><SaveBtn onClick={saveReferralOptions} loading={upsertSetting.isPending} /><SavedBadge section="referral" /></div>
           </SettingsCard>
         </div>
       </section>
-
       {/* ── OPERATIONS ── */}
       <section className="flex flex-col gap-3">
         <SectionLabel label="Operations" />
