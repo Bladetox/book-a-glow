@@ -126,9 +126,9 @@ const METRIC_COPY: MetricCopyShape = {
     benchmark: "Target: 40%+ for beauty. World-class salons exceed 60%.",
   },
   leadSource: {
-    title: "Acquisition Channel",
-    explain: "Where your clients are discovering you. All-time booking history is shown. Full breakdown below.",
-    benchmark: "Focus on your top channel. Put your energy where clients are already finding you.",
+    title: "Original Client Acquisition",
+    explain: "Where each client first discovered your business, counted once using their first booking. Repeat bookings do not increase these figures. Clients with missing or non-channel values are included as Not recorded.",
+    benchmark: "Use this breakdown to understand which channels are bringing new clients into your business.",
   },
   revenueTrend: [
     { term: "Revenue Trend", def: "Daily revenue plotted across the month." },
@@ -505,10 +505,10 @@ export const AdminDashboardView = ({
     totalWithSource > 0 && leadSourceBreakdown[0]
       ? Math.round((leadSourceBreakdown[0].count / totalWithSource) * 100)
       : null;
-  const leadSourceSub        = topChannelPct !== null ? `${topChannelPct}% of all bookings` : undefined;
+  const leadSourceSub        = topChannelPct !== null ? `${topChannelPct}% of recorded client profiles` : undefined;
   const leadSourceExtraLines: { term: string; def: string }[] = leadSourceBreakdown.map((r) => ({
     term: r.channel,
-    def: `${r.count} booking${r.count !== 1 ? "s" : ""} (${totalWithSource > 0 ? Math.round((r.count / totalWithSource) * 100) : 0}%)`,
+    def: `${r.count} client${r.count !== 1 ? "s" : ""} (${totalWithSource > 0 ? Math.round((r.count / totalWithSource) * 100) : 0}%)`,
   }));
 
   // ── Tesler's Law: safe next-appointment parsing ─────────────────────────

@@ -21,7 +21,7 @@ function resolveClientKey(b: any): string {
   return b.id;
 }
 
-const CLIENT_TYPE_LABELS = ["new client", "new", "existing client", "existing"];
+const CLIENT_TYPE_LABELS = ["new client", "new", "existing client", "existing", "returning client", "returning"];
 function isClientTypeLabel(src: string): boolean {
   return CLIENT_TYPE_LABELS.includes(src.toLowerCase().trim());
 }
@@ -281,16 +281,17 @@ export function useDashboardData() {
     },
   });
 
-  // 7. All-time lead source
-  const { data: allLeadSourceBookings = [] } = useQuery({
-    queryKey:  ["dash-lead-source-all", tenantId],
+  // 7. Original acquisition source — one record per guest, linked to their first booking.
+  // This deliberately reads guest_consultations rather than counting booking rows:
+  // repeat bookings must never inflate the number of clients acquired by a channel.
+  const { data: clientAcquisitionRecords = [] } = useQuery({
+    queryKey:  ["dash-client-acquisition", tenantId],
     staleTime: 10 * 60 * 1000,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("bookings")
-        .select("lead_source, status")
-        .eq("tenant_id", tenantId)
-        .neq("status", "cancelled");
+        .from("guest_consultations")
+        .select("firstBooking:bookings!guest_consultations_first_booking_id_fkey(lead_source)")
+        .eq("tenant_id", tenantId);
       if (error) throw error;
       return data ?? [];
     },
@@ -519,18 +520,20 @@ export function useDashboardData() {
     };
   }, [active, prevBookings]);
 
-  // ─── lead source breakdown ────────────────────────────────────────────────
+  // ─── original client acquisition breakdown ─────────────────────────────────
   const leadSourceBreakdown = useMemo(() => {
     const map = new Map<string, number>();
-    allLeadSourceBookings.forEach((b: any) => {
-      const src = (b.lead_source || "").trim();
-      if (!src || isClientTypeLabel(src)) return;
-      map.set(src, (map.get(src) || 0) + 1);
+    clientAcquisitionRecords.forEach((record: any) => {
+      const src = (record.firstBooking?.lead_source || "").trim();
+      // A client classification is not an acquisition channel. Preserve these
+      // clients in the denominator under Not recorded instead of losing them.
+      const channel = !src || isClientTypeLabel(src) ? "Not recorded" : src;
+      map.set(channel, (map.get(channel) || 0) + 1);
     });
     return [...map.entries()]
       .map(([channel, count]) => ({ channel, count }))
-      .sort((a, b) => b.count - a.count);
-  }, [allLeadSourceBookings]);
+      .sort((a, b) => b.count - a.count || a.channel.localeCompare(b.channel));
+  }, [clientAcquisitionRecords]);
 
   // ─── fill rate ────────────────────────────────────────────────────────────
   const fillRate: number | null = useMemo(() => {
