@@ -112,8 +112,8 @@ const METRIC_COPY: MetricCopyShape = {
     explain: "Your next client. Knowing their service lets you prep and deliver a great experience.",
   },
   clients: {
-    title: "Clients This Month",
-    explain: "Total distinct people who booked with you this month.",
+    title: "Clients Booked This Month",
+    explain: "Unique client identities with at least one appointment this month that is not cancelled or marked no-show. Includes future bookings.",
   },
   returning: {
     title: "Returning Clients",
