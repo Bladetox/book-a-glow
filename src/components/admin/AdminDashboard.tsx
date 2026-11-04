@@ -788,7 +788,7 @@ export const AdminDashboardView = ({
                     <p className="text-xs font-medium text-white/75 truncate">{s.name}</p>
                     <p className="text-[10px] text-white/30">{s.count} booking{s.count !== 1 ? "s" : ""}</p>
                   </div>
-                  <span className="text-xs font-semibold text-emerald-400/80">R {s.revenue.toLocaleString()}</span>
+                  <span className="text-xs font-semibold text-emerald-400/80">R {s.revenue.toLocaleString()} <span className="text-[9px] text-white/25 font-normal">booked value</span></span>
                 </div>
               ))
             )}
