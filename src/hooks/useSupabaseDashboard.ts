@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 import { useMemo } from "react";
+import { buildClientIdentityKeys } from "@/lib/clientIdentity";
 import {
   format, startOfMonth, endOfMonth, subMonths, subDays,
   eachDayOfInterval, parseISO, getDay,
@@ -10,54 +11,6 @@ import {
 // ─── helpers ────────────────────────────────────────────────────────────────
 function resolveClientName(b: any): string {
   return b.client_name || b.guest_name || b.client?.full_name || "Unknown";
-}
-
-function normalizePhone(value: unknown): string {
-  const digits = String(value ?? "").replace(/\D/g, "");
-  return digits.length === 11 && digits.startsWith("27") ? `0${digits.slice(2)}` : digits;
-}
-
-function buildClientIdentityKeys(rows: any[]): Map<string, string | null> {
-  const parent = new Map<string, string>();
-  const tokensFor = (b: any): string[] => {
-    const tokens: string[] = [];
-    if (b.canonical_client_id) tokens.push(`canonical:${b.canonical_client_id}`);
-    if (b.client_id) tokens.push(`client:${b.client_id}`);
-    const firstName = String(b.client_name || b.guest_name || "")
-      .trim().toLowerCase().replace(/[^a-z0-9'-]+/g, " ").trim().split(/\s+/)[0] || "unknown";
-    [b.client_email, b.guest_email].filter(Boolean).forEach((v: string) =>
-      tokens.push(`email:${String(v).trim().toLowerCase()}|person:${firstName}`));
-    [b.client_phone, b.guest_phone].filter(Boolean).map(normalizePhone)
-      .filter((v: string) => v.length >= 9).forEach((v: string) =>
-        tokens.push(`phone:${v}|person:${firstName}`));
-    if (tokens.length === 0) {
-      const fullName = String(b.client_name || b.guest_name || "")
-        .trim().toLowerCase().replace(/[^a-z0-9'-]+/g, " ").trim();
-      if (fullName) tokens.push(`name:${fullName}`);
-    }
-    return [...new Set(tokens)];
-  };
-  const find = (v: string): string => {
-    const p = parent.get(v);
-    if (!p) { parent.set(v, v); return v; }
-    if (p === v) return v;
-    const root = find(p); parent.set(v, root); return root;
-  };
-  const union = (a: string, b: string) => {
-    const ra = find(a), rb = find(b);
-    if (ra !== rb) parent.set(rb, ra);
-  };
-  const byId = new Map<string, string[]>();
-  rows.forEach((b: any) => {
-    const tokens = tokensFor(b); byId.set(b.id, tokens); tokens.forEach(find);
-    for (let i = 1; i < tokens.length; i++) union(tokens[0], tokens[i]);
-  });
-  const result = new Map<string, string | null>();
-  rows.forEach((b: any) => {
-    const tokens = byId.get(b.id) ?? [];
-    result.set(b.id, tokens.length ? find(tokens[0]) : null);
-  });
-  return result;
 }
 
 const CLIENT_TYPE_LABELS = ["new client", "new", "existing client", "existing", "returning client", "returning"];
