@@ -1357,7 +1357,7 @@ Deno.serve(async (req) => {
         html: emailWrapper(
           logoHtml,
           tenantName,
-          "Booking Confirmed",
+          "Booking Confirmed 🎉",
           clientBody,
           `&copy; ${new Date().getFullYear()} ${tenantName} &middot; Powered by NextSlot`,
           `Your appointment with ${tenantName} is confirmed.`
@@ -1387,7 +1387,7 @@ Deno.serve(async (req) => {
 <body class="ob" style="margin:0;padding:24px 16px;background:#f2f2f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
 <table class="ow" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#fff;border-radius:10px;border:1px solid #e0e0e0;overflow:hidden;">
   <tr><td style="padding:28px 28px 10px;">
-    <p class="ot" style="margin:0 0 4px;font-size:18px;font-weight:700;color:#000;">Deposit received ✓</p>
+    <p class="ot" style="margin:0 0 4px;font-size:18px;font-weight:700;color:#000;">🎉 New Booking - Deposit received 🎉</p>
     <p class="ol" style="margin:0 0 20px;font-size:12px;color:#888;">The booking is confirmed and the remaining balance is outstanding.</p>
     <table width="100%" cellpadding="0" cellspacing="0">
       ${row("Client", escapeHtml(clientName))}
@@ -1414,7 +1414,7 @@ Deno.serve(async (req) => {
           from: `NextSlot <bookings@nextslot.co.za>`,
           reply_to: tenantEmail,
           to: [tenantEmail],
-          subject: `Deposit received — ${clientName} on ${formattedDate}`,
+          subject: `🎉 New Booking - Deposit received 🎉 — ${clientName} on ${formattedDate}`,
           html: ownerHtml,
         });
       }
@@ -1503,7 +1503,7 @@ Deno.serve(async (req) => {
 <body class="ob" style="margin:0;padding:24px 16px;background:#f2f2f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
 <table class="ow" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#fff;border-radius:10px;border:1px solid #e0e0e0;box-shadow:0 2px 12px rgba(0,0,0,0.06);overflow:hidden;">
   <tr><td style="padding:28px 28px 10px;">
-    <p class="ot" style="margin:0 0 4px;font-size:18px;font-weight:700;color:#000;line-height:1.3;">Full payment confirmed 🎉</p>
+    <p class="ot" style="margin:0 0 4px;font-size:18px;font-weight:700;color:#000;line-height:1.3;">🎉 New Booking - Full payment confirmed 🎉</p>
     <p class="ol" style="margin:0 0 20px;font-size:12px;color:#888;line-height:1.5;">Full payment received — add to your calendar below.</p>
     <table width="100%" cellpadding="0" cellspacing="0">
       ${row("Client",        clientName)}
@@ -1528,7 +1528,7 @@ Deno.serve(async (req) => {
           from:     `NextSlot <bookings@nextslot.co.za>`,
           reply_to: "bookings@nextslot.co.za",
           to:       [tenantEmail],
-          subject:  `🎉 Full payment confirmed — ${clientName} on ${formattedDate}`,
+          subject:  `🎉 New Booking - Full payment confirmed 🎉 — ${clientName} on ${formattedDate}`,
           html:     ownerHtml,
         });
       }
@@ -1703,7 +1703,7 @@ Deno.serve(async (req) => {
 <body class="ob" style="margin:0;padding:24px 16px;background:#f2f2f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
 <table class="ow" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#fff;border-radius:10px;border:1px solid #e0e0e0;box-shadow:0 2px 12px rgba(0,0,0,0.06);overflow:hidden;">
   <tr><td style="padding:28px 28px 10px;">
-    <p class="ot" style="margin:0 0 4px;font-size:18px;font-weight:700;color:#000;line-height:1.3;">Balance received 🎉</p>
+    <p class="ot" style="margin:0 0 4px;font-size:18px;font-weight:700;color:#000;line-height:1.3;">🎉 Balance received 🎉</p>
     <p class="ol" style="margin:0 0 20px;font-size:12px;color:#888;line-height:1.5;">${clientName} has paid their outstanding balance.</p>
     <table width="100%" cellpadding="0" cellspacing="0">
       ${row("Client",         clientName)}
@@ -1725,7 +1725,7 @@ Deno.serve(async (req) => {
           from:     `NextSlot <bookings@nextslot.co.za>`,
           reply_to: "bookings@nextslot.co.za",
           to:       [tenantEmail],
-          subject:  `🎉 Balance received — ${clientName} on ${formattedDate}`,
+          subject:  `🎉 Balance received 🎉 — ${clientName} on ${formattedDate}`,
           html:     ownerHtml,
         });
       }
