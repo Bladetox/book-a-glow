@@ -319,9 +319,9 @@ const PaymentSuccess = () => {
             )}
 
             {/* ── Google review CTA — only if a URL is configured for this tenant ── */}
-            {googleReviewUrl && (
+            {reviewLink && (
               <a
-                href={googleReviewUrl}
+                href={reviewLink}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="mt-4 flex items-center justify-center gap-2 w-full px-4 py-3 rounded-2xl
