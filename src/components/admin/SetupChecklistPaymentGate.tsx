@@ -40,7 +40,7 @@
 
 import React, { useEffect } from 'react';
 import { CheckCircle2, Circle, ExternalLink } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useTenant } from '@/contexts/TenantContext';
 import { useUpsertAppSetting } from '@/hooks/useSupabaseSettings';
@@ -93,6 +93,7 @@ export function SetupChecklistPaymentGate({ onNavigate }: Props) {
   const { tenantId } = useTenant();
   const { data: tenant, isLoading } = useTenantPaymentFields(tenantId);
   const upsertSetting = useUpsertAppSetting();
+  const queryClient = useQueryClient();
 
   const plan = tenant?.plan ?? null;
   const lifetimeFree = isLifetimeFree(tenant?.is_lifetime_free);
@@ -109,13 +110,15 @@ export function SetupChecklistPaymentGate({ onNavigate }: Props) {
     ikhokha_merchant_id: tenant.ikhokha_merchant_id,
   });
 
-  // Auto-persist to app_settings when gate flips to complete
+  // Keep the checklist flag aligned in both directions with live payment configuration.
   useEffect(() => {
-    if (done) {
-      upsertSetting.mutate({ payment_setup_complete: 'true' });
-    }
+    if (isLoading || !tenantId || !tenant) return;
+    upsertSetting.mutate(
+      { payment_setup_complete: done ? 'true' : 'false' },
+      { onSuccess: () => queryClient.invalidateQueries({ queryKey: ['setup-checklist', tenantId] }) },
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [done]);
+  }, [done, isLoading, tenantId]);
 
   if (isLoading) return null;
 
