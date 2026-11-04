@@ -189,24 +189,25 @@ Deno.serve(async (req) => {
   const webhookTimestamp = req.headers.get("webhook-timestamp");
   const signatureHeader  = req.headers.get("webhook-signature");
 
-  let hmacVerified = false;
-  if (tenantRow?.yoco_webhook_secret) {
-    hmacVerified = await verifyYocoSignature(
-      rawBody,
-      webhookId,
-      webhookTimestamp,
-      signatureHeader,
-      tenantRow.yoco_webhook_secret as string
-    );
-    if (!hmacVerified) {
-      console.error("booking-payment-webhook: HMAC mismatch for tenant", tenantId);
-      console.error("  webhook-id:", webhookId, "webhook-timestamp:", webhookTimestamp, "sig:", signatureHeader);
-      return new Response("Unauthorized", { status: 401 });
-    }
-    console.log("booking-payment-webhook: HMAC verified✓ tenant", tenantId);
-  } else {
-    console.warn("booking-payment-webhook: no webhook secret for tenant", tenantId, "— skipping HMAC");
+  if (!tenantRow?.yoco_webhook_secret) {
+    console.error("booking-payment-webhook: webhook secret missing for tenant", tenantId);
+    return new Response("Webhook verification is not configured", { status: 401 });
   }
+
+  const hmacVerified = await verifyYocoSignature(
+    rawBody,
+    webhookId,
+    webhookTimestamp,
+    signatureHeader,
+    tenantRow.yoco_webhook_secret as string
+  );
+
+  if (!hmacVerified) {
+    console.error("booking-payment-webhook: HMAC verification failed for tenant", tenantId);
+    return new Response("Unauthorized", { status: 401 });
+  }
+
+  console.log("booking-payment-webhook: HMAC verified for tenant", tenantId);
 
   // ── Handle payment.failed ────────────────────────────────────────────────────
   if (event === "payment.failed") {
@@ -240,10 +241,14 @@ Deno.serve(async (req) => {
     });
   }
 
-  // A stored balance checkout ID is the current payment claim. Fee waivers
-  // and service edits clear it; never let an older externally-held link settle
-  // a booking after the amount due has changed.
-  if (paymentType === "balance" && booking.yoco_final_checkout_id !== checkoutId) {
+  // Only the checkout currently stored on this booking may settle it.
+  // Deposit checkouts and final/full-payment checkouts use separate columns.
+  const expectedCheckoutId =
+    paymentType === "deposit"
+      ? booking.yoco_checkout_id
+      : booking.yoco_final_checkout_id;
+
+  if (!expectedCheckoutId || expectedCheckoutId !== checkoutId) {
     const staleAmountCents = (eventData as any)?.amount as number | undefined;
     const { error: staleEventError } = await supabase
       .from("stale_payment_webhook_events")
@@ -251,7 +256,7 @@ Deno.serve(async (req) => {
         tenant_id: tenantId,
         booking_id: bookingId,
         gateway: "yoco",
-        payment_type: "balance",
+        payment_type: paymentType,
         checkout_reference: checkoutId,
         transaction_reference: (eventData as any)?.id ?? checkoutId,
         amount: staleAmountCents !== undefined ? Number(staleAmountCents) / 100 : null,
@@ -264,14 +269,14 @@ Deno.serve(async (req) => {
       return new Response("Could not record stale payment event", { status: 500 });
     }
 
-    console.warn("booking-payment-webhook: stale balance checkout recorded for manual reconciliation", {
+    console.warn("booking-payment-webhook: stale checkout recorded for manual reconciliation", {
       bookingId,
       checkoutId,
     });
     return new Response(JSON.stringify({
       received: true,
       matched: true,
-      skipped: "stale_balance_checkout_requires_review",
+      skipped: "stale_checkout_requires_review",
     }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
