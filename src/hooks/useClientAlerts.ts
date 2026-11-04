@@ -44,17 +44,25 @@ export function useClientAlerts(tenantIdProp?: string) {
       const ninetyDaysAgo = format(subDays(today, 90), "yyyy-MM-dd");
 
       // 1. Fetch overdue loyalty clients
-      const { data: overdueData, error: overdueError } = await supabase
-        .from("loyalty_tracker")
-        .select("id, client_name, phone, next_due_date")
-        .eq("tenant_id", tenantId)
-        .is("merged_into_id", null)
-        .not("next_due_date", "is", null)
-        .lt("next_due_date", format(today, "yyyy-MM-dd"));
+      const overdueData: any[] = [];
+      const pageSize = 500;
+      for (let offset = 0; ; offset += pageSize) {
+        const { data, error } = await supabase
+          .from("loyalty_tracker")
+          .select("id, client_name, phone, next_due_date")
+          .eq("tenant_id", tenantId)
+          .is("merged_into_id", null)
+          .not("next_due_date", "is", null)
+          .lt("next_due_date", format(today, "yyyy-MM-dd"))
+          .order("next_due_date", { ascending: true })
+          .order("id", { ascending: true })
+          .range(offset, offset + pageSize - 1);
+        if (error) throw error;
+        overdueData.push(...(data ?? []));
+        if (!data || data.length < pageSize) break;
+      }
 
-      if (overdueError) throw overdueError;
-
-      const overdueClients: OverdueLoyaltyClient[] = (overdueData || []).map((client) => {
+      const overdueClients: OverdueLoyaltyClient[] = overdueData.map((client) => {
         const nextDue     = parseISO(client.next_due_date!);
         const daysOverdue = differenceInCalendarDays(today, nextDue);
         return { ...client, days_overdue: daysOverdue };
