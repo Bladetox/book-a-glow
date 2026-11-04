@@ -645,7 +645,7 @@ export const AdminDashboardView = ({
                 {pctChange !== null && (
                   <div className={`flex items-center gap-1 mt-0.5 ${pctUp ? "text-emerald-400" : "text-red-400"}`}>
                     {pctUp ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
-                    <span className="text-xs font-semibold">{Math.abs(pctChange)}% vs same period last month</span>
+                    <span className="text-xs font-semibold">{Math.abs(pctChange)}% vs comparable period last month</span>
                   </div>
                 )}
               </div>
