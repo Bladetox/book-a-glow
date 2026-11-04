@@ -62,19 +62,24 @@ export function useClientAlerts(tenantIdProp?: string) {
 
       // 2. Resolve the latest completed visit and any upcoming appointment per guest.
       // No-shows and cancellations do not count as completed client visits.
-      const { data: bookingsData, error: bookingsError } = await supabase
-        .from("bookings")
-        .select(`
-          id, booking_date, status, client_id, canonical_client_id,
-          client_name, client_email, client_phone,
-          guest_name, guest_email, guest_phone
-        `)
-        .eq("tenant_id", tenantId)
-        .order("booking_date", { ascending: false });
-
-      if (bookingsError) throw bookingsError;
-
-      const rows = bookingsData ?? [];
+      const rows: any[] = [];
+      const pageSize = 500;
+      for (let offset = 0; ; offset += pageSize) {
+        const { data, error } = await supabase
+          .from("bookings")
+          .select(`
+            id, booking_date, status, client_id, canonical_client_id,
+            client_name, client_email, client_phone,
+            guest_name, guest_email, guest_phone
+          `)
+          .eq("tenant_id", tenantId)
+          .order("booking_date", { ascending: false })
+          .order("id", { ascending: true })
+          .range(offset, offset + pageSize - 1);
+        if (error) throw error;
+        rows.push(...(data ?? []));
+        if (!data || data.length < pageSize) break;
+      }
       const identityKeys = buildClientIdentityKeys(rows);
       const activityByClient = new Map<string, {
         name: string;
