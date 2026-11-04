@@ -167,6 +167,10 @@ export function useDashboardData() {
         event: "*", schema: "public", table: "profiles",
         filter: `tenant_id=eq.${tenantId}`,
       }, () => invalidate(["dash-staff-profiles", tenantId]))
+      .on("postgres_changes", {
+        event: "*", schema: "public", table: "loyalty_tracker",
+        filter: `tenant_id=eq.${tenantId}`,
+      }, () => invalidate(["client-alerts", tenantId]))
       .subscribe();
 
     return () => {
