@@ -117,11 +117,11 @@ const METRIC_COPY: MetricCopyShape = {
   },
   returning: {
     title: "Returning Clients",
-    explain: "Clients who booked this month and had at least one earlier booking at any point. A client is returning after their first booking.",
+    explain: "Clients who booked this month and had a completed appointment before their latest appointment this month. A client becomes returning after their first completed visit.",
   },
   retention: {
     title: "Returning Client Share",
-    explain: "The percentage of this month's identifiable clients who had booked before this month. This is a repeat-client share, not a month-over-month cohort retention calculation.",
+    explain: "The percentage of this month's identifiable clients who had completed an appointment before their latest appointment this month. This is a repeat-client share, not a month-over-month cohort retention calculation.",
   },
   leadSource: {
     title: "Original Client Acquisition",
