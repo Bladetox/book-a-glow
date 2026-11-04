@@ -380,21 +380,10 @@ Deno.serve(async (req) => {
     });
   }
 
-  // ── Idempotency guard ────────────────────────────────────────────────────────
-  if (paymentType === "deposit" && booking.deposit_paid === true) {
-    console.log("booking-payment-webhook: deposit already paid, skipping", bookingId);
-    return new Response(JSON.stringify({ received: true, matched: true, skipped: "already_paid" }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
-  if (paymentType === "balance" && Number(booking.balance_due) === 0) {
-    console.log("booking-payment-webhook: balance already cleared, skipping", bookingId);
-    return new Response(JSON.stringify({ received: true, matched: true, skipped: "balance_already_cleared" }), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
-  }
+  // Payment ledger idempotency is keyed by the immutable Yoco payment ID.
+  // We still continue through booking reconciliation and email delivery on a
+  // redelivery, because a previous attempt may have recorded the payment but
+  // failed before completing the rest of the workflow.
 
   // ── Build booking update ─────────────────────────────────────────────────────
   // If booking is cancelled, record payment but DO NOT flip status back.
@@ -447,37 +436,75 @@ Deno.serve(async (req) => {
     console.warn("booking-payment-webhook: booking", bookingId, "is cancelled — recording payment but NOT changing status");
   }
 
-  const { error: updateErr } = await supabase.from("bookings").update(bookingUpdate).eq("id", bookingId);
-  if (updateErr) {
-    console.error("booking-payment-webhook: failed to update booking", updateErr);
-    return new Response("Internal error", { status: 500 });
-  }
-
-  console.log("booking-payment-webhook: booking updated", bookingId, "→", paymentType, "cancelled:", isCancelled);
-
   // ── Insert payments row ───────────────────────────────────────────────────────
   // This insert is what fires notify_on_payment_event — the single trigger
   // that owns every gateway's payment notification (see file header note).
-  const paymentIdRaw = eventData.id as string | undefined;
-  const amountRands  = actualAmountCents / 100;
+  const paymentIdRaw = String(eventData.id ?? checkoutId);
+  const amountRands = actualAmountCents / 100;
   const paymentMethod = (eventData as any)?.payment_method ?? "card";
 
-  const { error: paymentErr } = await supabase.from("payments").insert({
-    booking_id:     bookingId,
-    tenant_id:      tenantId,
-    amount:         amountRands,
-    payment_type:   paymentType,
-    payment_method: paymentMethod,
-    status:         "completed",
-    gateway:        "yoco",
-    transaction_id: paymentIdRaw ?? checkoutId,
-    completed_at:   new Date().toISOString(),
-    notes:          isCancelled ? "Payment received after booking was cancelled" : null,
-  });
-  if (paymentErr) {
-    console.error("booking-payment-webhook: payments insert error", paymentErr);
-    return new Response("Could not record completed payment", { status: 500 });
+  const { data: existingPayment, error: existingPaymentError } = await supabase
+    .from("payments")
+    .select("id,status")
+    .eq("gateway", "yoco")
+    .eq("transaction_id", paymentIdRaw)
+    .maybeSingle();
+
+  if (existingPaymentError) {
+    console.error("booking-payment-webhook: failed to check payment idempotency", existingPaymentError);
+    return new Response("Could not verify payment ledger", { status: 500 });
   }
+
+  if (!existingPayment) {
+    const { error: paymentErr } = await supabase.from("payments").insert({
+      booking_id:     bookingId,
+      tenant_id:      tenantId,
+      amount:         amountRands,
+      payment_type:   paymentType,
+      payment_method: paymentMethod,
+      status:         "completed",
+      gateway:        "yoco",
+      transaction_id: paymentIdRaw,
+      completed_at:   new Date().toISOString(),
+      notes:          isCancelled ? "Payment received after booking was cancelled" : null,
+    });
+
+    if (paymentErr) {
+      // A concurrent Yoco redelivery may have inserted the same transaction
+      // after the lookup. Verify that exact ledger row before proceeding.
+      const { data: racedPayment, error: racedPaymentError } = await supabase
+        .from("payments")
+        .select("id,status")
+        .eq("gateway", "yoco")
+        .eq("transaction_id", paymentIdRaw)
+        .maybeSingle();
+
+      if (racedPaymentError || !racedPayment) {
+        console.error("booking-payment-webhook: payments insert error", paymentErr);
+        return new Response("Could not record completed payment", { status: 500 });
+      }
+    }
+  }
+
+  // Apply booking state only after the completed payment is safely in the
+  // ledger. A retry can therefore recover if this update previously failed.
+  const { error: updateErr } = await supabase
+    .from("bookings")
+    .update(bookingUpdate)
+    .eq("id", bookingId)
+    .eq("tenant_id", tenantId);
+
+  if (updateErr) {
+    console.error("booking-payment-webhook: failed to update booking", updateErr);
+    return new Response("Could not reconcile completed payment", { status: 500 });
+  }
+
+  console.log("booking-payment-webhook: payment ledger and booking reconciled", {
+    bookingId,
+    paymentType,
+    cancelled: isCancelled,
+    transactionId: paymentIdRaw,
+  });
 
   // ── Send confirmation email (only for non-cancelled bookings) ─────────────────
   if (!isCancelled && (emailType === "booking_confirmed" || emailType === "full_payment_confirmed" || emailType === "balance_paid")) {
