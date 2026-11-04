@@ -933,6 +933,7 @@ Deno.serve(async (req) => {
       .select(`
         id, booking_date, start_time, end_time,
         total_amount, deposit_amount, balance_due,
+        deposit_paid, full_payment_received, final_payment_paid,
         is_call_out, call_out_address, call_out_fee, service_ids,
         guest_address,
         tenant_id,
@@ -1284,6 +1285,21 @@ Deno.serve(async (req) => {
         throw new Error("Cannot send booking confirmation: booking has no client email address");
       }
 
+      const isDepositPaid = (booking as any).deposit_paid === true;
+      const isFullyPaid =
+        (booking as any).full_payment_received === true ||
+        (booking as any).final_payment_paid === true;
+      const paymentIntro = isFullyPaid
+        ? `Your booking is confirmed and fully paid. We look forward to welcoming you to ${tenantName}.`
+        : isDepositPaid
+          ? `We have received your deposit and secured your appointment with ${tenantName}.`
+          : `Your appointment with ${tenantName} has been confirmed. The amount due is shown below.`;
+      const paymentRows = isFullyPaid
+        ? detailRow("Paid in Full", totalAmount)
+        : isDepositPaid
+          ? detailRow("Deposit Paid", depositAmount) + detailRow("Balance Due", balanceDue)
+          : detailRow("Amount Due", totalAmount);
+
       const locationRow = clientMapsLink
         ? detailRow(clientLocationLabel, `<a href="${clientMapsLink}" target="_blank" class="tlink" style="color:#111111;font-weight:600;text-decoration:underline;">${clientLocationValue}</a>`, true)
         : detailRow(clientLocationLabel, clientLocationValue || tenantName, true);
@@ -1292,7 +1308,7 @@ Deno.serve(async (req) => {
         <tr><td style="padding:28px 36px 10px;">
           <p class="tm" style="margin:0;font-size:15px;color:#000;line-height:1.5;">Hi <strong>${clientName}</strong>, your booking is confirmed! &#10003;</p>
           <p class="tl" style="margin:10px 0 0;font-size:14px;color:#555;line-height:1.7;">
-            We have received your deposit and secured your appointment with ${tenantName}.
+            ${paymentIntro}
           </p>
         </td></tr>
         <tr><td style="padding:18px 36px 26px;">
@@ -1301,8 +1317,7 @@ Deno.serve(async (req) => {
             detailRow("Service", serviceNames) +
             detailRow("Date", formattedDate) +
             detailRow("Time", formattedTime) +
-            detailRow("Deposit Paid", depositAmount) +
-            detailRow("Balance Due", balanceDue) +
+            paymentRows +
             locationRow
           )}
         </td></tr>
