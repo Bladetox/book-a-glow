@@ -64,7 +64,11 @@ export function useSetupChecklist(): SetupChecklistState {
         supabase
           .from('staff_availability')
           .select('id', { count: 'exact', head: true })
-          .eq('tenant_id', tenantId),
+          .eq('tenant_id', tenantId)
+          .eq('day_enabled', true)
+          .eq('is_available', true)
+          .not('slot_start_time', 'is', null)
+          .not('slot_end_time', 'is', null),
 
         // Gate 3: any priced service?
         supabase
