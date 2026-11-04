@@ -130,7 +130,7 @@ Deno.serve(async (req) => {
   if (bookingIdFromMeta) {
     const { data } = await supabase
       .from("bookings")
-      .select("id, tenant_id, status, deposit_paid, deposit_amount, balance_due, total_amount, guest_email, guest_name, yoco_checkout_id, yoco_final_checkout_id")
+      .select("id, tenant_id, status, deposit_paid, deposit_amount, balance_due, total_amount, guest_email, guest_name, confirmed_at, yoco_checkout_id, yoco_final_checkout_id")
       .eq("id", bookingIdFromMeta)
       .single();
     if (data) {
@@ -366,7 +366,10 @@ Deno.serve(async (req) => {
       deposit_paid: true,
       balance_due: Number(booking.total_amount) - Number(booking.deposit_amount),
       // Only confirm if not already cancelled
-      ...(!isCancelled && { status: "confirmed" }),
+      ...(!isCancelled && {
+        status: "confirmed",
+        confirmed_at: booking.confirmed_at ?? new Date().toISOString(),
+      }),
     };
     emailType = isCancelled ? "payment_received_cancelled" : "booking_confirmed";
   } else if (paymentType === "balance") {
