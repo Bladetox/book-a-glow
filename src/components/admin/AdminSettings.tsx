@@ -20,6 +20,9 @@ import { toast } from "sonner";
 import { ConsultationFormBuilder } from "./ConsultationFormBuilder";
 import { AdminBilling } from "./AdminBilling";
 
+const isAcquisitionChannel = (value: string) =>
+  !["returning", "returning client", "existing", "existing client", "new", "new client"].includes(value.trim().toLowerCase());
+
 const LEAD_TIME_PRESETS = [
   { label: "No minimum", value: "0" },
   { label: "2 hours", value: "120" },
@@ -315,7 +318,7 @@ const AdminSettings = () => {
     }
     try {
       const parsed: unknown = JSON.parse(raw);
-      setReferralOptionsText(Array.isArray(parsed) ? parsed.map(String).join("\n") : "");
+      setReferralOptionsText(Array.isArray(parsed) ? parsed.map(String).filter(isAcquisitionChannel).join("\n") : "");
     } catch {
       setReferralOptionsText(defaultReferralOptions.join("\n"));
     }
@@ -365,7 +368,7 @@ const AdminSettings = () => {
     const channels = referralOptionsText
       .split("\n")
       .map((channel) => channel.trim())
-      .filter(Boolean);
+      .filter(isAcquisitionChannel);
     const unique = new Set(channels.map((channel) => channel.toLocaleLowerCase()));
     if (channels.length === 0) {
       toast.error("Add at least one acquisition channel.");
@@ -397,6 +400,10 @@ const AdminSettings = () => {
   const addReferralOption = () => {
     const channel = newReferralOption.trim();
     if (!channel) return;
+    if (!isAcquisitionChannel(channel)) {
+      toast.error("Returning or existing-client status is determined from booking history, not an acquisition channel.");
+      return;
+    }
     if (referralChannels.some((item) => item.toLocaleLowerCase() === channel.toLocaleLowerCase())) {
       toast.error("That acquisition channel already exists.");
       return;
@@ -592,7 +599,7 @@ const AdminSettings = () => {
               <input id="new-acquisition-channel" value={newReferralOption} onChange={(e) => setNewReferralOption(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addReferralOption(); } }} placeholder="Add an acquisition channel" className="min-w-0 flex-1 px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors" />
               <button type="button" onClick={addReferralOption} className="px-3 py-2 rounded-xl bg-white/[0.08] border border-white/[0.1] text-xs font-semibold text-white/80"><Plus className="w-3.5 h-3.5" /></button>
             </div>
-            <p className="text-[10px] text-white/25 leading-relaxed">These are guest-reported answers, not independently verified referral data. Keep Returning Client as a separate repeat-client classification. Existing bookings retain their saved channel.</p>
+            <p className="text-[10px] text-white/25 leading-relaxed">These are guest-reported acquisition sources. Returning-client status is determined automatically from booking history and is not an acquisition channel. Existing bookings retain their saved source.</p>
             <div className="flex items-center gap-3"><SaveBtn onClick={saveReferralOptions} loading={upsertSetting.isPending} /><SavedBadge section="referral" /></div>
           </SettingsCard>
         </div>
