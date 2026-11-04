@@ -64,14 +64,20 @@ const HEAT_DAYS  = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const DOW_TO_IDX: Record<number, number> = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 0: 6 };
 
 function buildHeatSlots(availRows: any[]): { label: string; hourStart: number }[] {
-  const starts = availRows
-    .map((r: any) => r.slot_start_time)
-    .filter(Boolean)
-    .map((t: string) => parseInt(t.split(":")[0]))
-    .filter((h: number) => !isNaN(h));
+  const enabledRows = availRows.filter((row: any) =>
+    row.day_enabled === true && row.is_available === true && row.slot_start_time && row.slot_end_time
+  );
+  const starts = enabledRows.map((row: any) => {
+    const [hours, mins] = row.slot_start_time.split(":").map(Number);
+    return hours + (mins || 0) / 60;
+  }).filter(Number.isFinite);
+  const ends = enabledRows.map((row: any) => {
+    const [hours, mins] = row.slot_end_time.split(":").map(Number);
+    return hours + (mins || 0) / 60;
+  }).filter(Number.isFinite);
 
-  const minHour = starts.length > 0 ? Math.min(...starts) : 8;
-  const maxHour = starts.length > 0 ? Math.max(...starts) + 2 : 18;
+  const minHour = starts.length > 0 ? Math.floor(Math.min(...starts)) : 8;
+  const maxHour = ends.length > 0 ? Math.ceil(Math.max(...ends)) : 18;
   const clampedMin = Math.max(6, Math.min(minHour, 10));
   const clampedMax = Math.min(22, Math.max(maxHour, 14));
 
@@ -574,12 +580,14 @@ export function useDashboardData() {
   type Alert = { text: string; type: "warning" | "info" | "danger" };
   const alerts = useMemo(() => {
     const list: Alert[] = [];
-    const pendingDeposits = bookings.filter((b: any) =>
-      b.status !== "cancelled" && Number(b.deposit_amount ?? 0) > 0 &&
-      b.deposit_paid !== true && b.full_payment_received !== true
+    const outstandingPayments = bookings.filter((b: any) =>
+      b.status !== "cancelled" &&
+      Number(b.balance_due ?? 0) > 0 &&
+      b.full_payment_received !== true &&
+      b.final_payment_paid !== true
     ).length;
-    if (pendingDeposits > 0)
-      list.push({ text: `${pendingDeposits} deposit${pendingDeposits > 1 ? "s" : ""} still pending`, type: "warning" });
+    if (outstandingPayments > 0)
+      list.push({ text: `${outstandingPayments} booking payment${outstandingPayments > 1 ? "s" : ""} still outstanding`, type: "warning" });
     if (cancelledBookings.length > 0)
       list.push({ text: `${cancelledBookings.length} cancellation${cancelledBookings.length > 1 ? "s" : ""} this month`, type: "info" });
     if (noShowBookings.length > 0)
