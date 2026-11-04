@@ -30,6 +30,11 @@ function buildClientIdentityKeys(rows: any[]): Map<string, string | null> {
     [b.client_phone, b.guest_phone].filter(Boolean).map(normalizePhone)
       .filter((v: string) => v.length >= 9).forEach((v: string) =>
         tokens.push(`phone:${v}|person:${firstName}`));
+    if (tokens.length === 0) {
+      const fullName = String(b.client_name || b.guest_name || "")
+        .trim().toLowerCase().replace(/[^a-z0-9'-]+/g, " ").trim();
+      if (fullName) tokens.push(`name:${fullName}`);
+    }
     return [...new Set(tokens)];
   };
   const find = (v: string): string => {
