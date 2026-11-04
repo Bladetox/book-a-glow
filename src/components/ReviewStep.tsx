@@ -567,8 +567,15 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, holdId, sessio
         </div>
       )}
 
+      {/* Payment configuration must finish loading before a payment choice is shown or submitted. */}
+      {config.loading && (
+        <div className="rounded-xl border border-border/50 bg-muted/20 px-4 py-3 text-sm text-muted-foreground" role="status">
+          Loading available payment options…
+        </div>
+      )}
+
       {/* Payment summary - Yoco / PayFast */}
-      {!isPayshap && !isIkhokha && (
+      {!config.loading && !isPayshap && !isIkhokha && (
         <div className="rounded-2xl border border-border/50 bg-muted/20 overflow-hidden">
           <div className="px-4 pt-3 pb-2 border-b border-border/30">
             <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Payment</p>
@@ -606,7 +613,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, holdId, sessio
       )}
 
             {/* Payment summary - iKhokha */}
-      {isIkhokha && (
+      {!config.loading && isIkhokha && (
         <div className="rounded-2xl border border-border/50 bg-muted/20 overflow-hidden">
           <div className="px-4 pt-3 pb-2 border-b border-border/30">
             <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Payment</p>
@@ -639,7 +646,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, holdId, sessio
       )}
 
       {/* iKhokha deposit / full toggle */}
-      {isIkhokha && config.requiresDeposit && config.depositPercent < 100 && (
+      {!config.loading && isIkhokha && config.requiresDeposit && config.depositPercent > 0 && config.depositPercent < 100 && (
         <div className="flex rounded-xl border border-border/50 overflow-hidden text-sm">
           <button
             onClick={() => setPaymentChoice("ikhokha_deposit")}
@@ -665,7 +672,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, holdId, sessio
       )}
       
       {/* Payment summary - PayShap */}
-      {isPayshap && (
+      {!config.loading && isPayshap && (
         <div className="rounded-2xl border border-border/50 bg-muted/20 overflow-hidden">
           <div className="px-4 pt-3 pb-2 border-b border-border/30">
             <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Payment</p>
@@ -703,7 +710,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, holdId, sessio
       )}
 
       {/* Payment method toggle - Yoco / PayFast */}
-      {!isPayshap && !isIkhokha && config.requiresDeposit && depositPercent < 100 && (
+      {!config.loading && !isPayshap && !isIkhokha && config.requiresDeposit && depositPercent > 0 && depositPercent < 100 && (
         <div className="flex rounded-xl border border-border/50 overflow-hidden text-sm">
           <button
             onClick={() => setPaymentChoice("deposit")}
@@ -729,7 +736,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, holdId, sessio
       )}
 
       {/* Payment method toggle - PayShap */}
-      {isPayshap && config.requiresDeposit && config.depositPercent < 100 && (
+      {!config.loading && isPayshap && config.requiresDeposit && config.depositPercent > 0 && config.depositPercent < 100 && (
         <div className="flex rounded-xl border border-border/50 overflow-hidden text-sm">
           <button
             onClick={() => setPaymentChoice("payshap_deposit")}
@@ -777,11 +784,16 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, holdId, sessio
       {/* CTA */}
       <motion.button
         onClick={handleConfirm}
-        disabled={submitting || (!holdId && !pendingBookingId)}
-        whileTap={submitting || (!holdId && !pendingBookingId) ? {} : { scale: 0.97 }}
+        disabled={config.loading || submitting || (!holdId && !pendingBookingId)}
+        whileTap={config.loading || submitting || (!holdId && !pendingBookingId) ? {} : { scale: 0.97 }}
         className="btn-next w-full flex items-center justify-center gap-2.5"
       >
-        {submitting ? (
+        {config.loading ? (
+          <>
+            <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+            <span>Loading payment options…</span>
+          </>
+        ) : submitting ? (
           <>
             <Loader2 className="w-4 h-4 animate-spin shrink-0" />
             <span>{phaseLabel(phase, cur, amountDueNow, paymentChoice)}</span>
