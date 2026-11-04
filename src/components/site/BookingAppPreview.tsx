@@ -191,7 +191,7 @@ const TENANT_BY_ID: Record<string, TenantMeta> = {
       { id: "3", name: "Express Session",   duration: 30, price:  500, category: "premium" },
       { id: "4", name: "Consultation",      duration: 30, price:  300, category: "premium" },
     ],
-    referralOptions: ["Returning Client", "Google", "Instagram", "Friend", "Walk-in"],
+    referralOptions: ["Google", "Instagram", "Friend", "Walk-in"],
   },
 };
 
