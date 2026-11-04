@@ -244,6 +244,7 @@ Deno.serve(async (req) => {
 
       if (paymentType === "balance" || paymentType === "full") {
         updateData.final_payment_paid        = true;
+        updateData.full_payment_received     = true;
         updateData.balance_due               = 0;
         updateData.ikhokha_final_checkout_id = paylinkID;
         updateData.ikhokha_final_link        = paylinkID;
@@ -284,6 +285,47 @@ Deno.serve(async (req) => {
         console.log(
           `[ikhokha-webhook] booking=${matchedId} updated OK type=${paymentType}`
         );
+
+        // Record the verified gateway transaction in the shared payments
+        // ledger. The iKhokha callback does not include an amount, so derive
+        // it from the tenant-scoped booking that the server priced at checkout.
+        const { data: paidBooking, error: paidBookingError } = await supabase
+          .from("bookings")
+          .select("id, client_id, tenant_id, total_amount, deposit_amount, balance_due")
+          .eq("id", matchedId)
+          .eq("tenant_id", tenantId)
+          .single();
+
+        if (paidBookingError || !paidBooking) {
+          console.error("[ikhokha-webhook] could not load paid booking for ledger entry", paidBookingError);
+          return new Response("Could not record payment", { status: 500 });
+        }
+
+        const paidAmount = paymentType === "balance"
+          ? Math.max(0, Number(paidBooking.total_amount) - Number(paidBooking.deposit_amount))
+          : paymentType === "full"
+            ? Number(paidBooking.total_amount)
+            : Number(paidBooking.deposit_amount);
+
+        const { error: paymentInsertError } = await supabase
+          .from("payments")
+          .insert({
+            booking_id: matchedId,
+            client_id: paidBooking.client_id,
+            tenant_id: tenantId,
+            amount: paidAmount,
+            payment_type: paymentType,
+            payment_method: "ikhokha",
+            status: "completed",
+            gateway: "ikhokha",
+            transaction_id: externalTransactionID,
+            completed_at: new Date().toISOString(),
+          });
+
+        if (paymentInsertError && paymentInsertError.code !== "23505") {
+          console.error("[ikhokha-webhook] payment ledger insert failed", paymentInsertError);
+          return new Response("Could not record payment", { status: 500 });
+        }
 
         // ── 7. Fire confirmation email (non-fatal) ─────────────────────────
         try {
