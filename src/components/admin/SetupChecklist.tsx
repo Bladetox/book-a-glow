@@ -170,8 +170,9 @@ export function SetupChecklist({ onNavigate }: Props) {
 
   const handleWhatsApp = () => {
     const message = buildWhatsAppMessage('booking_link', { businessName: tenantInfo?.name ?? '', bookingUrl }, whatsappTone, whatsappTemplates);
-    const opened = window.open(waLink('', message), '_blank', 'noopener,noreferrer');
+    const opened = window.open(waLink('', message), '_blank');
     if (opened) {
+      opened.opener = null;
       checklist.markBookingLinkShared();
     } else {
       toast.error("WhatsApp could not be opened. Please allow pop-ups or copy the booking link instead.");
