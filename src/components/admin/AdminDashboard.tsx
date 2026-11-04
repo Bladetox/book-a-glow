@@ -125,7 +125,7 @@ const METRIC_COPY: MetricCopyShape = {
   },
   leadSource: {
     title: "Original Client Acquisition",
-    explain: "The first acquisition source recorded on each identifiable client's earliest booking. Each client is counted once. Repeat bookings do not increase the count. Missing or non-channel values are shown as Not recorded.",
+    explain: "The guest-reported acquisition source on each client's earliest booking. Each client is counted once. Repeat bookings do not increase the count. Channel percentages use clients with a valid recorded source; Not recorded is shown separately as a share of all clients.",
     benchmark: "Use this breakdown to understand which channels are bringing new clients into your business.",
   },
   revenueTrend: [
