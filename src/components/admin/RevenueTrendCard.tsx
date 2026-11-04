@@ -32,10 +32,10 @@ const PERIODS = [
 type PeriodLabel = typeof PERIODS[number]["label"];
 
 const INFO_LINES: InfoLine[] = [
-  { term: "Revenue Trend",    def: "Daily revenue plotted across the selected period." },
-  { term: "Peak Days",        def: "The tallest bars are your best earning days — highlighted in bright green." },
-  { term: "Zero Bars",        def: "Dashed outline = R0 that day. No revenue earned." },
-  { term: "Faint Bars",       def: "Low revenue days. Consider a targeted offer." },
+  { term: "Collections Trend", def: "Daily completed payment receipts recorded across the selected period." },
+  { term: "Peak Days",         def: "The tallest bars are the days with the highest payment collections." },
+  { term: "Zero Bars",         def: "Dashed outline = no payment receipts recorded that day. It does not mean no bookings occurred." },
+  { term: "Faint Bars",        def: "Days with lower payment collections." },
   { term: "Period comparison", def: "The selected number of days is compared with the immediately preceding equal-length period." },
 ];
 
@@ -82,7 +82,7 @@ const Skeleton = () => (
 const EmptyState = () => (
   <div className="h-32 flex flex-col items-center justify-center gap-2">
     <BarChart3 className="w-5 h-5 text-white/10" />
-    <p className="text-xs text-white/25">No revenue data for this period</p>
+    <p className="text-xs text-white/25">No payment receipts recorded for this period</p>
   </div>
 );
 
