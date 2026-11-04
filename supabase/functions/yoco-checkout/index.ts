@@ -30,9 +30,6 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const {
       booking_id,
-      tenant_slug,
-      success_url,
-      cancel_url,
       payment_type = "deposit",
     } = body;
 
@@ -102,7 +99,7 @@ Deno.serve(async (req) => {
     // phenomebeauty has yoco_mode = 'live' — always hits the fallback path. Safe.
     const { data: tenantRow } = await supabase
       .from("tenants")
-      .select("yoco_secret_key, yoco_secret_key_test, yoco_mode")
+      .select("yoco_secret_key, yoco_secret_key_test, yoco_mode, custom_domain, subdomain")
       .eq("id", booking.tenant_id)
       .single();
 
@@ -155,15 +152,40 @@ Deno.serve(async (req) => {
       );
     }
 
-    const origin = req.headers.get("origin") || "https://book-a-glow.vercel.app";
-    const slug   = tenant_slug || booking.tenant_id;
+    // Resolve the return origin from this booking's tenant record, never from
+    // an optional request Origin header or caller-supplied redirect URL.
+    // This keeps guest checkouts on the correct tenant booking app and avoids
+    // falling back to the retired Vercel preview hostname.
+    const customDomain = String(tenantRow?.custom_domain ?? "").trim();
+    let tenantOrigin: string;
+    if (customDomain) {
+      const domainUrl = new URL(
+        customDomain.includes("://") ? customDomain : `https://${customDomain}`,
+      );
+      if (domainUrl.protocol !== "https:" || !domainUrl.hostname) {
+        throw new Error("Tenant custom domain must be a valid HTTPS domain");
+      }
+      tenantOrigin = domainUrl.origin;
+    } else {
+      const tenantSubdomain = String(tenantRow?.subdomain ?? booking.tenant_id).trim();
+      if (!tenantSubdomain || !/^[a-z0-9-]+$/i.test(tenantSubdomain)) {
+        throw new Error("Tenant subdomain is invalid");
+      }
+      tenantOrigin = `https://${tenantSubdomain}.nextslot.co.za`;
+    }
 
-    const finalSuccessUrl = success_url ||
-      `${origin}/payment-success?payment=success&booking_id=${booking_id}&tenant=${slug}&type=${
-        payment_type === "balance" ? "final" : payment_type === "full" ? "full" : "deposit"
-      }`;
-    const finalCancelUrl  = cancel_url  ||
-      `${origin}/payment-success?payment=cancelled&tenant=${slug}`;
+    const successParams = new URLSearchParams({
+      payment: "success",
+      booking_id: booking.id,
+      tenant: booking.tenant_id,
+      type: payment_type === "balance" ? "final" : payment_type === "full" ? "full" : "deposit",
+    });
+    const cancelParams = new URLSearchParams({
+      payment: "cancelled",
+      tenant: booking.tenant_id,
+    });
+    const finalSuccessUrl = `${tenantOrigin}/payment-success?${successParams.toString()}`;
+    const finalCancelUrl = `${tenantOrigin}/payment-success?${cancelParams.toString()}`;
 
     const yocoRes = await fetch("https://payments.yoco.com/api/checkouts", {
       method: "POST",
