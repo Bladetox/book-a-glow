@@ -43,6 +43,13 @@ Deno.serve(async (req) => {
       );
     }
 
+    if (!["deposit", "balance", "full"].includes(payment_type)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid payment_type" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const { data: booking, error: bookingErr } = await supabase
       .from("bookings")
       .select("id, deposit_amount, deposit_paid, balance_due, total_amount, client_id, tenant_id")
@@ -56,26 +63,53 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Payment policy is tenant-owned. A deposit checkout is not available
+    // unless the tenant explicitly requires deposits. Full payment remains
+    // available regardless of the deposit setting.
+    const { data: depositSetting, error: depositSettingError } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("tenant_id", booking.tenant_id)
+      .eq("key", "requires_deposit")
+      .maybeSingle();
+
+    if (depositSettingError) {
+      console.error("[yoco-checkout] failed to read tenant payment policy", depositSettingError);
+      return new Response(
+        JSON.stringify({ error: "Could not verify tenant payment settings" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const requiresDeposit = depositSetting?.value === "true";
+    if (payment_type === "deposit" && !requiresDeposit) {
+      return new Response(
+        JSON.stringify({ error: "This business requires full payment at booking" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (payment_type === "balance" && !booking.deposit_paid) {
+      return new Response(
+        JSON.stringify({ error: "A balance payment is only available after the deposit is paid" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Resolve Yoco secret key per-tenant.
-    // Mode is AUTO-DETECTED from the key prefix — sk_live_ = live, sk_test_ = test.
-    // No manual toggle needed or used.
-    // Priority: mode-specific columns (yoco_secret_key_live / yoco_secret_key_test)
-    // Fallback: legacy yoco_secret_key column (supports existing tenants e.g. PhenomeBeauty)
+    // Mode-aware: if yoco_mode = 'test' and yoco_secret_key_test is populated, use it.
+    // Otherwise fall back to yoco_secret_key (live key or legacy single-key tenants).
+    // phenomebeauty has yoco_mode = 'live' — always hits the fallback path. Safe.
     const { data: tenantRow } = await supabase
       .from("tenants")
-      .select("yoco_secret_key, yoco_secret_key_live, yoco_secret_key_test, yoco_mode")
+      .select("yoco_secret_key, yoco_secret_key_test, yoco_mode")
       .eq("id", booking.tenant_id)
       .single();
 
-    const resolvedKey =
-      tenantRow?.yoco_secret_key_live ||
-      tenantRow?.yoco_secret_key_test ||
-      tenantRow?.yoco_secret_key; // legacy fallback for PhenomeBeauty and pre-migration tenants
-
-    const isLive = resolvedKey?.startsWith("sk_live_") ?? false;
-    const yocoSecret = resolvedKey;
-
-    console.log(`[yoco-checkout] tenant=${booking.tenant_id} mode=${isLive ? "live" : "test"} key_prefix=${yocoSecret?.slice(0, 12)}...`);
+    const yocoSecret =
+      tenantRow?.yoco_mode === "test" && tenantRow?.yoco_secret_key_test
+        ? tenantRow.yoco_secret_key_test
+        : tenantRow?.yoco_secret_key;
 
     if (!yocoSecret) {
       return new Response(
@@ -153,8 +187,8 @@ Deno.serve(async (req) => {
     if (!yocoRes.ok) {
       console.error("Yoco error:", yocoData);
       return new Response(
-        JSON.stringify({ error: "Failed to create Yoco checkout", detail: yocoData }),
-        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Failed to create checkout" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
