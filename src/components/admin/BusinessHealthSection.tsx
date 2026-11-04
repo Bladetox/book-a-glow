@@ -86,13 +86,13 @@ export const HEALTH_METRIC_COPY = {
     benchmark: "Target: below 10%. Above 20% warrants attention.",
   },
   clients: {
-    title: "Clients This Month",
-    explain: "Total distinct people who booked with you this month.",
+    title: "Clients Booked This Month",
+    explain: "Unique client identities with at least one appointment this month that is not cancelled or marked no-show. Includes future bookings.",
   },
   returning: {
     title: "Returning Clients",
     explain: "Clients who booked this month and had a completed appointment before their latest appointment this month. A client becomes returning after their first completed visit.",
-    benchmark: "Track the share of this month's clients who have booked before.",
+    benchmark: "Track the share of this month's clients who have completed a previous appointment.",
   },
 } as const;
 
