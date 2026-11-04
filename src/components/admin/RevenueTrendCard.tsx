@@ -36,7 +36,7 @@ const INFO_LINES: InfoLine[] = [
   { term: "Peak Days",        def: "The tallest bars are your best earning days — highlighted in bright green." },
   { term: "Zero Bars",        def: "Dashed outline = R0 that day. No revenue earned." },
   { term: "Faint Bars",       def: "Low revenue days. Consider a targeted offer." },
-  { term: "Month-on-Month",   def: "The % change vs the equivalent prior window tells you if you're growing." },
+  { term: "Period comparison", def: "The selected number of days is compared with the immediately preceding equal-length period." },
 ];
 
 const PERIOD_COMPARE_LABEL: Record<PeriodLabel, string> = {
