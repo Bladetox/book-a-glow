@@ -10,6 +10,7 @@ const ALLOWED_APP_SETTING_KEYS = [
   "booking_ref_prefix",
   "lead_time_minutes",
   "deposit_percent",
+  "requires_deposit",
   "min_notice_minutes",  // required gap after a booking ends
   "max_advance_days",
   "overrun_minutes",     // how many minutes past closing a booking may end
