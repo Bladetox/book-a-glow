@@ -91,7 +91,7 @@ export const HEALTH_METRIC_COPY = {
   },
   returning: {
     title: "Returning Clients",
-    explain: "Clients who booked this month and had at least one earlier booking at any point. A client becomes returning after their first booking.",
+    explain: "Clients who booked this month and had a completed appointment before their latest appointment this month. A client becomes returning after their first completed visit.",
     benchmark: "Track the share of this month's clients who have booked before.",
   },
 } as const;
