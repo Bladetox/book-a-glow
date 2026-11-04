@@ -161,10 +161,17 @@ Deno.serve(async (req) => {
 
     // ── 6. Update bookings (column names match live schema) ─────────────────
     if (status === "SUCCESS") {
+      let bookingFinancials: {
+        total_amount: number;
+        deposit_amount: number;
+        balance_due: number;
+        client_id: string | null;
+      } | null = null;
+
       if (bookingId) {
         const { data: bookingState, error: bookingStateError } = await supabase
           .from("bookings")
-          .select("id, status")
+          .select("id, status, total_amount, deposit_amount, balance_due, client_id")
           .eq("id", bookingId)
           .eq("tenant_id", tenantId)
           .maybeSingle();
@@ -174,6 +181,12 @@ Deno.serve(async (req) => {
           return new Response("Could not verify booking state", { status: 500 });
         }
         if (!bookingState) return new Response("OK", { status: 200 });
+        bookingFinancials = {
+          total_amount: Number(bookingState.total_amount),
+          deposit_amount: Number(bookingState.deposit_amount),
+          balance_due: Number(bookingState.balance_due),
+          client_id: bookingState.client_id,
+        };
 
         if (bookingState.status === "cancelled") {
           const { error: staleEventError } = await supabase.from("stale_payment_webhook_events").insert({
@@ -301,11 +314,19 @@ Deno.serve(async (req) => {
           return new Response("Could not record payment", { status: 500 });
         }
 
+        const financials = bookingFinancials ?? {
+          total_amount: Number(paidBooking.total_amount),
+          deposit_amount: Number(paidBooking.deposit_amount),
+          balance_due: Number(paidBooking.balance_due),
+          client_id: financials.client_id,
+        };
         const paidAmount = paymentType === "balance"
-          ? Math.max(0, Number(paidBooking.total_amount) - Number(paidBooking.deposit_amount))
+          ? (financials.balance_due > 0
+              ? financials.balance_due
+              : Math.max(0, financials.total_amount - financials.deposit_amount))
           : paymentType === "full"
-            ? Number(paidBooking.total_amount)
-            : Number(paidBooking.deposit_amount);
+            ? financials.total_amount
+            : financials.deposit_amount;
 
         const { error: paymentInsertError } = await supabase
           .from("payments")
