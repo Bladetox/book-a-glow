@@ -43,9 +43,9 @@ const sectionLabels: Record<SectionKey, string> = {
   stockAlerts: "Stock Alerts",
 };
 
-function getVisibility(): Record<SectionKey, boolean> {
+function getVisibility(storageKey: string): Record<SectionKey, boolean> {
   try {
-    const stored = localStorage.getItem(DASHBOARD_VIS_KEY);
+    const stored = localStorage.getItem(storageKey);
     if (stored) {
       const parsed = JSON.parse(stored);
       return Object.fromEntries(
@@ -56,8 +56,8 @@ function getVisibility(): Record<SectionKey, boolean> {
   return Object.fromEntries(ALL_SECTIONS.map((s) => [s, true])) as Record<SectionKey, boolean>;
 }
 
-function saveVisibility(v: Record<SectionKey, boolean>) {
-  localStorage.setItem(DASHBOARD_VIS_KEY, JSON.stringify(v));
+function saveVisibility(v: Record<SectionKey, boolean>, storageKey: string) {
+  localStorage.setItem(storageKey, JSON.stringify(v));
 }
 
 interface Appointment {
@@ -408,6 +408,7 @@ export interface AdminDashboardViewProps {
   demo?: boolean;
   onSelectAppointment?: (client: string) => void;
   onNavigate?: (view: string) => void;
+  visibilityScope?: string;
 }
 
 /** Presentational dashboard. The live admin feeds it real data; the marketing demo feeds it sample data. */
@@ -420,9 +421,11 @@ export const AdminDashboardView = ({
   demo = false,
   onSelectAppointment,
   onNavigate,
+  visibilityScope = "default",
 }: AdminDashboardViewProps) => {
+  const visibilityStorageKey = `${DASHBOARD_VIS_KEY}:${demo ? "demo" : visibilityScope}`;
   const [visibility, setVisibility] = useState<Record<SectionKey, boolean>>(() =>
-    demo ? (Object.fromEntries(ALL_SECTIONS.map((k) => [k, true])) as Record<SectionKey, boolean>) : getVisibility(),
+    demo ? (Object.fromEntries(ALL_SECTIONS.map((k) => [k, true])) as Record<SectionKey, boolean>) : getVisibility(visibilityStorageKey),
   );
   const [showCustomize, setShowCustomize] = useState(false);
   const [showHeatInfo, setShowHeatInfo] = useState(false);
@@ -436,7 +439,7 @@ export const AdminDashboardView = ({
   const toggle = (key: SectionKey) => {
     const next = { ...visibility, [key]: !visibility[key] };
     setVisibility(next);
-    if (!demo) saveVisibility(next);
+    if (!demo) saveVisibility(next, visibilityStorageKey);
   };
 
   if (data.coreLoading) {
@@ -454,6 +457,7 @@ export const AdminDashboardView = ({
 
   const monthRevenue   = data.revenue?.month    ?? 0;
   const lastMonthRev   = data.revenue?.lastMonth ?? 0;
+  const lastMonthComparableRev = data.revenue?.lastMonthToDate ?? 0;
   const todayRevenue   = data.revenue?.today     ?? 0;
   const todayAppts     = data.today?.appointments   ?? 0;
   const todayRemaining = data.today?.remaining      ?? 0;
@@ -473,7 +477,10 @@ export const AdminDashboardView = ({
     servicesPeriod === "alltime" ? (data.allTimeTopServices ?? []) : (data.topServices ?? []);
 
   const hasLastMonth = lastMonthRev > 0;
-  const pctChange    = hasLastMonth ? Math.round(((monthRevenue - lastMonthRev) / lastMonthRev) * 100) : null;
+  const hasComparableLastMonth = lastMonthComparableRev > 0;
+  const pctChange = hasComparableLastMonth
+    ? Math.round(((monthRevenue - lastMonthComparableRev) / lastMonthComparableRev) * 100)
+    : null;
   const pctUp        = pctChange !== null ? pctChange >= 0 : true;
 
   // ── Zeigarnik Effect: day-of-month context ──────────────────────────────
@@ -505,7 +512,10 @@ export const AdminDashboardView = ({
     totalWithSource > 0 && leadSourceBreakdown[0]
       ? Math.round((leadSourceBreakdown[0].count / totalWithSource) * 100)
       : null;
-  const leadSourceSub        = topChannelPct !== null ? `${topChannelPct}% of recorded client profiles` : undefined;
+  const leadSourceSub        = topChannelPct !== null ? `${topChannelPct}% of identified clients` : undefined;
+  const operationalAlerts = (data.alerts ?? []).filter((alert: any) =>
+    !String(alert.text ?? "").toLowerCase().includes("stock")
+  );
   const leadSourceExtraLines: { term: string; def: string }[] = leadSourceBreakdown.map((r) => ({
     term: r.channel,
     def: `${r.count} client${r.count !== 1 ? "s" : ""} (${totalWithSource > 0 ? Math.round((r.count / totalWithSource) * 100) : 0}%)`,
@@ -632,7 +642,7 @@ export const AdminDashboardView = ({
                 {pctChange !== null && (
                   <div className={`flex items-center gap-1 mt-0.5 ${pctUp ? "text-emerald-400" : "text-red-400"}`}>
                     {pctUp ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
-                    <span className="text-xs font-semibold">{Math.abs(pctChange)}% vs last month</span>
+                    <span className="text-xs font-semibold">{Math.abs(pctChange)}% vs same period last month</span>
                   </div>
                 )}
               </div>
@@ -797,6 +807,15 @@ export const AdminDashboardView = ({
               </div>
             ) : (
               <>
+                {operationalAlerts.map((alert: any, index: number) => (
+                  <div key={`operational-alert-${index}`} className="flex items-center gap-3 rounded-xl border border-amber-500/[0.12] bg-amber-500/[0.035] p-3.5">
+                    <div className="p-1.5 rounded-lg bg-amber-500/10">
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+                    </div>
+                    <p className="flex-1 text-xs text-white/65">{alert.text}</p>
+                    <span className="text-[9px] uppercase tracking-wide text-white/25">{alert.type}</span>
+                  </div>
+                ))}
                 <motion.button
                   layoutId={alertCardLayoutId("overdue_loyalty")}
                   transition={{ type: "spring", stiffness: 400, damping: 32, restSpeed: 0.5, restDelta: 0.5 }}
@@ -954,6 +973,7 @@ const AdminDashboard = ({
       flags={flags}
       onSelectAppointment={onSelectAppointment}
       onNavigate={onNavigate}
+      visibilityScope={tenantId}
     />
   );
 };
