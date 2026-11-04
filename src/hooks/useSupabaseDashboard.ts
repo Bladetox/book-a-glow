@@ -504,14 +504,19 @@ export function useDashboardData() {
       }
     });
 
-    const keys = new Set<string>();
+    const latestMonthBookingDate = new Map<string, string>();
     active.forEach((b: any) => {
       const key = identityKeys.get(b.id);
-      if (key) keys.add(key);
+      if (!key) return;
+      const date = String(b.booking_date ?? "");
+      const currentLatest = latestMonthBookingDate.get(key) ?? "";
+      if (date && date > currentLatest) latestMonthBookingDate.set(key, date);
     });
+    const keys = new Set(latestMonthBookingDate.keys());
     const returning = [...keys].filter(key => {
       const first = firstBookingByClient.get(key);
-      return !!first?.booking_date && first.booking_date < monthStart;
+      const latestCurrentMonthDate = latestMonthBookingDate.get(key) ?? "";
+      return !!first?.booking_date && !!latestCurrentMonthDate && first.booking_date < latestCurrentMonthDate;
     }).length;
 
     return {
