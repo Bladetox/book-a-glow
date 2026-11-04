@@ -204,11 +204,11 @@ const RevenueTrendCard = ({ revenueTrend, periodRevenue: _periodRevenue, lastPer
     >
 
       <div className="flex items-center justify-between">
-        <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25">Revenue Trend</p>
+        <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25">Collections Trend</p>
         <button
           onClick={() => setShowInfo(v => !v)}
           className="text-white/20 hover:text-white/50 transition-colors"
-          aria-label="Revenue trend info"
+          aria-label="Collections trend info"
         >
           <Info className="w-3.5 h-3.5" />
         </button>
