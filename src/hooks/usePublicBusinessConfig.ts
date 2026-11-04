@@ -9,6 +9,7 @@ export const defaultReferralOptions = [
   "Instagram",
   "Facebook",
   "Referral",
+  "Other",
 ];
 
 export interface PublicBusinessConfig {
