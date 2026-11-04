@@ -284,9 +284,9 @@ export default function ClientAlertsModal({
                       </div>
                       <div className="flex flex-col items-end gap-1.5 shrink-0">
                         <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${badgeColor}`}>
-                          {client.days_since_booking}d ago
+                          {client.days_since_visit}d ago
                         </span>
-                        <span className="text-[10px] text-white/30">Last {formatDate(client.last_booking_date)}</span>
+                        <span className="text-[10px] text-white/30">Last visit {formatDate(client.last_visit_date)}</span>
                         {phone && <WaButton phone={phone} msg={msg} />}
                       </div>
                     </div>
