@@ -208,19 +208,25 @@ export function useDashboardData() {
 
   // 4. Stock alerts
   const { data: stockItems = [] } = useQuery({
-    queryKey:  ["dash-stock", tenantId],
+    queryKey: ["dash-stock", tenantId],
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("stock_inventory")
-        .select("item_name, stock_on_hand")
+        .select("item_name, stock_on_hand, reorder_level")
         .eq("tenant_id", tenantId)
-        .lte("stock_on_hand", 5)
         .order("stock_on_hand");
       if (error) throw error;
       return data ?? [];
     },
   });
+
+  const lowStockItems = useMemo(
+    () => stockItems.filter((item: any) =>
+      Number(item.stock_on_hand ?? 0) <= Number(item.reorder_level ?? 5)
+    ),
+    [stockItems],
+  );
 
   // 5. Staff profiles
   const { data: staffProfiles = [], isLoading: l4 } = useQuery({
@@ -565,14 +571,17 @@ export function useDashboardData() {
       list.push({ text: `${cancelledBookings.length} cancellation${cancelledBookings.length > 1 ? "s" : ""} this month`, type: "info" });
     if (noShowBookings.length > 0)
       list.push({ text: `${noShowBookings.length} no-show${noShowBookings.length > 1 ? "s" : ""} this month`, type: "warning" });
-    stockItems.forEach((s: any) => {
+    lowStockItems.forEach((s: any) => {
+      const reorderLevel = Math.max(1, Number(s.reorder_level ?? 5));
+      const criticalLevel = Math.max(1, Math.floor(reorderLevel / 2));
+      const critical = Number(s.stock_on_hand ?? 0) <= criticalLevel;
       list.push({
-        text: `${s.item_name} - ${s.stock_on_hand <= 2 ? "critical" : "low"} stock (${s.stock_on_hand})`,
-        type: s.stock_on_hand <= 2 ? "danger" : "warning",
+        text: `${s.item_name} - ${critical ? "critical" : "low"} stock (${s.stock_on_hand}; reorder at ${reorderLevel})`,
+        type: critical ? "danger" : "warning",
       });
     });
     return list;
-  }, [bookings, cancelledBookings, noShowBookings, stockItems]);
+  }, [bookings, cancelledBookings, noShowBookings, lowStockItems]);
 
   // ─── return ───────────────────────────────────────────────────────────────
   return {
@@ -628,10 +637,14 @@ export function useDashboardData() {
         status:  b.status as "confirmed" | "pending" | "complete" | "completed" | "cancelled",
         balance: Number(b.balance_due ?? 0),
       })),
-    stockAlerts: stockItems.map((s: any) => ({
-      item:  s.item_name,
-      level: (s.stock_on_hand <= 2 ? "critical" : "low") as "critical" | "low",
-    })),
+    stockAlerts: lowStockItems.map((s: any) => {
+      const reorderLevel = Math.max(1, Number(s.reorder_level ?? 5));
+      const criticalLevel = Math.max(1, Math.floor(reorderLevel / 2));
+      return {
+        item: s.item_name,
+        level: (Number(s.stock_on_hand ?? 0) <= criticalLevel ? "critical" : "low") as "critical" | "low",
+      };
+    }),
     revenueTrend,
     heatmap,
   };
