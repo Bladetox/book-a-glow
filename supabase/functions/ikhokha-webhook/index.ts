@@ -291,9 +291,11 @@ Deno.serve(async (req) => {
             body: {
               booking_id: matchedId,
               email_type:
-                paymentType === "balance" || paymentType === "full"
-                  ? "payment_confirmed"
-                  : "booking_confirmed",
+                paymentType === "balance"
+                  ? "balance_paid"
+                  : paymentType === "full"
+                    ? "full_payment_confirmed"
+                    : "booking_confirmed",
             },
           });
         } catch (emailErr) {
