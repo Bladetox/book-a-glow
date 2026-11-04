@@ -95,6 +95,10 @@ export function useSetupChecklist(): SetupChecklistState {
           ]),
       ]);
 
+      for (const result of [servicesRes, availRes, pricedRes, settingsRes]) {
+        if (result.error) throw result.error;
+      }
+
       const settingsMap: Record<string, string> = {};
       (settingsRes.data ?? []).forEach((row) => {
         if (row.value) settingsMap[row.key] = row.value;
@@ -113,10 +117,11 @@ export function useSetupChecklist(): SetupChecklistState {
   });
 
   const upsertSetting = async (key: string, value: string) => {
-    await supabase
+    const { error } = await supabase
       .from('app_settings')
       .upsert({ tenant_id: tenantId, key, value }, { onConflict: 'tenant_id,key' });
-    qc.invalidateQueries({ queryKey: QUERY_KEY });
+    if (error) throw error;
+    await qc.invalidateQueries({ queryKey: QUERY_KEY });
   };
 
   const dismissMutation = useMutation({
