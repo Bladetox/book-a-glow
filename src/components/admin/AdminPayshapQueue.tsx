@@ -19,8 +19,8 @@ function resolveClaimedAmount(booking: {
   const balance = Number(booking.balanceDue    ?? 0);
 
   if (booking.paymentIntent === "full") return total;
+  if (booking.paymentIntent === "deposit") return deposit;
   if (booking.depositPaid) return balance;
-  if (deposit > 0)         return deposit;
   return total;
 }
 
@@ -32,9 +32,9 @@ function resolveAmountLabel(booking: {
 }): string {
   const deposit = Number(booking.depositAmount ?? 0);
   if (booking.paymentIntent === "full") return "Full payment";
-  if (booking.depositPaid)              return "Balance due";
-  if (deposit > 0)                      return "Deposit";
-  return "Full payment";
+  if (booking.paymentIntent === "deposit") return "Deposit";
+  if (booking.depositPaid) return "Balance due";
+  return "Payment amount";
 }
 
 const AdminPayshapQueue = () => {
