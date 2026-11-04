@@ -16,8 +16,8 @@ export interface InactiveClient {
   client_name: string;
   client_phone: string | null;
   client_email: string | null;
-  last_booking_date: string;
-  days_since_booking: number;
+  last_visit_date: string;
+  days_since_visit: number;
 }
 
 export interface ClientAlerts {
@@ -137,11 +137,11 @@ export function useClientAlerts(tenantIdProp?: string) {
           client_name: activity.name,
           client_phone: activity.phone,
           client_email: activity.email,
-          last_booking_date: lastDate,
-          days_since_booking: daysSince,
+          last_visit_date: lastDate,
+          days_since_visit: daysSince,
         });
       });
-      inactiveClients.sort((a, b) => b.days_since_booking - a.days_since_booking);
+      inactiveClients.sort((a, b) => b.days_since_visit - a.days_since_visit);
 
       return {
         overdueLoyaltyClients: overdueClients,
