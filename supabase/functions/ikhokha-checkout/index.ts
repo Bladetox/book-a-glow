@@ -241,10 +241,9 @@ serve(async (req) => {
       `txn=${externalTransactionID}`
     );
 
-    // ── 10. Email is fired by ikhokha-webhook on payment SUCCESS ──────────
-    // Sending confirmation here (before the client has paid) was dead code.
-    // The webhook handles: deposit/full → booking_confirmed, balance → payment_confirmed.
-
+    // Do not send a booking confirmation when a paylink is merely created.
+    // The verified success callback sends the confirmation after payment.
+    
     return new Response(
       JSON.stringify({
         success:        true,
