@@ -363,8 +363,8 @@ export function useDashboardData() {
 
   // ─── top services (this month) ────────────────────────────────────────────
   const topServices = useMemo(
-    () => buildTopServices(active),
-    [active],
+    () => buildTopServices(booked),
+    [booked],
   );
 
   // ─── all-time top services ────────────────────────────────────────────────
