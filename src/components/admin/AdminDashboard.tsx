@@ -117,24 +117,22 @@ const METRIC_COPY: MetricCopyShape = {
   },
   returning: {
     title: "Returning Clients",
-    explain: "Clients who booked this month and also booked last month — your retained base.",
-    benchmark: "Aim: at least 30–40% of this month's clients should be returning from last month.",
+    explain: "Clients who booked this month and had at least one earlier booking at any point. A client is returning after their first booking.",
   },
   retention: {
-    title: "Retention Rate",
-    explain: "The % of this month's clients who also came back from last month. This is the standard month-over-month retention measure.",
-    benchmark: "Target: 40%+ for beauty. World-class salons exceed 60%.",
+    title: "Returning Client Share",
+    explain: "The percentage of this month's identifiable clients who had booked before this month. This is a repeat-client share, not a month-over-month cohort retention calculation.",
   },
   leadSource: {
     title: "Original Client Acquisition",
-    explain: "Where each client first discovered your business, counted once using their first booking. Repeat bookings do not increase these figures. Clients with missing or non-channel values are included as Not recorded.",
+    explain: "The first acquisition source recorded on each identifiable client's earliest booking. Each client is counted once. Repeat bookings do not increase the count. Missing or non-channel values are shown as Not recorded.",
     benchmark: "Use this breakdown to understand which channels are bringing new clients into your business.",
   },
   revenueTrend: [
     { term: "Revenue Trend", def: "Daily revenue plotted across the month." },
     { term: "Peak Days", def: "The tallest bars are your best earning days." },
     { term: "Flat / Zero Bars", def: "Days with no revenue. Quiet days may need a targeted push." },
-    { term: "Month-on-Month", def: "Compare this to last month to see if revenue is growing." },
+    { term: "Period comparison", def: "The selected number of days is compared with the immediately preceding equal-length period." },
   ],
   heatmap: [
     { term: "Booking Heatmap", def: "Shows which days and time slots get the most bookings." },
@@ -754,7 +752,7 @@ export const AdminDashboardView = ({
           <div className="grid grid-cols-3 gap-3">
             <ClientMiniCard id="ci-total" icon={UserPlus} value={String(totalClients)} label="Total" iconColor="text-blue-400" valueColor="text-white/90" {...METRIC_COPY.clients} onExpand={setExpandedCard} />
             <ClientMiniCard id="ci-returning" icon={UserCheck} value={String(returningCount)} label="Returning" iconColor="text-emerald-400" valueColor="text-emerald-400" {...METRIC_COPY.returning} onExpand={setExpandedCard} />
-            <ClientMiniCard id="ci-retention" icon={Star} value={retentionDisp} label="Retention" iconColor="text-amber-400" valueColor={retentionColor} {...METRIC_COPY.retention} onExpand={setExpandedCard} />
+            <ClientMiniCard id="ci-retention" icon={Star} value={retentionDisp} label="Repeat share" iconColor="text-amber-400" valueColor={retentionColor} {...METRIC_COPY.retention} onExpand={setExpandedCard} />
           </div>
         </motion.section>
       )}
