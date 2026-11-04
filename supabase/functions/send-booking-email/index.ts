@@ -1118,10 +1118,22 @@ Deno.serve(async (req) => {
       location:  calendarLocation,
     });
 
+    const sentEmailIds: string[] = [];
     const send = async (payload: Record<string, unknown>) => {
+      const recipients = Array.isArray(payload.to)
+        ? payload.to.map((value) => String(value)).sort().join(",")
+        : String(payload.to ?? "");
+      const idempotencyKey = btoa(`${booking.id}|${email_type}|${recipients}`)
+        .replace(/[^a-zA-Z0-9]/g, "")
+        .slice(0, 180);
+
       const res = await fetch(RESEND_API_URL, {
         method: "POST",
-        headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
+        headers: {
+          "Authorization": `Bearer ${resendKey}`,
+          "Content-Type": "application/json",
+          "Idempotency-Key": idempotencyKey,
+        },
         body: JSON.stringify(payload),
       });
       const responseBody = await res.json().catch(() => null);
@@ -1129,7 +1141,12 @@ Deno.serve(async (req) => {
         console.error(`Resend rejected email [${payload.subject}]:`, res.status, responseBody);
         throw new Error(`Resend email request failed with HTTP ${res.status}`);
       }
-      console.log(`Email accepted [${payload.subject}]:`, res.status, JSON.stringify(responseBody));
+      if (!responseBody?.id || typeof responseBody.id !== "string") {
+        console.error(`Resend returned no message ID [${payload.subject}]:`, responseBody);
+        throw new Error("Resend did not confirm an accepted email message");
+      }
+      sentEmailIds.push(responseBody.id);
+      console.log(`Email accepted [${payload.subject}]:`, res.status, responseBody.id);
       return responseBody;
     };
 
@@ -1851,7 +1868,27 @@ Deno.serve(async (req) => {
       });
     }
 
-    return new Response(JSON.stringify({ success: true, email_type }), {
+    if (sentEmailIds.length === 0) {
+      console.error("send-booking-email: no message was sent for supported email type", {
+        booking_id,
+        email_type,
+        has_client_email: Boolean(clientEmail),
+        has_tenant_email: Boolean(tenantEmail),
+      });
+      return new Response(JSON.stringify({
+        success: false,
+        error: "No eligible recipient received an email",
+        email_type,
+      }), {
+        status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    return new Response(JSON.stringify({
+      success: true,
+      email_type,
+      message_ids: sentEmailIds,
+    }), {
       status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 
