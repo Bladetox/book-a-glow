@@ -3,7 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { usePublicTenant } from "@/contexts/PublicTenantContext";
 
 export const defaultReferralOptions = [
-  "Returning Client",
   "TikTok",
   "Website",
   "Google",
@@ -157,11 +156,19 @@ export function usePublicBusinessConfig(): PublicBusinessConfig & { loading: boo
   const s = appSettings ?? {};
   const t = tenantRow ?? null;
 
+  const isAcquisitionChannel = (value: unknown) => {
+    const label = String(value ?? "").trim().toLowerCase();
+    return !!label && !["returning", "returning client", "existing", "existing client", "new", "new client"].includes(label);
+  };
+
   let referralOptions = defaults.referralOptions;
   if (s.referral_options) {
     try {
       const parsed = JSON.parse(s.referral_options);
-      if (Array.isArray(parsed) && parsed.length > 0) referralOptions = parsed;
+      if (Array.isArray(parsed)) {
+        const valid = parsed.map(String).filter(isAcquisitionChannel);
+        if (valid.length > 0) referralOptions = valid;
+      }
     } catch {
       // ignore parse error, use defaults
     }
