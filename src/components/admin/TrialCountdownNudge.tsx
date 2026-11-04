@@ -10,14 +10,16 @@
  */
 
 import { useMemo } from "react";
+import { differenceInCalendarDays, isSameDay } from "date-fns";
 import { Hourglass } from "lucide-react";
 import { useTenant } from "@/contexts/TenantContext";
 import { getAccountState } from "@/hooks/useFeatureFlags";
 
 function getDaysLeft(trialEndsAt: string | null | undefined): number | null {
   if (!trialEndsAt) return null;
-  const ms = new Date(trialEndsAt).getTime() - Date.now();
-  return Math.max(0, Math.ceil(ms / (1000 * 60 * 60 * 24)));
+  const end = new Date(trialEndsAt);
+  if (Number.isNaN(end.getTime())) return null;
+  return Math.max(0, differenceInCalendarDays(end, new Date()));
 }
 
 export function TrialCountdownNudge() {
@@ -38,7 +40,7 @@ export function TrialCountdownNudge() {
   // Only show during trial, within the last 7 days
   if (accountState !== "trial" || daysLeft === null || daysLeft > 7) return null;
 
-  const isLastDay = daysLeft <= 1;
+  const isLastDay = !!tenant?.trial_ends_at && isSameDay(new Date(tenant.trial_ends_at), new Date());
 
   const message = isLastDay
     ? "Your free trial ends today — upgrade to keep everything running."
