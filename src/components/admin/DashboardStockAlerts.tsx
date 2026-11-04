@@ -26,12 +26,23 @@ interface DashboardStockAlertsProps {
 
 const fadeUp = { initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 } };
 
-const DashboardStockAlerts = ({ stockAlerts, onNavigate: _onNavigate }: DashboardStockAlertsProps) => {
+const DashboardStockAlerts = ({ stockAlerts, onNavigate }: DashboardStockAlertsProps) => {
   if (stockAlerts.length === 0) return null;
 
   return (
     <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.2 }}>
-      <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25 mb-3">Stock Alerts</p>
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25">Stock Alerts</p>
+        {onNavigate && (
+          <button
+            type="button"
+            onClick={() => onNavigate("Stock")}
+            className="text-[10px] font-medium text-white/40 hover:text-white/75 transition-colors"
+          >
+            Manage stock →
+          </button>
+        )}
+      </div>
       <div className="flex flex-col gap-2">
         {stockAlerts.map((item: StockAlertItem, i: number) => (
           <div
