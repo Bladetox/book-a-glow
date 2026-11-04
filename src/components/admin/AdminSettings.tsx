@@ -14,6 +14,7 @@ import {
   useUpsertAppSetting,
 } from "@/hooks/useSupabaseSettings";
 import { useTenant } from "@/contexts/TenantContext";
+import { defaultReferralOptions } from "@/hooks/usePublicBusinessConfig";
 import { toast } from "sonner";
 import { ConsultationFormBuilder } from "./ConsultationFormBuilder";
 import { AdminBilling } from "./AdminBilling";
@@ -307,14 +308,14 @@ const AdminSettings = () => {
   useEffect(() => {
     const raw = appSettings.referral_options;
     if (!raw) {
-      setReferralOptionsText("");
+      setReferralOptionsText(defaultReferralOptions.join("\n"));
       return;
     }
     try {
       const parsed: unknown = JSON.parse(raw);
       setReferralOptionsText(Array.isArray(parsed) ? parsed.map(String).join("\n") : "");
     } catch {
-      setReferralOptionsText("");
+      setReferralOptionsText(defaultReferralOptions.join("\n"));
     }
   }, [appSettings.referral_options]);
 
