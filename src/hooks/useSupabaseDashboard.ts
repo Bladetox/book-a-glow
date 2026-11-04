@@ -142,6 +142,7 @@ export function useDashboardData() {
     };
 
     const channel = supabase.channel(`dashboard-data-${tenantId}`);
+    // Subscribe only to INSERT and UPDATE. DELETE payloads do not reliably carry tenant_id for filtering.
     const subscribeToTenantChanges = (table: string, queryKey: unknown[]) => {
       const filter = `tenant_id=eq.${tenantId}`;
       channel
