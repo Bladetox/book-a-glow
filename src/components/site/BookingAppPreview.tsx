@@ -55,7 +55,7 @@ const TENANT_BY_ID: Record<string, TenantMeta> = {
       { id: "4", name: "Event Makeup",    duration: 45, price: 1200, category: "event" },
       { id: "5", name: "Natural Glow",    duration: 40, price:  900, category: "event" },
     ],
-    referralOptions: ["Returning Client", "Instagram", "Google", "Friend", "TikTok", "Walk-in"],
+    referralOptions: ["Instagram", "Google", "Friend", "TikTok", "Walk-in"],
   },
   "beautician": {
     name: "Glow Studio",
@@ -78,7 +78,7 @@ const TENANT_BY_ID: Record<string, TenantMeta> = {
       { id: "4", name: "Brazilian Wax",     duration: 30, price:  450, category: "waxing" },
       { id: "5", name: "Back Treatment",    duration: 45, price:  800, category: "body" },
     ],
-    referralOptions: ["Returning Client", "Instagram", "Google", "Friend", "Referral", "Walk-in"],
+    referralOptions: ["Instagram", "Google", "Friend", "Referral", "Walk-in"],
   },
   "tattoo-artist": {
     name: "Ink Vault Studio",
@@ -101,7 +101,7 @@ const TENANT_BY_ID: Record<string, TenantMeta> = {
       { id: "4", name: "Touch-up",        duration:  45, price:  800, category: "other" },
       { id: "5", name: "Consultation",    duration:  30, price:  300, category: "other" },
     ],
-    referralOptions: ["Returning Client", "Instagram", "Google", "Friend", "TikTok", "Walk-in"],
+    referralOptions: ["Instagram", "Google", "Friend", "TikTok", "Walk-in"],
   },
   "lash-tech": {
     name: "Luxe Lash Co.",
@@ -124,7 +124,7 @@ const TENANT_BY_ID: Record<string, TenantMeta> = {
       { id: "4", name: "Lash Infill",       duration: 60, price:  750, category: "maintenance" },
       { id: "5", name: "Lash Removal",      duration: 30, price:  350, category: "maintenance" },
     ],
-    referralOptions: ["Returning Client", "Instagram", "Google", "Friend", "Referral", "Walk-in"],
+    referralOptions: ["Instagram", "Google", "Friend", "Referral", "Walk-in"],
   },
   "barber": {
     name: "Blade & Co.",
@@ -147,7 +147,7 @@ const TENANT_BY_ID: Record<string, TenantMeta> = {
       { id: "4", name: "Beard Sculpt",     duration: 30, price: 350, category: "beard" },
       { id: "5", name: "Shape-up",         duration: 20, price: 200, category: "beard" },
     ],
-    referralOptions: ["Returning Client", "Instagram", "Google", "Friend", "Walk-in", "Drive-by"],
+    referralOptions: ["Instagram", "Google", "Friend", "Walk-in", "Drive-by"],
   },
   "nail-tech": {
     name: "Polish & Press",
@@ -170,7 +170,7 @@ const TENANT_BY_ID: Record<string, TenantMeta> = {
       { id: "4", name: "Nail Art Session", duration: 90, price: 1100, category: "art" },
       { id: "5", name: "Press-On Set",    duration: 45, price:  700, category: "art" },
     ],
-    referralOptions: ["Returning Client", "Instagram", "Google", "Friend", "TikTok", "Walk-in"],
+    referralOptions: ["Instagram", "Google", "Friend", "TikTok", "Walk-in"],
   },
   "standard": {
     name: "NextSlot Demo",
