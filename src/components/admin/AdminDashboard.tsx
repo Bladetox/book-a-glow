@@ -129,9 +129,9 @@ const METRIC_COPY: MetricCopyShape = {
     benchmark: "Use this breakdown to understand which channels are bringing new clients into your business.",
   },
   revenueTrend: [
-    { term: "Revenue Trend", def: "Daily revenue plotted across the month." },
-    { term: "Peak Days", def: "The tallest bars are your best earning days." },
-    { term: "Flat / Zero Bars", def: "Days with no revenue. Quiet days may need a targeted push." },
+    { term: "Collections Trend", def: "Daily completed payment receipts recorded across the month." },
+    { term: "Peak Days", def: "The tallest bars are the days with the highest payment collections." },
+    { term: "Flat / Zero Bars", def: "No payment receipt was recorded that day. Bookings may still have occurred." },
     { term: "Period comparison", def: "The selected number of days is compared with the immediately preceding equal-length period." },
   ],
   heatmap: [
@@ -669,10 +669,10 @@ export const AdminDashboardView = ({
                 </div>
                 <p className="text-[10px] text-white/25 tabular-nums">
                   {beatLastMonth
-                    ? "Last month beaten \u2713"
+                    ? "Last month's collections beaten \u2713"
                     : rToGo !== null
-                      ? `R ${rToGo.toLocaleString()} to beat last month`
-                      : `${progressPct}% of last month`}
+                      ? `R ${rToGo.toLocaleString()} to match last month's collections`
+                      : `${progressPct}% of last month's collections`}
                 </p>
               </div>
             )}
