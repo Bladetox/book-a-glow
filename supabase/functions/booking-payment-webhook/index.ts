@@ -354,7 +354,10 @@ Deno.serve(async (req) => {
   // ── Build booking update ─────────────────────────────────────────────────────
   // If booking is cancelled, record payment but DO NOT flip status back.
   const isCancelled = booking.status === "cancelled";
-  let bookingUpdate: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  let bookingUpdate: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+    payment_provider: "yoco",
+  };
   let emailType: string;
 
   if (paymentType === "deposit") {
