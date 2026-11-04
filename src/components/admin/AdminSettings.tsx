@@ -263,6 +263,7 @@ const AdminSettings = () => {
   const [confirmPw, setConfirmPw] = useState("");
   const [pwError, setPwError] = useState("");
   const [pwSuccess, setPwSuccess] = useState("");
+  const [referralOptionsText, setReferralOptionsText] = useState("");
 
   const flash = useCallback((section: string) => {
     setSaved(section);
@@ -303,6 +304,20 @@ const AdminSettings = () => {
     if (Object.keys(appSettings).length > 0) setDraft((prev) => ({ ...prev, ...appSettings }));
   }, [appSettings]);
 
+  useEffect(() => {
+    const raw = appSettings.referral_options;
+    if (!raw) {
+      setReferralOptionsText("");
+      return;
+    }
+    try {
+      const parsed: unknown = JSON.parse(raw);
+      setReferralOptionsText(Array.isArray(parsed) ? parsed.map(String).join("\n") : "");
+    } catch {
+      setReferralOptionsText("");
+    }
+  }, [appSettings.referral_options]);
+
   const update = (field: string, value: string) => setDraft((prev) => ({ ...prev, [field]: value }));
 
   const saveTenantFields = (section: string, fields: string[]) => {
@@ -341,6 +356,29 @@ const AdminSettings = () => {
       onSuccess: () => flash(section),
       onError: (err: any) => toast.error(err?.message ?? "Save failed"),
     });
+  };
+
+  const saveReferralOptions = () => {
+    const channels = referralOptionsText
+      .split("\n")
+      .map((channel) => channel.trim())
+      .filter(Boolean);
+    const unique = new Set(channels.map((channel) => channel.toLocaleLowerCase()));
+    if (channels.length === 0) {
+      toast.error("Add at least one acquisition channel.");
+      return;
+    }
+    if (unique.size !== channels.length) {
+      toast.error("Remove duplicate channel names before saving.");
+      return;
+    }
+    upsertSetting.mutate(
+      { referral_options: JSON.stringify(channels) },
+      {
+        onSuccess: () => flash("referral"),
+        onError: (err: any) => toast.error(err?.message ?? "Could not save acquisition channels"),
+      },
+    );
   };
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -511,6 +549,27 @@ const AdminSettings = () => {
             <div className="flex items-center gap-3">
               <SaveBtn onClick={() => saveSettings("splash", ["splash_welcome_label", "splash_tagline1", "splash_tagline2", "splash_cta_label"])} loading={upsertSetting.isPending} />
               <SavedBadge section="splash" />
+            </div>
+          </SettingsCard>
+          <SettingsCard title="Acquisition Channels" icon={Star} gradient="from-white/[0.05] to-white/[0.02]" collapsible>
+            <p className="text-xs text-white/35 leading-relaxed">
+              Manage the options guests can select when booking. Enter one channel per line and keep names consistent for reliable reporting.
+            </p>
+            <textarea
+              id="acquisition-channels"
+              name="acquisition-channels"
+              value={referralOptionsText}
+              onChange={(e) => setReferralOptionsText(e.target.value)}
+              rows={7}
+              placeholder={"TikTok\nInstagram\nGoogle Search\nGoogle Maps\nWebsite\nReferral\nReturning Client"}
+              className="w-full px-4 py-3 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors resize-y"
+            />
+            <p className="text-[10px] text-white/25 leading-relaxed">
+              These are guest-reported answers, not independently verified referral data. Keep Returning Client as a separate repeat-client classification. Existing bookings retain their saved channel.
+            </p>
+            <div className="flex items-center gap-3">
+              <SaveBtn onClick={saveReferralOptions} loading={upsertSetting.isPending} />
+              <SavedBadge section="referral" />
             </div>
           </SettingsCard>
         </div>

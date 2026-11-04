@@ -31,6 +31,7 @@ const ALLOWED_APP_SETTING_KEYS = [
   "splash_tagline1",
   "splash_tagline2",
   "splash_cta_label",
+  "referral_options",
   "confirmation_subject",
   "confirmation_title",
   "confirmation_intro",
