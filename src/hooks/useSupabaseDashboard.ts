@@ -141,36 +141,37 @@ export function useDashboardData() {
       void queryClient.invalidateQueries({ queryKey });
     };
 
-    const channel = supabase
-      .channel(`dashboard-data-${tenantId}`)
+    const channel = supabase.channel(`dashboard-data-${tenantId}`);
+    const subscribeToTenantChanges = (table: string, queryKey: unknown[]) => {
+      const filter = `tenant_id=eq.${tenantId}`;
+      channel
+        .on("postgres_changes", { event: "INSERT", schema: "public", table, filter }, () => invalidate(queryKey))
+        .on("postgres_changes", { event: "UPDATE", schema: "public", table, filter }, () => invalidate(queryKey));
+    };
+
+    subscribeToTenantChanges("bookings", ["dash-bookings", tenantId]);
+    subscribeToTenantChanges("payments", ["dash-payments", tenantId]);
+    subscribeToTenantChanges("staff_availability", ["dash-availability", tenantId]);
+    subscribeToTenantChanges("stock_inventory", ["dash-stock", tenantId]);
+    subscribeToTenantChanges("profiles", ["dash-staff-profiles", tenantId]);
+    subscribeToTenantChanges("loyalty_tracker", ["client-alerts", tenantId]);
+
+    // Booking changes affect the all-time acquisition and client-alert datasets too.
+    channel
       .on("postgres_changes", {
-        event: "*", schema: "public", table: "bookings",
+        event: "INSERT", schema: "public", table: "bookings",
         filter: `tenant_id=eq.${tenantId}`,
       }, () => {
-        invalidate(["dash-bookings", tenantId]);
         invalidate(["dash-alltime-bookings", tenantId]);
         invalidate(["client-alerts", tenantId]);
       })
       .on("postgres_changes", {
-        event: "*", schema: "public", table: "payments",
+        event: "UPDATE", schema: "public", table: "bookings",
         filter: `tenant_id=eq.${tenantId}`,
-      }, () => invalidate(["dash-payments", tenantId]))
-      .on("postgres_changes", {
-        event: "*", schema: "public", table: "staff_availability",
-        filter: `tenant_id=eq.${tenantId}`,
-      }, () => invalidate(["dash-availability", tenantId]))
-      .on("postgres_changes", {
-        event: "*", schema: "public", table: "stock_inventory",
-        filter: `tenant_id=eq.${tenantId}`,
-      }, () => invalidate(["dash-stock", tenantId]))
-      .on("postgres_changes", {
-        event: "*", schema: "public", table: "profiles",
-        filter: `tenant_id=eq.${tenantId}`,
-      }, () => invalidate(["dash-staff-profiles", tenantId]))
-      .on("postgres_changes", {
-        event: "*", schema: "public", table: "loyalty_tracker",
-        filter: `tenant_id=eq.${tenantId}`,
-      }, () => invalidate(["client-alerts", tenantId]))
+      }, () => {
+        invalidate(["dash-alltime-bookings", tenantId]);
+        invalidate(["client-alerts", tenantId]);
+      })
       .subscribe();
 
     return () => {
