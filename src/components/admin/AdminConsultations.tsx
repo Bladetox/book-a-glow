@@ -135,7 +135,7 @@ function exportCSV(rows: any[]) {
         booking?.booking_date ?? "",
         fmtTime(booking?.start_time) ?? "",
         c.has_form ? "Form on file" : "No form yet",
-        booking?.lead_source ?? "",   // ← from bookings
+        c.firstBooking?.lead_source ?? "",   // original acquisition channel from first booking
         services,
         c.skin_conditions ?? "", c.medications ?? "", c.allergies ?? "",
         c.health_conditions ?? "", c.pregnancy ?? "",
@@ -173,10 +173,13 @@ const AdminConsultations = () => {
         .select(`
           *,
           booking:bookings!guest_consultations_last_booking_id_fkey(
-            booking_date, start_time, lead_source,
+            booking_date, start_time,
             guest_name, guest_email, guest_phone,
             client:profiles!bookings_client_id_fkey(full_name, email, phone),
             items:booking_items(service_name, price, sort_order)
+          ),
+          firstBooking:bookings!guest_consultations_first_booking_id_fkey(
+            lead_source
           )
         `)
         .eq("tenant_id", tenantId)
@@ -295,9 +298,11 @@ const AdminConsultations = () => {
               ? formatDistanceToNow(new Date(c.updated_at), { addSuffix: true })
               : null;
 
-            // lead_source lives on the booking, not the consultation
-            const leadCfg = getLeadSourceConfig(booking?.lead_source);
-            const hasLeadSource = !!booking?.lead_source;
+            // Acquisition is attributed to the first booking, not the latest return visit.
+            // Never substitute a later booking's source when the original source is unknown.
+            const acquisitionSource = c.firstBooking?.lead_source ?? null;
+            const leadCfg = getLeadSourceConfig(acquisitionSource);
+            const hasLeadSource = !!acquisitionSource?.trim();
 
             // health fields
             const healthFields = [
