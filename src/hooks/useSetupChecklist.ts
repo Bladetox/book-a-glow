@@ -58,7 +58,9 @@ export function useSetupChecklist(): SetupChecklistState {
         supabase
           .from('services')
           .select('id', { count: 'exact', head: true })
-          .eq('tenant_id', tenantId),
+          .eq('tenant_id', tenantId)
+          .eq('is_active', true)
+          .or('is_archived.is.null,is_archived.eq.false'),
 
         // Gate 2: any availability rows?
         supabase
@@ -75,6 +77,8 @@ export function useSetupChecklist(): SetupChecklistState {
           .from('services')
           .select('id', { count: 'exact', head: true })
           .eq('tenant_id', tenantId)
+          .eq('is_active', true)
+          .or('is_archived.is.null,is_archived.eq.false')
           .gt('price', 0),
 
         // Gates 4, 5 & 6: payment_setup_complete, booking_link_shared,
