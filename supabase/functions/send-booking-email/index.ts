@@ -1363,6 +1363,61 @@ Deno.serve(async (req) => {
           `Your appointment with ${tenantName} is confirmed.`
         ),
       });
+      // Send the business owner a matching notification after the client
+      // confirmation. This is a separate email side effect; payment state is
+      // already reconciled by the caller and is not changed here.
+      if (tenantEmail) {
+        const gcalOwnerLink = buildGcalLink({
+          title: `${serviceNames} — ${clientName}`,
+          startDate: booking.booking_date,
+          startTime: booking.start_time,
+          endTime: (booking.end_time as string | null),
+          details: `Client: ${clientName} | Phone: ${clientPhone} | Deposit received: ${depositAmount} | Balance due: ${balanceDue}`,
+          location: tenantLocationDisplay || "",
+        });
+        const ownerHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="supported-color-schemes" content="light dark">
+  <style>${OWNER_STYLES}</style>
+</head>
+<body class="ob" style="margin:0;padding:24px 16px;background:#f2f2f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+<table class="ow" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#fff;border-radius:10px;border:1px solid #e0e0e0;overflow:hidden;">
+  <tr><td style="padding:28px 28px 10px;">
+    <p class="ot" style="margin:0 0 4px;font-size:18px;font-weight:700;color:#000;">Deposit received ✓</p>
+    <p class="ol" style="margin:0 0 20px;font-size:12px;color:#888;">The booking is confirmed and the remaining balance is outstanding.</p>
+    <table width="100%" cellpadding="0" cellspacing="0">
+      ${row("Client", escapeHtml(clientName))}
+      ${row("Phone", escapeHtml(clientPhone || "—"))}
+      ${row("Service", escapeHtml(serviceNames))}
+      ${row("Date", escapeHtml(formattedDate))}
+      ${row("Time", escapeHtml(formattedTime))}
+      ${row("Total", totalAmount)}
+      ${row("Deposit received", depositAmount, true)}
+      ${row("Balance due", balanceDue, true)}
+    </table>
+  </td></tr>
+  <tr><td style="padding:16px 28px 22px;">
+    ${calendarButton(gcalOwnerLink)}
+    <p style="margin:18px 0 0;"><a href="${appBaseUrl}/admin" style="color:#111;font-size:13px;font-weight:600;">Open NextSlot dashboard</a></p>
+  </td></tr>
+  <tr><td style="padding:12px 28px 18px;background:#f7f7f7;border-top:1px solid #ebebeb;">
+    <p style="margin:0;font-size:11px;color:#999;">Sent by NextSlot &middot; ${new Date().getFullYear()}</p>
+  </td></tr>
+</table>
+</body></html>`;
+
+        await send({
+          from: `NextSlot <bookings@nextslot.co.za>`,
+          reply_to: tenantEmail,
+          to: [tenantEmail],
+          subject: `Deposit received — ${clientName} on ${formattedDate}`,
+          html: ownerHtml,
+        });
+      }
     }
 
     if (email_type === "full_payment_confirmed") {
