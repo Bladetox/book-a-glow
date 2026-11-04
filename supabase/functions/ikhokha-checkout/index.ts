@@ -119,6 +119,45 @@ serve(async (req) => {
 
     const adminClient = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Resolve the payable amount from the tenant-scoped booking row.
+    // Never trust amount_cents supplied by the browser.
+    const { data: booking, error: bookingError } = await adminClient
+      .from("bookings")
+      .select("id, tenant_id, total_amount, deposit_amount, balance_due, deposit_paid, final_payment_paid")
+      .eq("id", booking_id)
+      .eq("tenant_id", tenant_id)
+      .maybeSingle();
+
+    if (bookingError) throw bookingError;
+    if (!booking) throw new Error("Booking not found for this tenant");
+
+    let expectedAmount: number;
+    if (payment_type === "balance") {
+      if (!booking.deposit_paid) throw new Error("A balance payment is only available after the deposit is paid");
+      expectedAmount = Number(booking.balance_due) > 0
+        ? Number(booking.balance_due)
+        : Math.max(0, Number(booking.total_amount) - Number(booking.deposit_amount));
+    } else if (payment_type === "full") {
+      if (booking.final_payment_paid) throw new Error("Final payment already made");
+      expectedAmount = Number(booking.total_amount);
+    } else {
+      if (booking.deposit_paid) throw new Error("Deposit already paid");
+      expectedAmount = Number(booking.deposit_amount);
+    }
+
+    const expectedAmountCents = Math.round(expectedAmount * 100);
+    if (!Number.isFinite(expectedAmountCents) || expectedAmountCents <= 0) {
+      throw new Error("The calculated payment amount is invalid");
+    }
+    if (Number(amount_cents) !== expectedAmountCents) {
+      console.warn("[ikhokha-checkout] ignoring client amount that differs from booking amount", {
+        booking_id,
+        requested_amount_cents: amount_cents,
+        expected_amount_cents: expectedAmountCents,
+      });
+    }
+    const checkoutAmountCents = expectedAmountCents;
+
     // ── 3. Verify caller owns this tenant ──────────────────────────────────
     const { data: tenant, error: tenantError } = await adminClient
       .from("tenants")
@@ -139,7 +178,7 @@ serve(async (req) => {
       .from("app_settings")
       .select("key, value")
       .eq("tenant_id", tenant_id)
-      .in("key", ["ikhokha_app_id", "ikhokha_app_key", "ikhokha_mode"]);
+      .in("key", ["ikhokha_app_id", "ikhokha_app_key", "ikhokha_mode", "requires_deposit"]);
 
     if (settingsErr) throw settingsErr;
 
@@ -153,6 +192,10 @@ serve(async (req) => {
     if (!appId || !appKey)
       throw new Error("iKhokha credentials not configured for this tenant");
 
+    if (payment_type === "deposit" && settings.requires_deposit !== "true") {
+      throw new Error("This business requires full payment at booking");
+    }
+
     // ── 5. Derive webhook callback URL ─────────────────────────────────────
     const callbackUrl = `${supabaseUrl}/functions/v1/ikhokha-webhook`;
 
@@ -162,7 +205,7 @@ serve(async (req) => {
     // ── 7. Build iKhokha request payload ──────────────────────────────────
     const ikPayload = {
       entityID:             appId,
-      amount:               amount_cents,
+      amount:               checkoutAmountCents,
       currency:             "ZAR",
       requesterUrl:         return_url,
       mode,
@@ -181,7 +224,7 @@ serve(async (req) => {
 
     console.log(
       `[ikhokha-checkout] tenant=${tenant_id} booking=${booking_id} ` +
-      `type=${payment_type} amount=${amount_cents} mode=${mode}`
+      `type=${payment_type} amount=${checkoutAmountCents} mode=${mode}`
     );
 
     // ── 8. Call iKhokha API ────────────────────────────────────────────────
