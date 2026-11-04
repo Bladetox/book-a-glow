@@ -171,6 +171,8 @@ export function useDashboardData() {
   const trendWindowDays = 180;
   const trendStartDate  = format(subDays(now, trendWindowDays),     "yyyy-MM-dd");
   const fetchFromDate   = format(subDays(now, trendWindowDays + 1), "yyyy-MM-dd");
+  const paymentsFromISO = new Date(`${fetchFromDate}T00:00:00`).toISOString();
+  const paymentsThroughISO = new Date(`${todayStr}T23:59:59.999`).toISOString();
 
   // 1. Bookings — current month
   const { data: bookings = [], isLoading: l1 } = useQuery({
@@ -232,8 +234,8 @@ export function useDashboardData() {
         .select("amount, created_at, payment_type")
         .eq("tenant_id", tenantId)
         .in("status", ["completed", "paid"])
-        .gte("created_at", fetchFromDate)
-        .lte("created_at", todayStr + "T23:59:59");
+        .gte("created_at", paymentsFromISO)
+        .lte("created_at", paymentsThroughISO);
       if (error) throw error;
       return data ?? [];
     },
@@ -310,7 +312,7 @@ export function useDashboardData() {
   // ─── payment slices ──────────────────────────────────────────────────────
   const thisMonthPayments = useMemo(
     () => allPayments.filter((p: any) => {
-      const d = (p.created_at ?? "").slice(0, 10);
+      const d = (p.created_at ? format(new Date(p.created_at), "yyyy-MM-dd") : "");
       return d >= monthStart && d <= monthEnd;
     }),
     [allPayments, monthStart, monthEnd],
@@ -318,10 +320,18 @@ export function useDashboardData() {
 
   const prevMonthPayments = useMemo(
     () => allPayments.filter((p: any) => {
-      const d = (p.created_at ?? "").slice(0, 10);
-      return d >= prevStart && d <= prevMonthComparableEnd;
+      const d = p.created_at ? format(new Date(p.created_at), "yyyy-MM-dd") : "";
+      return d >= prevStart && d <= prevEnd;
     }),
     [allPayments, prevStart, prevEnd],
+  );
+
+  const prevMonthComparablePayments = useMemo(
+    () => allPayments.filter((p: any) => {
+      const d = p.created_at ? format(new Date(p.created_at), "yyyy-MM-dd") : "";
+      return d >= prevStart && d <= prevMonthComparableEnd;
+    }),
+    [allPayments, prevStart, prevMonthComparableEnd],
   );
 
   // ─── revenue totals ───────────────────────────────────────────────────────
@@ -335,9 +345,14 @@ export function useDashboardData() {
     [prevMonthPayments],
   );
 
+  const prevMonthComparableRevenue = useMemo(
+    () => prevMonthComparablePayments.reduce((s: number, p: any) => s + Number(p.amount ?? 0), 0),
+    [prevMonthComparablePayments],
+  );
+
   const todayRevenue = useMemo(
     () => allPayments
-      .filter((p: any) => (p.created_at ?? "").slice(0, 10) === todayStr)
+      .filter((p: any) => (p.created_at ? format(new Date(p.created_at), "yyyy-MM-dd") : "") === todayStr)
       .reduce((s: number, p: any) => s + Number(p.amount ?? 0), 0),
     [allPayments, todayStr],
   );
@@ -402,7 +417,7 @@ export function useDashboardData() {
   const revenueTrend = useMemo(() => {
     const paymentsMap: Record<string, number> = {};
     allPayments.forEach((p: any) => {
-      const date = (p.created_at ?? "").slice(0, 10);
+      const date = (p.created_at ? format(new Date(p.created_at), "yyyy-MM-dd") : "");
       if (date >= trendStartDate && date <= todayStr) {
         paymentsMap[date] = (paymentsMap[date] || 0) + Number(p.amount ?? 0);
       }
@@ -587,6 +602,7 @@ export function useDashboardData() {
       month:     monthRevenue,
       today:     todayRevenue,
       lastMonth: prevMonthRevenue,
+      lastMonthToDate: prevMonthComparableRevenue,
     },
     today: {
       appointments: todayBookings.filter((b: any) => b.status !== "cancelled" && b.status !== "no_show").length,
