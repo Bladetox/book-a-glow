@@ -481,14 +481,14 @@ export function useDashboardData() {
   );
 
   const { clientKeySet, returningCount, retentionRate, newClientCount } = useMemo(() => {
-    const firstBookingByClient = new Map<string, any>();
+    const firstCompletedVisitByClient = new Map<string, string>();
     allTimeBookings.forEach((b: any) => {
+      if (b.status !== "completed") return;
       const key = identityKeys.get(b.id);
-      if (!key) return;
-      const previous = firstBookingByClient.get(key);
-      if (!previous || String(b.booking_date ?? "9999-12-31") < String(previous.booking_date ?? "9999-12-31") ||
-          (b.booking_date === previous.booking_date && String(b.created_at ?? "") < String(previous.created_at ?? ""))) {
-        firstBookingByClient.set(key, b);
+      if (!key || !b.booking_date) return;
+      const previousDate = firstCompletedVisitByClient.get(key);
+      if (!previousDate || b.booking_date < previousDate) {
+        firstCompletedVisitByClient.set(key, b.booking_date);
       }
     });
 
@@ -502,9 +502,9 @@ export function useDashboardData() {
     });
     const keys = new Set(latestMonthBookingDate.keys());
     const returning = [...keys].filter(key => {
-      const first = firstBookingByClient.get(key);
+      const firstCompletedVisit = firstCompletedVisitByClient.get(key);
       const latestCurrentMonthDate = latestMonthBookingDate.get(key) ?? "";
-      return !!first?.booking_date && !!latestCurrentMonthDate && first.booking_date < latestCurrentMonthDate;
+      return !!firstCompletedVisit && !!latestCurrentMonthDate && firstCompletedVisit < latestCurrentMonthDate;
     }).length;
 
     return {
