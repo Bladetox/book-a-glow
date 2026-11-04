@@ -390,7 +390,10 @@ Deno.serve(async (req) => {
       balance_due: 0,
       full_payment_received: true,
       final_payment_paid: true,
-      ...(!isCancelled && { status: "confirmed" }),
+      ...(!isCancelled && {
+        status: "confirmed",
+        confirmed_at: booking.confirmed_at ?? new Date().toISOString(),
+      }),
     };
     emailType = isCancelled ? "payment_received_cancelled" : "full_payment_confirmed";
   }
