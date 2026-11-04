@@ -126,7 +126,7 @@ const RevenueTrendCard = ({ revenueTrend, periodRevenue: _periodRevenue, lastPer
     if (!revenueTrend.length) return [];
     if (revenueTrend[0]?.date) {
       const cutoff = new Date();
-      cutoff.setDate(cutoff.getDate() - selectedDays);
+      cutoff.setDate(cutoff.getDate() - (selectedDays - 1));
       const cutoffStr = toLocalDateStr(cutoff);
       return revenueTrend.filter(e => e.date != null && e.date >= cutoffStr);
     }
@@ -154,9 +154,9 @@ const RevenueTrendCard = ({ revenueTrend, periodRevenue: _periodRevenue, lastPer
     const selectedDays = PERIODS.find(p => p.label === period)?.days ?? 30;
     const now = new Date();
     const currentCutoff = new Date();
-    currentCutoff.setDate(now.getDate() - selectedDays);
+    currentCutoff.setDate(now.getDate() - (selectedDays - 1));
     const prevCutoff = new Date();
-    prevCutoff.setDate(now.getDate() - selectedDays * 2);
+    prevCutoff.setDate(now.getDate() - (selectedDays * 2 - 1));
     const currentCutoffStr = toLocalDateStr(currentCutoff);
     const prevCutoffStr    = toLocalDateStr(prevCutoff);
     const prevTotal = revenueTrend
