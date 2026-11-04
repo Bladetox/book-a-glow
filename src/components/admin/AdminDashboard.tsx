@@ -135,10 +135,10 @@ const METRIC_COPY: MetricCopyShape = {
     { term: "Period comparison", def: "The selected number of days is compared with the immediately preceding equal-length period." },
   ],
   heatmap: [
-    { term: "Booking Heatmap", def: "Shows which days and time slots get the most bookings." },
-    { term: "Bright Green", def: "Peak demand slots. Never discount these." },
-    { term: "Faint / Empty", def: "Quiet slots. Run targeted offers here." },
-    { term: "Day Patterns", def: "Weekend-heavy? Build weekday traffic to smooth revenue." },
+    { term: "Booking Heatmap", def: "Shows booking volume by weekday and time window for the selected month." },
+    { term: "Bright Green", def: "Highest booking volume in the displayed period. This is not a capacity-utilisation percentage." },
+    { term: "Faint / Empty", def: "Lower booking volume. Check available hours and staffing before choosing promotions." },
+    { term: "Day Patterns", def: "Shows when bookings are concentrated, not attendance or conversion rates." },
   ],
 };
 
