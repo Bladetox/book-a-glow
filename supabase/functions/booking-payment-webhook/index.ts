@@ -278,6 +278,63 @@ Deno.serve(async (req) => {
     });
   }
 
+  // Verify the amount Yoco actually collected before changing booking state.
+  // Yoco reports amounts in cents. Mismatches are retained for reconciliation
+  // and must never confirm or settle the booking.
+  const amountCents = (eventData as any)?.total_amount?.amount;
+  const expectedAmountRands =
+    paymentType === "deposit"
+      ? Number(booking.deposit_amount)
+      : paymentType === "balance"
+        ? (Number(booking.balance_due) > 0
+            ? Number(booking.balance_due)
+            : Math.max(0, Number(booking.total_amount) - Number(booking.deposit_amount)))
+        : Number(booking.total_amount);
+  const expectedAmountCents = Math.round(expectedAmountRands * 100);
+  const actualAmountCents = Number(amountCents);
+  const amountIsValid =
+    amountCents !== undefined &&
+    amountCents !== null &&
+    Number.isFinite(actualAmountCents) &&
+    expectedAmountCents > 0 &&
+    Math.abs(actualAmountCents - expectedAmountCents) <= 1;
+
+  if (!amountIsValid) {
+    const { error: staleAmountError } = await supabase
+      .from("stale_payment_webhook_events")
+      .insert({
+        tenant_id: tenantId,
+        booking_id: bookingId,
+        gateway: "yoco",
+        payment_type: paymentType,
+        checkout_reference: checkoutId,
+        transaction_reference: String(eventData.id ?? checkoutId),
+        amount: Number.isFinite(actualAmountCents) ? actualAmountCents / 100 : null,
+        event_payload: eventData,
+        review_status: "needs_review",
+      });
+
+    if (staleAmountError) {
+      console.error("booking-payment-webhook: failed to record amount mismatch", staleAmountError);
+      return new Response("Could not record payment amount mismatch", { status: 500 });
+    }
+
+    console.error("booking-payment-webhook: amount mismatch; payment held for review", {
+      bookingId,
+      paymentType,
+      actualAmountCents: Number.isFinite(actualAmountCents) ? actualAmountCents : null,
+      expectedAmountCents,
+    });
+    return new Response(JSON.stringify({
+      received: true,
+      matched: true,
+      skipped: "payment_amount_mismatch_requires_review",
+    }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
   // ── Idempotency guard ────────────────────────────────────────────────────────
   if (paymentType === "deposit" && booking.deposit_paid === true) {
     console.log("booking-payment-webhook: deposit already paid, skipping", bookingId);
@@ -348,12 +405,7 @@ Deno.serve(async (req) => {
   // This insert is what fires notify_on_payment_event — the single trigger
   // that owns every gateway's payment notification (see file header note).
   const paymentIdRaw = eventData.id as string | undefined;
-  const amountCents  = (eventData as any)?.total_amount?.amount as number | undefined;
-  const amountRands  = amountCents !== undefined ? amountCents / 100 : (
-    paymentType === "deposit"  ? Number(booking.deposit_amount)
-    : paymentType === "balance" ? (Number(booking.balance_due) > 0 ? Number(booking.balance_due) : Number(booking.total_amount) - Number(booking.deposit_amount))
-    : Number(booking.total_amount)
-  );
+  const amountRands  = actualAmountCents / 100;
   const paymentMethod = (eventData as any)?.payment_method ?? "card";
 
   const { error: paymentErr } = await supabase.from("payments").insert({
