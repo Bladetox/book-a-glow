@@ -278,10 +278,55 @@ Deno.serve(async (req) => {
     });
   }
 
-  // Verify the amount Yoco actually collected before changing booking state.
-  // Yoco reports amounts in cents. Mismatches are retained for reconciliation
-  // and must never confirm or settle the booking.
-  const amountCents = (eventData as any)?.amount;
+  // Verify the amount Yoco collected before changing booking state.
+  // Some successful payment event payloads omit amount. In that case, fetch
+  // the checkout from Yoco using the stored checkout reference and verify its
+  // completed status, currency and amount. Never infer a paid amount from our
+  // own booking total.
+  let amountCents = (eventData as any)?.amount;
+  let actualAmountCents = Number(amountCents);
+
+  if (!Number.isFinite(actualAmountCents) || actualAmountCents <= 0) {
+    const checkoutRes = await fetch(
+      `https://payments.yoco.com/api/checkouts/${encodeURIComponent(checkoutId)}`,
+      {
+        method: "GET",
+        headers: { "Authorization": `Bearer ${yocoSecret}` },
+      },
+    );
+    const checkoutData = await checkoutRes.json().catch(() => null);
+
+    if (!checkoutRes.ok || !checkoutData) {
+      console.error("booking-payment-webhook: could not verify checkout amount with Yoco", {
+        status: checkoutRes.status,
+        checkoutId,
+      });
+      return new Response("Could not verify Yoco checkout", { status: 502 });
+    }
+
+    const checkoutStatus = String(checkoutData.status ?? "").toLowerCase();
+    if (!["completed", "succeeded"].includes(checkoutStatus)) {
+      console.error("booking-payment-webhook: Yoco checkout is not completed", {
+        checkoutId,
+        status: checkoutData.status ?? null,
+      });
+      return new Response("Yoco checkout is not completed", { status: 409 });
+    }
+
+    if (checkoutData.id && checkoutData.id !== checkoutId) {
+      console.error("booking-payment-webhook: Yoco checkout reference mismatch", checkoutId);
+      return new Response("Yoco checkout reference mismatch", { status: 409 });
+    }
+
+    if (checkoutData.currency && String(checkoutData.currency).toUpperCase() !== "ZAR") {
+      console.error("booking-payment-webhook: unexpected checkout currency", checkoutData.currency);
+      return new Response("Unexpected Yoco checkout currency", { status: 409 });
+    }
+
+    amountCents = checkoutData.amount;
+    actualAmountCents = Number(amountCents);
+  }
+
   const expectedAmountRands =
     paymentType === "deposit"
       ? Number(booking.deposit_amount)
@@ -291,11 +336,11 @@ Deno.serve(async (req) => {
             : Math.max(0, Number(booking.total_amount) - Number(booking.deposit_amount)))
         : Number(booking.total_amount);
   const expectedAmountCents = Math.round(expectedAmountRands * 100);
-  const actualAmountCents = Number(amountCents);
   const amountIsValid =
     amountCents !== undefined &&
     amountCents !== null &&
     Number.isFinite(actualAmountCents) &&
+    actualAmountCents > 0 &&
     expectedAmountCents > 0 &&
     Math.abs(actualAmountCents - expectedAmountCents) <= 1;
 
@@ -429,7 +474,10 @@ Deno.serve(async (req) => {
     completed_at:   new Date().toISOString(),
     notes:          isCancelled ? "Payment received after booking was cancelled" : null,
   });
-  if (paymentErr) console.error("booking-payment-webhook: payments insert error", paymentErr);
+  if (paymentErr) {
+    console.error("booking-payment-webhook: payments insert error", paymentErr);
+    return new Response("Could not record completed payment", { status: 500 });
+  }
 
   // ── Send confirmation email (only for non-cancelled bookings) ─────────────────
   if (!isCancelled && (emailType === "booking_confirmed" || emailType === "full_payment_confirmed" || emailType === "balance_paid")) {
@@ -439,13 +487,14 @@ Deno.serve(async (req) => {
       body: JSON.stringify({ booking_id: bookingId, tenant_id: tenantId, email_type: emailType }),
     });
     const emailResult = await emailRes.json().catch(() => null);
-    if (!emailRes.ok || emailResult?.success !== true) {
+    if (!emailRes.ok || emailResult?.success !== true || !Array.isArray(emailResult.message_ids) || emailResult.message_ids.length === 0) {
       console.error("booking-payment-webhook: booking confirmation email was not accepted", {
         status: emailRes.status,
         response: emailResult,
         bookingId,
         emailType,
       });
+      return new Response("Booking confirmation email was not accepted", { status: 502 });
     } else {
       console.log("booking-payment-webhook: booking confirmation email accepted", {
         bookingId,
