@@ -350,7 +350,7 @@ Deno.serve(async (req) => {
 
         // ── 7. Fire confirmation email (non-fatal) ─────────────────────────
         try {
-          await supabase.functions.invoke("send-booking-email", {
+          const { data: emailResult, error: emailError } = await supabase.functions.invoke("send-booking-email", {
             body: {
               booking_id: matchedId,
               email_type:
@@ -361,6 +361,11 @@ Deno.serve(async (req) => {
                     : "booking_confirmed",
             },
           });
+          if (emailError || emailResult?.success !== true) {
+            console.warn("[ikhokha-webhook] email was not accepted (non-fatal):", emailError ?? emailResult);
+          } else {
+            console.log("[ikhokha-webhook] email accepted:", emailResult);
+          }
         } catch (emailErr) {
           console.warn("[ikhokha-webhook] email send failed (non-fatal):", emailErr);
         }
