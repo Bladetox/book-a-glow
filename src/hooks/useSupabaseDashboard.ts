@@ -12,13 +12,47 @@ function resolveClientName(b: any): string {
   return b.client_name || b.guest_name || b.client?.full_name || "Unknown";
 }
 
-function resolveClientKey(b: any): string {
-  if (b.client_id) return b.client_id;
-  const email = b.client_email || b.guest_email || b.client?.email;
-  if (email) return email.toLowerCase().trim();
-  const phone = b.client_phone || b.guest_phone || b.client?.phone;
-  if (phone) return String(phone).replace(/\D/g, "").slice(-9);
-  return b.id;
+function normalizePhone(value: unknown): string {
+  const digits = String(value ?? "").replace(/\D/g, "");
+  return digits.length === 11 && digits.startsWith("27") ? `0${digits.slice(2)}` : digits;
+}
+
+function buildClientIdentityKeys(rows: any[]): Map<string, string | null> {
+  const parent = new Map<string, string>();
+  const tokensFor = (b: any): string[] => {
+    const tokens: string[] = [];
+    if (b.canonical_client_id) tokens.push(`canonical:${b.canonical_client_id}`);
+    if (b.client_id) tokens.push(`client:${b.client_id}`);
+    const firstName = String(b.client_name || b.guest_name || "")
+      .trim().toLowerCase().replace(/[^a-z0-9'-]+/g, " ").trim().split(/\s+/)[0] || "unknown";
+    [b.client_email, b.guest_email].filter(Boolean).forEach((v: string) =>
+      tokens.push(`email:${String(v).trim().toLowerCase()}|person:${firstName}`));
+    [b.client_phone, b.guest_phone].filter(Boolean).map(normalizePhone)
+      .filter((v: string) => v.length >= 9).forEach((v: string) =>
+        tokens.push(`phone:${v}|person:${firstName}`));
+    return [...new Set(tokens)];
+  };
+  const find = (v: string): string => {
+    const p = parent.get(v);
+    if (!p) { parent.set(v, v); return v; }
+    if (p === v) return v;
+    const root = find(p); parent.set(v, root); return root;
+  };
+  const union = (a: string, b: string) => {
+    const ra = find(a), rb = find(b);
+    if (ra !== rb) parent.set(rb, ra);
+  };
+  const byId = new Map<string, string[]>();
+  rows.forEach((b: any) => {
+    const tokens = tokensFor(b); byId.set(b.id, tokens); tokens.forEach(find);
+    for (let i = 1; i < tokens.length; i++) union(tokens[0], tokens[i]);
+  });
+  const result = new Map<string, string | null>();
+  rows.forEach((b: any) => {
+    const tokens = byId.get(b.id) ?? [];
+    result.set(b.id, tokens.length ? find(tokens[0]) : null);
+  });
+  return result;
 }
 
 const CLIENT_TYPE_LABELS = ["new client", "new", "existing client", "existing", "returning client", "returning"];
@@ -76,8 +110,7 @@ function resolveAvailabilityForRange(
       const dow  = getDay(day);
 
       const dateOverrides = staffRows.filter(
-        (row: any) =>
-          row.specific_date === date && row.day_of_week === dow,
+        (row: any) => row.specific_date === date,
       );
 
       const rows =
@@ -103,25 +136,20 @@ function buildTopServices(
   limit = 5,
 ): { name: string; count: number; revenue: number }[] {
   const svcMap = new Map<string, { count: number; revenue: number }>();
-  bookingRows.forEach((b: any) => {
-    const seen = new Set<string>();
-    [...(b.items ?? [])]
-      .sort((a: any, z: any) => (a.sort_order ?? 0) - (z.sort_order ?? 0))
-      .forEach((i: any) => {
-        const name = i.service_name;
-        if (!name || seen.has(name)) return;
-        seen.add(name);
-        const prev = svcMap.get(name) || { count: 0, revenue: 0 };
-        svcMap.set(name, {
-          count:   prev.count + 1,
-          revenue: prev.revenue + Number(i.price ?? 0),
-        });
-      });
+  bookingRows.filter((b: any) => b.status !== "cancelled" && b.status !== "no_show").forEach((b: any) => {
+    const perBooking = new Map<string, number>();
+    [...(b.items ?? [])].sort((a: any, z: any) => (a.sort_order ?? 0) - (z.sort_order ?? 0)).forEach((i: any) => {
+      const name = String(i.service_name ?? "").trim();
+      if (!name) return;
+      perBooking.set(name, (perBooking.get(name) ?? 0) + Number(i.price ?? 0) * Math.max(1, Number(i.quantity ?? 1)));
+    });
+    perBooking.forEach((value, name) => {
+      const prev = svcMap.get(name) || { count: 0, revenue: 0 };
+      svcMap.set(name, { count: prev.count + 1, revenue: prev.revenue + value });
+    });
   });
-  return [...svcMap.entries()]
-    .map(([name, d]) => ({ name, ...d }))
-    .sort((a, b) => b.count - a.count || b.revenue - a.revenue)
-    .slice(0, limit);
+  return [...svcMap.entries()].map(([name, d]) => ({ name, ...d }))
+    .sort((a, b) => b.count - a.count || b.revenue - a.revenue).slice(0, limit);
 }
 
 // ─── main hook ──────────────────────────────────────────────────────────────
@@ -133,6 +161,12 @@ export function useDashboardData() {
   const monthEnd     = format(endOfMonth(now),   "yyyy-MM-dd");
   const prevStart    = format(startOfMonth(subMonths(now, 1)), "yyyy-MM-dd");
   const prevEnd      = format(endOfMonth(subMonths(now, 1)),   "yyyy-MM-dd");
+  const prevMonthComparableEnd = format(
+    new Date(now.getFullYear(), now.getMonth() - 1, Math.min(
+      now.getDate(), new Date(now.getFullYear(), now.getMonth(), 0).getDate(),
+    )),
+    "yyyy-MM-dd",
+  );
 
   const trendWindowDays = 180;
   const trendStartDate  = format(subDays(now, trendWindowDays),     "yyyy-MM-dd");
@@ -176,40 +210,13 @@ export function useDashboardData() {
           gcal_event_id,
           created_at,
           client:profiles!bookings_client_id_fkey(full_name, email, phone, address),
-          items:booking_items(service_name, price, duration_minutes, sort_order)
+          items:booking_items(service_name, price, duration_minutes, sort_order, quantity)
         `)
         .eq("tenant_id", tenantId)
         .gte("booking_date", monthStart)
         .lte("booking_date", monthEnd)
         .order("booking_date", { ascending: true })
         .order("start_time",   { ascending: true });
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-
-  // 2. Previous month bookings
-  const { data: prevBookings = [], isLoading: l2 } = useQuery({
-    queryKey:  ["dash-bookings-prev", tenantId, prevStart],
-    staleTime: 10 * 60 * 1000,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("bookings")
-        .select(`
-          id,
-          total_amount,
-          status,
-          client_id,
-          client_email,
-          client_phone,
-          guest_email,
-          guest_phone,
-          client:profiles!bookings_client_id_fkey(email, phone)
-        `)
-        .eq("tenant_id", tenantId)
-        .gte("booking_date", prevStart)
-        .lte("booking_date", prevEnd)
-        .neq("status", "cancelled");
       if (error) throw error;
       return data ?? [];
     },
@@ -273,7 +280,7 @@ export function useDashboardData() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("staff_availability")
-        .select("staff_id, day_of_week, day_enabled, slot_start_time, is_available, specific_date")
+        .select("staff_id, day_of_week, day_enabled, slot_start_time, slot_end_time, is_available, specific_date")
         .eq("tenant_id", tenantId)
         .in("staff_id", staffIds);
       if (error) throw error;
@@ -281,70 +288,19 @@ export function useDashboardData() {
     },
   });
 
-  // 7. Original acquisition source — one record per guest, linked to their first booking.
-  // This deliberately reads guest_consultations rather than counting booking rows:
-  // repeat bookings must never inflate the number of clients acquired by a channel.
-  const { data: clientAcquisitionRecords = [] } = useQuery({
-    queryKey:  ["dash-client-acquisition", tenantId],
-    staleTime: 10 * 60 * 1000,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("guest_consultations")
-        .select("firstBooking:bookings!guest_consultations_first_booking_id_fkey(lead_source)")
-        .eq("tenant_id", tenantId);
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-
-  // 8. 180-day bookings for revenue trend
-  const { data: trendBookings = [], isLoading: l6 } = useQuery({
-    queryKey:  ["dash-trend-bookings", tenantId, fetchFromDate, todayStr],
-    staleTime: 3 * 60 * 1000,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("bookings")
-        .select("booking_date, total_amount, final_payment_paid, full_payment_received, status")
-        .eq("tenant_id", tenantId)
-        .neq("status", "cancelled")
-        .gte("booking_date", fetchFromDate)
-        .lte("booking_date", todayStr);
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-
-  // 9. All-time bookings for allTimeTopServices
+  // All-time booking history powers service, client and original acquisition metrics.
   const { data: allTimeBookings = [], isLoading: l7 } = useQuery({
-    queryKey:  ["dash-alltime-bookings", tenantId],
-    staleTime: 15 * 60 * 1000,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("bookings")
-        .select(`
-          id,
-          status,
-          items:booking_items(service_name, price, sort_order)
-        `)
-        .eq("tenant_id", tenantId)
-        .neq("status", "cancelled");
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-
-  // 10. New vs returning clients RPC
-  const { data: newVsReturningData } = useQuery({
-    queryKey:  ["dash-new-vs-returning", tenantId, monthStart, monthEnd],
+    queryKey: ["dash-alltime-bookings", tenantId],
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
-      const { data, error } = await supabase.rpc("get_new_vs_returning_clients", {
-        p_tenant_id:   tenantId,
-        p_month_start: monthStart,
-        p_month_end:   monthEnd,
-      });
+      const { data, error } = await supabase.from("bookings").select(`
+        id, booking_date, created_at, status, total_amount, lead_source,
+        client_id, canonical_client_id, client_name, client_email, client_phone,
+        guest_name, guest_email, guest_phone,
+        items:booking_items(service_name, price, sort_order, quantity)
+      `).eq("tenant_id", tenantId);
       if (error) throw error;
-      return data?.[0] ?? null;
+      return data ?? [];
     },
   });
 
