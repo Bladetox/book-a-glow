@@ -40,6 +40,7 @@ import { ChecklistCelebration } from '@/components/admin/ChecklistCelebration';
 import { useTenant } from '@/contexts/TenantContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { buildWhatsAppMessage, waLink } from '@/lib/whatsapp';
 import { useWhatsAppTone, useWhatsAppTemplates } from '@/hooks/useWhatsAppTone';
 
@@ -160,16 +161,21 @@ export function SetupChecklist({ onNavigate }: Props) {
   const handleCopyLink = async () => {
     try {
       await navigator.clipboard.writeText(bookingUrl);
+      checklist.markBookingLinkShared();
+      toast.success("Booking link copied");
     } catch {
-      // fallback silent
+      toast.error("The booking link could not be copied. Please copy the link manually.");
     }
-    checklist.markBookingLinkShared();
   };
 
   const handleWhatsApp = () => {
     const message = buildWhatsAppMessage('booking_link', { businessName: tenantInfo?.name ?? '', bookingUrl }, whatsappTone, whatsappTemplates);
-    window.open(waLink('', message), '_blank', 'noopener,noreferrer');
-    checklist.markBookingLinkShared();
+    const opened = window.open(waLink('', message), '_blank', 'noopener,noreferrer');
+    if (opened) {
+      checklist.markBookingLinkShared();
+    } else {
+      toast.error("WhatsApp could not be opened. Please allow pop-ups or copy the booking link instead.");
+    }
   };
 
   const handleCelebrationClose = () => {
