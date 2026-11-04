@@ -130,9 +130,9 @@ payshapPaymentIntent: string | null;
 * 2. Marks the booking confirmed via RPC.
 * 3. Sets deposit_paid and/or full_payment_received flags correctly on the booking row.
 * 4. Updates the payment row to completed (idempotent: only when status = pending).
-* FIX: if no pending payshap row exists (e.g. the original submit-proof insert
-* failed), self-heal by inserting a completed row directly, so confirmed
-* revenue is never silently lost.
+* Guest checkout runs with the anon role and cannot INSERT into payments
+* by design. After the tenant manually verifies the transfer, this confirmation
+* creates the completed ledger row when no pending row exists.
 * 5. Fires the booking-confirmed email via send-booking-email edge function.
 * 6. Inserts an admin notification so the dashboard reflects the correct gateway.
 */
