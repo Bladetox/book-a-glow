@@ -504,19 +504,24 @@ export const AdminDashboardView = ({
   const retentionDisp  = `${retentionRate}%`;
   const retentionColor = retentionRate >= 40 ? "text-emerald-400" : "text-white/90";
 
-  const topChannel       = leadSourceBreakdown[0]?.channel ?? "\u2014";
-  const totalWithSource  = leadSourceBreakdown.reduce((s, r) => s + r.count, 0);
-  const topChannelPct    =
-    totalWithSource > 0 && leadSourceBreakdown[0]
-      ? Math.round((leadSourceBreakdown[0].count / totalWithSource) * 100)
-      : null;
-  const leadSourceSub        = topChannelPct !== null ? `${topChannelPct}% of identified clients` : undefined;
+  const recordedLeadSources = leadSourceBreakdown.filter((row) => row.channel !== "Not recorded");
+  const totalClientIdentities = leadSourceBreakdown.reduce((sum, row) => sum + row.count, 0);
+  const totalRecordedSources = recordedLeadSources.reduce((sum, row) => sum + row.count, 0);
+  const topChannel = recordedLeadSources[0]?.channel ?? "No recorded source";
+  const topChannelPct = totalRecordedSources > 0 && recordedLeadSources[0]
+    ? Math.round((recordedLeadSources[0].count / totalRecordedSources) * 100)
+    : null;
+  const leadSourceSub = topChannelPct !== null
+    ? `${topChannelPct}% of clients with a recorded source`
+    : undefined;
   const operationalAlerts = (data.alerts ?? []).filter((alert: any) =>
     !String(alert.text ?? "").toLowerCase().includes("stock")
   );
-  const leadSourceExtraLines: { term: string; def: string }[] = leadSourceBreakdown.map((r) => ({
-    term: r.channel,
-    def: `${r.count} client${r.count !== 1 ? "s" : ""} (${totalWithSource > 0 ? Math.round((r.count / totalWithSource) * 100) : 0}%)`,
+  const leadSourceExtraLines: { term: string; def: string }[] = leadSourceBreakdown.map((row) => ({
+    term: row.channel,
+    def: row.channel === "Not recorded"
+      ? `${row.count} client${row.count !== 1 ? "s" : ""} (${totalClientIdentities > 0 ? Math.round((row.count / totalClientIdentities) * 100) : 0}% of all clients)`
+      : `${row.count} client${row.count !== 1 ? "s" : ""} (${totalRecordedSources > 0 ? Math.round((row.count / totalRecordedSources) * 100) : 0}% of recorded sources)`,
   }));
 
   // ── Tesler's Law: safe next-appointment parsing ─────────────────────────
