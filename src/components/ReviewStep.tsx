@@ -128,6 +128,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, holdId, sessio
 
   const [showPairWith, setShowPairWith] = useState(false);
   const [payshapSuccess, setPayshapSuccess] = useState(false);
+  const [payshapEmailFailed, setPayshapEmailFailed] = useState(false);
   const [payshapCountdown, setPayshapCountdown] = useState(5);
   const [pendingBookingId, setPendingBookingId] = useState<string | null>(null);
 
@@ -241,24 +242,33 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, holdId, sessio
     if (pendingBookingId) {
       if (config.payshapEnabled) {
         const intent = paymentChoice === "payshap_full" ? "full" : "deposit";
-        await supabase
+        const { data: existingClaim, error: claimReadError } = await supabase
           .from("bookings")
-          .update({
-            status: "payment_claimed",
-            payshap_payment_intent: intent,
-            payshap_claimed_at: new Date().toISOString(),
-          })
-          .eq("id", pendingBookingId);
+          .select("status, payshap_payment_intent")
+          .eq("id", pendingBookingId)
+          .eq("tenant_id", tenantId)
+          .maybeSingle();
+        if (claimReadError) throw claimReadError;
+        if (!existingClaim) throw new Error("Could not verify the PayShap booking claim.");
 
-        await supabase.from("payments").insert({
-          booking_id:     pendingBookingId,
-          tenant_id:      tenantId,
-          amount:         paymentChoice === "payshap_full" ? total : deposit,
-          payment_type:   paymentChoice === "payshap_full" ? "full" : "deposit",
-          payment_method: "payshap",
-          status:         "pending",
-          gateway:        "payshap",
-        });
+        if (existingClaim.status !== "payment_claimed") {
+          const { data: updatedClaim, error: claimUpdateError } = await supabase
+            .from("bookings")
+            .update({
+              status: "payment_claimed",
+              payshap_payment_intent: intent,
+              payshap_claimed_at: new Date().toISOString(),
+            })
+            .eq("id", pendingBookingId)
+            .eq("tenant_id", tenantId)
+            .in("status", ["pending", "awaiting_payshap"])
+            .select("id")
+            .maybeSingle();
+          if (claimUpdateError) throw claimUpdateError;
+          if (!updatedClaim) throw new Error("The PayShap booking could not be placed on hold.");
+        } else if (existingClaim.payshap_payment_intent !== intent) {
+          throw new Error("This booking already has a different PayShap payment selection.");
+        }
       }
       return pendingBookingId;
     }
@@ -365,24 +375,25 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, holdId, sessio
 
     if (config.payshapEnabled) {
       const intent = paymentChoice === "payshap_full" ? "full" : "deposit";
-      await supabase
+      const { data: updatedClaim, error: claimUpdateError } = await supabase
         .from("bookings")
         .update({
           status: "payment_claimed",
           payshap_payment_intent: intent,
           payshap_claimed_at: new Date().toISOString(),
         })
-        .eq("id", bookingId);
+        .eq("id", bookingId)
+        .eq("tenant_id", tenantId)
+        .eq("status", "pending")
+        .select("id")
+        .maybeSingle();
+      if (claimUpdateError) throw claimUpdateError;
+      if (!updatedClaim) throw new Error("The PayShap booking could not be placed on hold.");
 
-      await supabase.from("payments").insert({
-        booking_id:     bookingId,
-        tenant_id:      tenantId,
-        amount:         paymentChoice === "payshap_full" ? total : deposit,
-        payment_type:   paymentChoice === "payshap_full" ? "full" : "deposit",
-        payment_method: "payshap",
-        status:         "pending",
-        gateway:        "payshap",
-      });
+      // Guest checkout runs as anon. The payments table intentionally does
+      // not grant anonymous INSERT; the tenant admin records the verified
+      // transfer on confirmation, where useConfirmPayshapBooking self-heals
+      // the completed ledger entry if no pending row exists.
     }
 
     return bookingId;
@@ -396,12 +407,13 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, holdId, sessio
       const bookingId = await ensureBookingCreated();
 
       if (config.payshapEnabled) {
-        try {
-          await supabase.functions.invoke("send-booking-email", {
-            body: { booking_id: bookingId, email_type: "payshap_instructions" },
-          });
-        } catch (emailErr) {
-          console.warn("payshap_instructions email failed (non-fatal):", emailErr);
+        setPayshapEmailFailed(false);
+        const { data: emailData, error: emailError } = await supabase.functions.invoke("send-booking-email", {
+          body: { booking_id: bookingId, email_type: "payshap_instructions" },
+        });
+        if (emailError || emailData?.success !== true) {
+          console.error("payshap_instructions email failed:", emailError ?? emailData);
+          setPayshapEmailFailed(true);
         }
 
         await releaseHold();
@@ -812,8 +824,23 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, holdId, sessio
               <div className="flex flex-col gap-2">
                 <p className="text-lg font-bold text-foreground">Booking submitted</p>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  Check your email for PayShap payment instructions. Your slot is provisionally held.
+                  {payshapEmailFailed
+                    ? "Your booking is held, but we could not send the payment instructions email. Use the details below or contact the business before paying."
+                    : "Your slot is provisionally held. Complete your PayShap payment using the details below."}
                 </p>
+                {config.phone && (
+                  <div className="w-full rounded-xl border border-border/60 bg-muted/30 px-4 py-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">PayShap number</p>
+                    <p className="mt-1 text-lg font-semibold text-foreground">{config.phone}</p>
+                  </div>
+                )}
+                <div className="w-full rounded-xl border border-border/60 bg-muted/30 px-4 py-3">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Amount to pay</p>
+                  <p className="mt-1 text-lg font-semibold text-foreground">{cur}{amountDueNow.toLocaleString()}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {paymentChoice === "payshap_deposit" ? `Deposit (${depositPercent}%). Balance due on the day: ${cur}${balance.toLocaleString()}.` : "Full payment"}
+                  </p>
+                </div>
               </div>
               <p className="text-xs text-muted-foreground">
                 Redirecting in {payshapCountdown}s
