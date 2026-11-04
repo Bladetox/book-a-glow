@@ -527,6 +527,31 @@ const AdminSettings = () => {
               value={draft.deposit_percent}
               onSelect={(v) => update("deposit_percent", v)}
             />
+            <div className="flex items-center justify-between gap-4 rounded-xl border border-white/[0.08] bg-white/[0.03] px-4 py-3">
+              <div className="flex min-w-0 flex-col gap-1">
+                <span className="text-xs font-semibold text-white/75">Require a deposit at booking</span>
+                <span className="text-[10px] leading-relaxed text-white/30">
+                  Clients can pay this deposit or choose to pay the full amount upfront.
+                </span>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={draft.requires_deposit === "true"}
+                onClick={() => update("requires_deposit", draft.requires_deposit === "true" ? "false" : "true")}
+                className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors ${
+                  draft.requires_deposit === "true"
+                    ? "border-emerald-500/50 bg-emerald-500/30"
+                    : "border-white/10 bg-white/10"
+                }`}
+              >
+                <span
+                  className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-transform ${
+                    draft.requires_deposit === "true" ? "translate-x-5" : "translate-x-0.5"
+                  }`}
+                />
+              </button>
+            </div>
             <PillPicker
               label="Lead Time"
               presets={LEAD_TIME_PRESETS}
@@ -558,7 +583,7 @@ const AdminSettings = () => {
             />
             <div className="flex items-center gap-3">
               <SaveBtn
-                onClick={() => saveSettings("rules", ["deposit_percent", "lead_time_minutes", "min_notice_minutes", "max_advance_days", "overrun_minutes"])}
+                onClick={() => saveSettings("rules", ["deposit_percent", "requires_deposit", "lead_time_minutes", "min_notice_minutes", "max_advance_days", "overrun_minutes"])}
                 loading={upsertSetting.isPending}
               />
               <SavedBadge section="rules" />
