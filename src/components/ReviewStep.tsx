@@ -438,13 +438,14 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, holdId, sessio
 
       if (config.payfastMode) {
         
-        const { data: pfData, error: pfErr } = await supabase.functions.invoke("payfast-initiate", {
+        const { data: pfData, error: pfErr } = await supabase.functions.invoke("payfast-checkout", {
           body: { booking_id: bookingId, payment_type: paymentChoice },
         });
-        if (pfErr || !pfData?.redirectUrl) throw new Error(pfErr?.message ?? "Payment gateway error.");
-        const { redirectUrl, fields } = pfData;
+        if (pfErr || !pfData?.payfast_url || !pfData?.fields) {
+          throw new Error(pfErr?.message ?? pfData?.error ?? "Payment gateway error.");
+        }
         redirectingRef.current = true;
-        redirectToPayfast(redirectUrl, fields);
+        redirectToPayfast(pfData.payfast_url, pfData.fields);
         return;
       }
 
