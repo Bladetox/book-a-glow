@@ -32,6 +32,7 @@ export interface PublicBusinessConfig {
   salonAddress: string;
   currency: string;
   depositPercent: number;
+  requiresDeposit: boolean;
   ratePerKm: number;
   defaultDistanceKm: number;
   minNoticeHours: number;
@@ -74,6 +75,7 @@ const defaults: PublicBusinessConfig = {
   salonAddress: "",
   currency: "R",
   depositPercent: 50,
+  requiresDeposit: false,
   ratePerKm: 3.6,
   defaultDistanceKm: 15,
   minNoticeHours: 24,
@@ -212,6 +214,7 @@ export function usePublicBusinessConfig(): PublicBusinessConfig & { loading: boo
 
     // Pricing
     depositPercent: s.deposit_percent ? Number(s.deposit_percent) : defaults.depositPercent,
+    requiresDeposit: s.requires_deposit === "true",
     ratePerKm: s.rate_per_km ? Number(s.rate_per_km) : defaults.ratePerKm,
     defaultDistanceKm: s.default_distance_km
       ? Number(s.default_distance_km)
