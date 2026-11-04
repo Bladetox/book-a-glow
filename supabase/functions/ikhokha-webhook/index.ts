@@ -318,7 +318,7 @@ Deno.serve(async (req) => {
           total_amount: Number(paidBooking.total_amount),
           deposit_amount: Number(paidBooking.deposit_amount),
           balance_due: Number(paidBooking.balance_due),
-          client_id: financials.client_id,
+          client_id: paidBooking.client_id,
         };
         const paidAmount = paymentType === "balance"
           ? (financials.balance_due > 0
@@ -332,7 +332,7 @@ Deno.serve(async (req) => {
           .from("payments")
           .insert({
             booking_id: matchedId,
-            client_id: paidBooking.client_id,
+            client_id: financials.client_id,
             tenant_id: tenantId,
             amount: paidAmount,
             payment_type: paymentType,
