@@ -35,7 +35,7 @@ const sectionLabels: Record<SectionKey, string> = {
   health: "Business Health",
   topServices: "Top Services",
   alerts: "Alerts",
-  revenueGraph: "Revenue Trend",
+  revenueGraph: "Collections Trend",
   heatmap: "Booking Heatmap",
   todayAppointments: "Today's Appointments",
   clientInsights: "Client Insights",
@@ -624,7 +624,7 @@ export const AdminDashboardView = ({
             {/* ── Month revenue header ── */}
             <div className="flex items-start justify-between gap-3">
               <div className="flex flex-col gap-1 flex-1 min-w-0">
-                <p className="text-[10px] tracking-[0.16em] uppercase text-white/25">Revenue This Month</p>
+                <p className="text-[10px] tracking-[0.16em] uppercase text-white/25">Collected This Month</p>
                 <p className="text-2xl font-bold text-white/95 leading-none tabular-nums">
                   R {monthRevenue.toLocaleString()}
                 </p>
@@ -637,7 +637,7 @@ export const AdminDashboardView = ({
                 {/* Peak-End Rule: projection */}
                 {projectedRevenue !== null && dayOfMonth < totalDays && (
                   <p className="text-[11px] text-white/40 tabular-nums">
-                    On track for R {projectedRevenue.toLocaleString()} this month
+                    On track for R {projectedRevenue.toLocaleString()} collected this month
                   </p>
                 )}
 
@@ -704,10 +704,10 @@ export const AdminDashboardView = ({
                 },
                 {
                   // Von Restorff: flag if no revenue by noon
-                  label: "Revenue Today",
+                  label: "Collected Today",
                   value: `R ${todayRevenue.toLocaleString()}`,
                   color: todayRevenue > 0 ? "text-emerald-400" : "text-white/40",
-                  sub: "paid in",
+                  sub: "received",
                   urgent: revenueIsUrgent,
                 },
                 {
