@@ -429,7 +429,21 @@ Deno.serve(async (req) => {
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${serviceKey}` },
       body: JSON.stringify({ booking_id: bookingId, tenant_id: tenantId, email_type: emailType }),
     });
-    console.log("booking-payment-webhook: send-booking-email status", emailRes.status);
+    const emailResult = await emailRes.json().catch(() => null);
+    if (!emailRes.ok || emailResult?.success !== true) {
+      console.error("booking-payment-webhook: booking confirmation email was not accepted", {
+        status: emailRes.status,
+        response: emailResult,
+        bookingId,
+        emailType,
+      });
+    } else {
+      console.log("booking-payment-webhook: booking confirmation email accepted", {
+        bookingId,
+        emailType,
+        emailId: emailResult.id ?? null,
+      });
+    }
   }
 
   console.log("booking-payment-webhook v8: done — booking", bookingId, paymentType, "✓");
