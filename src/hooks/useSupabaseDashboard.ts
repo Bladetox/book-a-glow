@@ -306,14 +306,23 @@ export function useDashboardData() {
     queryKey: ["dash-alltime-bookings", tenantId],
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
-      const { data, error } = await supabase.from("bookings").select(`
-        id, booking_date, created_at, status, total_amount, lead_source,
-        client_id, canonical_client_id, client_name, client_email, client_phone,
-        guest_name, guest_email, guest_phone,
-        items:booking_items(service_name, price, sort_order, quantity)
-      `).eq("tenant_id", tenantId);
-      if (error) throw error;
-      return data ?? [];
+      const pageSize = 500;
+      const rows: any[] = [];
+      for (let offset = 0; ; offset += pageSize) {
+        const { data, error } = await supabase.from("bookings").select(`
+          id, booking_date, created_at, status, total_amount, lead_source,
+          client_id, canonical_client_id, client_name, client_email, client_phone,
+          guest_name, guest_email, guest_phone,
+          items:booking_items(service_name, price, sort_order, quantity)
+        `).eq("tenant_id", tenantId)
+          .order("created_at", { ascending: true })
+          .order("id", { ascending: true })
+          .range(offset, offset + pageSize - 1);
+        if (error) throw error;
+        rows.push(...(data ?? []));
+        if (!data || data.length < pageSize) break;
+      }
+      return rows;
     },
   });
 
@@ -634,7 +643,7 @@ export function useDashboardData() {
       totalAppointments: active.length,
       cancellationRate:
         bookings.length > 0 ? Math.round((cancelledBookings.length / bookings.length) * 100) : 0,
-      revenueLost: lostBookings.reduce((s: number, b: any) => s + Number(b.total_amount), 0),
+      revenueLost: lostBookings.reduce((s: number, b: any) => s + Number(b.total_amount ?? 0), 0),
     },
     clients: {
       total:      clientKeySet.size,
