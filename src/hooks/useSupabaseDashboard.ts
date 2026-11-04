@@ -600,7 +600,7 @@ export function useDashboardData() {
       list.push({ text: `${noShowBookings.length} no-show${noShowBookings.length > 1 ? "s" : ""} this month`, type: "warning" });
     lowStockItems.forEach((s: any) => {
       const reorderLevel = Math.max(1, Number(s.reorder_level ?? 5));
-      const criticalLevel = Math.max(1, Math.floor(reorderLevel / 2));
+      const criticalLevel = Math.min(2, reorderLevel);
       const critical = Number(s.stock_on_hand ?? 0) <= criticalLevel;
       list.push({
         text: `${s.item_name} - ${critical ? "critical" : "low"} stock (${s.stock_on_hand}; reorder at ${reorderLevel})`,
@@ -666,7 +666,7 @@ export function useDashboardData() {
       })),
     stockAlerts: lowStockItems.map((s: any) => {
       const reorderLevel = Math.max(1, Number(s.reorder_level ?? 5));
-      const criticalLevel = Math.max(1, Math.floor(reorderLevel / 2));
+      const criticalLevel = Math.min(2, reorderLevel);
       return {
         item: s.item_name,
         level: (Number(s.stock_on_hand ?? 0) <= criticalLevel ? "critical" : "low") as "critical" | "low",
