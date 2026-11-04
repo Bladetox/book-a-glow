@@ -304,7 +304,7 @@ export function useDashboardData() {
     },
   });
 
-  const coreLoading  = l1 || l2 || l3 || l6;
+  const coreLoading  = l1 || l3 || l7;
   const staffLoading = l4 || l5;
 
   // ─── payment slices ──────────────────────────────────────────────────────
@@ -319,7 +319,7 @@ export function useDashboardData() {
   const prevMonthPayments = useMemo(
     () => allPayments.filter((p: any) => {
       const d = (p.created_at ?? "").slice(0, 10);
-      return d >= prevStart && d <= prevEnd;
+      return d >= prevStart && d <= prevMonthComparableEnd;
     }),
     [allPayments, prevStart, prevEnd],
   );
@@ -348,14 +348,26 @@ export function useDashboardData() {
     [bookings, todayStr],
   );
 
-  const active = useMemo(
+  // No-shows occupied a reserved slot, however they are not delivered appointments.
+  const booked = useMemo(
     () => bookings.filter((b: any) => b.status !== "cancelled"),
     [bookings],
   );
-
-  const lostBookings = useMemo(
-    () => bookings.filter((b: any) => b.status === "cancelled" || b.status === "no_show"),
+  const active = useMemo(
+    () => bookings.filter((b: any) => b.status !== "cancelled" && b.status !== "no_show"),
     [bookings],
+  );
+  const cancelledBookings = useMemo(
+    () => bookings.filter((b: any) => b.status === "cancelled"),
+    [bookings],
+  );
+  const noShowBookings = useMemo(
+    () => bookings.filter((b: any) => b.status === "no_show"),
+    [bookings],
+  );
+  const lostBookings = useMemo(
+    () => [...cancelledBookings, ...noShowBookings],
+    [cancelledBookings, noShowBookings],
   );
 
   // ─── next appointment today ───────────────────────────────────────────────
@@ -363,7 +375,7 @@ export function useDashboardData() {
 
   const upcoming = useMemo(
     () => todayBookings
-      .filter((b: any) => b.status !== "cancelled")
+      .filter((b: any) => b.status !== "cancelled" && b.status !== "no_show")
       .filter((b: any) => {
         const [h, m] = (b.start_time || "00:00").split(":").map(Number);
         return h * 60 + m > nowMins;
@@ -386,40 +398,21 @@ export function useDashboardData() {
     [allTimeBookings],
   );
 
-  // ─── revenue trend ────────────────────────────────────────────────────────
-  // bookingMap is the fallback layer — includes all non-cancelled bookings.
-  // paymentsMap overrides per-day with actual confirmed payment amounts.
+  // ─── revenue trend: actual cash receipts only ────────────────────────────
   const revenueTrend = useMemo(() => {
-    const bookingMap: Record<string, number> = {};
-    trendBookings.forEach((b: any) => {
-      const d = (b.booking_date ?? "").slice(0, 10);
-      if (!d || d < trendStartDate || d > todayStr) return;
-      bookingMap[d] = (bookingMap[d] || 0) + Number(b.total_amount ?? 0);
-    });
-
     const paymentsMap: Record<string, number> = {};
     allPayments.forEach((p: any) => {
-      const d = (p.created_at ?? "").slice(0, 10);
-      if (d >= trendStartDate && d <= todayStr) {
-        paymentsMap[d] = (paymentsMap[d] || 0) + Number(p.amount);
+      const date = (p.created_at ?? "").slice(0, 10);
+      if (date >= trendStartDate && date <= todayStr) {
+        paymentsMap[date] = (paymentsMap[date] || 0) + Number(p.amount ?? 0);
       }
     });
-
-    // Payments table takes precedence over booking totals per day.
-    const trendMap: Record<string, number> = { ...bookingMap };
-    Object.entries(paymentsMap).forEach(([d, amount]) => {
-      trendMap[d] = amount;
-    });
-
-    return eachDayOfInterval({
-      start: parseISO(trendStartDate),
-      end:   parseISO(todayStr),
-    }).map(day => ({
-      day:   day.getDate(),
-      date:  format(day, "yyyy-MM-dd"),
-      value: trendMap[format(day, "yyyy-MM-dd")] || 0,
-    }));
-  }, [allPayments, trendBookings, trendStartDate, todayStr]);
+    return eachDayOfInterval({ start: parseISO(trendStartDate), end: parseISO(todayStr) })
+      .map(day => {
+        const date = format(day, "yyyy-MM-dd");
+        return { day: day.getDate(), date, value: paymentsMap[date] || 0 };
+      });
+  }, [allPayments, trendStartDate, todayStr]);
 
   // ─── resolved availability for heatmap ────────────────────────────────────
   const heatmapAvailabilityRows = useMemo(
@@ -458,108 +451,124 @@ export function useDashboardData() {
     }));
   }, [active, heatmapAvailabilityRows]);
 
-  // ─── client insights ──────────────────────────────────────────────────────
-  const { clientKeySet, returningCount, retentionRate } = useMemo(() => {
-    const prevKeySet = new Set<string>();
-    prevBookings.forEach((b: any) => {
-      const key = resolveClientKey(b);
-      if (key) prevKeySet.add(key);
+  // ─── unified client identity and first-booking attribution ───────────────
+  const identityKeys = useMemo(
+    () => buildClientIdentityKeys(allTimeBookings),
+    [allTimeBookings],
+  );
+
+  const { clientKeySet, returningCount, retentionRate, newClientCount } = useMemo(() => {
+    const firstBookingByClient = new Map<string, any>();
+    allTimeBookings.forEach((b: any) => {
+      const key = identityKeys.get(b.id);
+      if (!key) return;
+      const previous = firstBookingByClient.get(key);
+      if (!previous || String(b.booking_date ?? "9999-12-31") < String(previous.booking_date ?? "9999-12-31") ||
+          (b.booking_date === previous.booking_date && String(b.created_at ?? "") < String(previous.created_at ?? ""))) {
+        firstBookingByClient.set(key, b);
+      }
     });
 
-    const keySet = new Set(active.map((b: any) => resolveClientKey(b)));
-    const retained = [...keySet].filter(k => prevKeySet.has(k)).length;
+    const keys = new Set<string>();
+    active.forEach((b: any) => {
+      const key = identityKeys.get(b.id);
+      if (key) keys.add(key);
+    });
+    const returning = [...keys].filter(key => {
+      const first = firstBookingByClient.get(key);
+      return !!first?.booking_date && first.booking_date < monthStart;
+    }).length;
 
     return {
-      clientKeySet:   keySet,
-      returningCount: retained,
-      retentionRate:  keySet.size > 0 ? Math.round((retained / keySet.size) * 100) : 0,
+      clientKeySet: keys,
+      returningCount: returning,
+      newClientCount: Math.max(0, keys.size - returning),
+      retentionRate: keys.size ? Math.round((returning / keys.size) * 100) : 0,
     };
-  }, [active, prevBookings]);
+  }, [active, allTimeBookings, identityKeys, monthStart]);
 
-  // ─── original client acquisition breakdown ─────────────────────────────────
   const leadSourceBreakdown = useMemo(() => {
+    const firstByClient = new Map<string, any>();
+    allTimeBookings.forEach((b: any) => {
+      const key = identityKeys.get(b.id);
+      if (!key) return;
+      const previous = firstByClient.get(key);
+      const created = String(b.created_at ?? "");
+      const previousCreated = String(previous?.created_at ?? "");
+      if (!previous || created < previousCreated ||
+          (created === previousCreated && String(b.booking_date ?? "") < String(previous.booking_date ?? ""))) {
+        firstByClient.set(key, b);
+      }
+    });
     const map = new Map<string, number>();
-    clientAcquisitionRecords.forEach((record: any) => {
-      const src = (record.firstBooking?.lead_source || "").trim();
-      // A client classification is not an acquisition channel. Preserve these
-      // clients in the denominator under Not recorded instead of losing them.
-      const channel = !src || isClientTypeLabel(src) ? "Not recorded" : src;
+    firstByClient.forEach((first: any) => {
+      const source = String(first.lead_source ?? "").trim();
+      const channel = !source || isClientTypeLabel(source) ? "Not recorded" : source;
       map.set(channel, (map.get(channel) || 0) + 1);
     });
     return [...map.entries()]
       .map(([channel, count]) => ({ channel, count }))
       .sort((a, b) => b.count - a.count || a.channel.localeCompare(b.channel));
-  }, [clientAcquisitionRecords]);
+  }, [allTimeBookings, identityKeys]);
 
-  // ─── fill rate ────────────────────────────────────────────────────────────
+  // ─── monthly capacity utilisation: booked minutes / available minutes ────
   const fillRate: number | null = useMemo(() => {
-    if (staffLoading)              return null;
-    if (availabilityRows.length === 0) return null;
-
-    const monthDays = eachDayOfInterval({
-      start: parseISO(monthStart),
-      end:   parseISO(monthEnd),
-    });
-
-    type StaffSlots = {
-      recurring: Map<number, number>;
-      overrides: Map<string, number>;
+    if (staffLoading) return null;
+    if (!availabilityRows.length) return null;
+    const toMinutes = (value: string | null | undefined): number | null => {
+      if (!value) return null;
+      const [hours, mins] = value.split(":").map(Number);
+      if (!Number.isFinite(hours) || !Number.isFinite(mins)) return null;
+      return hours * 60 + mins;
     };
-    const staffIndex = new Map<string, StaffSlots>();
-
+    type StaffCapacity = { recurring: Map<number, number>; overrides: Map<string, number> };
+    const index = new Map<string, StaffCapacity>();
     availabilityRows.forEach((row: any) => {
-      if (!staffIndex.has(row.staff_id)) {
-        staffIndex.set(row.staff_id, { recurring: new Map(), overrides: new Map() });
-      }
-      const entry = staffIndex.get(row.staff_id)!;
-      const isEnabled = row.day_enabled === true && row.is_available === true;
-
+      if (!index.has(row.staff_id)) index.set(row.staff_id, { recurring: new Map(), overrides: new Map() });
+      const staff = index.get(row.staff_id)!;
+      const enabled = row.day_enabled === true && row.is_available === true;
+      const start = toMinutes(row.slot_start_time);
+      const end = toMinutes(row.slot_end_time);
+      const duration = start === null || end === null ? 0 : Math.max(0, end >= start ? end - start : 1440 - start + end);
       if (row.specific_date) {
-        // Any specific_date row for a date masks that date's recurring entry.
-        if (!entry.overrides.has(row.specific_date)) {
-          entry.overrides.set(row.specific_date, 0);
-        }
-        if (isEnabled) {
-          entry.overrides.set(
-            row.specific_date,
-            entry.overrides.get(row.specific_date)! + 1,
-          );
-        }
-      } else if (isEnabled) {
-        const prev = entry.recurring.get(row.day_of_week) ?? 0;
-        entry.recurring.set(row.day_of_week, prev + 1);
+        if (!staff.overrides.has(row.specific_date)) staff.overrides.set(row.specific_date, 0);
+        if (enabled) staff.overrides.set(row.specific_date, staff.overrides.get(row.specific_date)! + duration);
+      } else if (enabled) {
+        staff.recurring.set(row.day_of_week, (staff.recurring.get(row.day_of_week) ?? 0) + duration);
       }
     });
-
-    let totalSlots = 0;
-    monthDays.forEach(day => {
-      const dateStr = format(day, "yyyy-MM-dd");
-      const dow     = getDay(day);
-      staffIndex.forEach(entry => {
-        if (entry.overrides.has(dateStr)) {
-          totalSlots += entry.overrides.get(dateStr)!;
-        } else {
-          totalSlots += entry.recurring.get(dow) ?? 0;
-        }
+    let availableMinutes = 0;
+    eachDayOfInterval({ start: parseISO(monthStart), end: parseISO(monthEnd) }).forEach(day => {
+      const date = format(day, "yyyy-MM-dd"), dow = getDay(day);
+      index.forEach(staff => {
+        availableMinutes += staff.overrides.has(date)
+          ? staff.overrides.get(date)!
+          : (staff.recurring.get(dow) ?? 0);
       });
     });
-
-    if (totalSlots === 0) return null;
-    const bookedSlots = active.length;
-    return Math.min(bookedSlots / totalSlots, 1);
-  }, [availabilityRows, active, monthStart, monthEnd, staffLoading]);
+    if (availableMinutes <= 0) return null;
+    const bookedMinutes = booked.reduce((sum: number, b: any) => {
+      const start = toMinutes(b.start_time), end = toMinutes(b.end_time);
+      if (start === null || end === null) return sum;
+      return sum + Math.max(0, end >= start ? end - start : 1440 - start + end);
+    }, 0);
+    return bookedMinutes / availableMinutes;
+  }, [availabilityRows, booked, monthStart, monthEnd, staffLoading]);
 
   // ─── alerts ───────────────────────────────────────────────────────────────
   type Alert = { text: string; type: "warning" | "info" | "danger" };
   const alerts = useMemo(() => {
     const list: Alert[] = [];
-    const pendingDeposits = bookings.filter(
-      (b: any) => b.deposit_paid !== true && b.status !== "cancelled",
+    const pendingDeposits = bookings.filter((b: any) =>
+      b.status !== "cancelled" && Number(b.deposit_amount ?? 0) > 0 &&
+      b.deposit_paid !== true && b.full_payment_received !== true
     ).length;
     if (pendingDeposits > 0)
       list.push({ text: `${pendingDeposits} deposit${pendingDeposits > 1 ? "s" : ""} still pending`, type: "warning" });
-    if (lostBookings.length > 0)
-      list.push({ text: `${lostBookings.length} cancellation${lostBookings.length > 1 ? "s" : ""} / no-show${lostBookings.length > 1 ? "s" : ""} this month`, type: "info" });
+    if (cancelledBookings.length > 0)
+      list.push({ text: `${cancelledBookings.length} cancellation${cancelledBookings.length > 1 ? "s" : ""} this month`, type: "info" });
+    if (noShowBookings.length > 0)
+      list.push({ text: `${noShowBookings.length} no-show${noShowBookings.length > 1 ? "s" : ""} this month`, type: "warning" });
     stockItems.forEach((s: any) => {
       list.push({
         text: `${s.item_name} - ${s.stock_on_hand <= 2 ? "critical" : "low"} stock (${s.stock_on_hand})`,
@@ -567,7 +576,7 @@ export function useDashboardData() {
       });
     });
     return list;
-  }, [bookings, lostBookings, stockItems]);
+  }, [bookings, cancelledBookings, noShowBookings, stockItems]);
 
   // ─── return ───────────────────────────────────────────────────────────────
   return {
@@ -580,7 +589,7 @@ export function useDashboardData() {
       lastMonth: prevMonthRevenue,
     },
     today: {
-      appointments: todayBookings.filter((b: any) => b.status !== "cancelled").length,
+      appointments: todayBookings.filter((b: any) => b.status !== "cancelled" && b.status !== "no_show").length,
       remaining:    upcoming.length,
       nextAppointment: nextAppt
         ? `${(nextAppt.start_time || "").slice(0, 5)} - ${resolveClientName(nextAppt)}`
@@ -590,17 +599,17 @@ export function useDashboardData() {
       fillRate,
       staffLoading,
       avgBasket:
-        active.length > 0 && monthRevenue > 0
-          ? Math.round(monthRevenue / active.length)
+        active.length > 0
+          ? Math.round(active.reduce((sum: number, b: any) => sum + Number(b.total_amount ?? 0), 0) / active.length)
           : 0,
       totalAppointments: active.length,
       cancellationRate:
-        bookings.length > 0 ? Math.round((lostBookings.length / bookings.length) * 100) : 0,
+        bookings.length > 0 ? Math.round((cancelledBookings.length / bookings.length) * 100) : 0,
       revenueLost: lostBookings.reduce((s: number, b: any) => s + Number(b.total_amount), 0),
     },
     clients: {
       total:      clientKeySet.size,
-      newClients: Number(newVsReturningData?.new_clients ?? 0),
+      newClients: newClientCount,
       returning:  returningCount,
       retentionRate,
     },
@@ -609,7 +618,7 @@ export function useDashboardData() {
     allTimeTopServices,
     alerts,
     todayAppointments: todayBookings
-      .filter((b: any) => b.status !== "cancelled")
+      .filter((b: any) => b.status !== "cancelled" && b.status !== "no_show")
       .sort((a: any, b: any) => a.start_time.localeCompare(b.start_time))
       .map((b: any) => ({
         id:      b.id,
