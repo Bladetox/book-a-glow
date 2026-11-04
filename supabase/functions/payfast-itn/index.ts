@@ -99,8 +99,12 @@ async function sendBookingEmail(
         email_type: emailType,
       }),
     });
-    const emailJson = await emailRes.json();
-    console.log(`[payfast-itn] send-booking-email (${emailType}) response:`, emailRes.status, JSON.stringify(emailJson));
+    const emailJson = await emailRes.json().catch(() => null);
+    if (!emailRes.ok || emailJson?.success !== true) {
+      console.error(`[payfast-itn] send-booking-email (${emailType}) was not accepted:`, emailRes.status, JSON.stringify(emailJson));
+    } else {
+      console.log(`[payfast-itn] send-booking-email (${emailType}) accepted:`, emailRes.status, JSON.stringify(emailJson));
+    }
   } catch (emailErr) {
     console.error("[payfast-itn] Failed to call send-booking-email:", emailErr);
   }
