@@ -1123,7 +1123,13 @@ Deno.serve(async (req) => {
         headers: { "Authorization": `Bearer ${resendKey}`, "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      console.log(`Email sent [${payload.subject}]:`, res.status, JSON.stringify(await res.json()));
+      const responseBody = await res.json().catch(() => null);
+      if (!res.ok) {
+        console.error(`Resend rejected email [${payload.subject}]:`, res.status, responseBody);
+        throw new Error(`Resend email request failed with HTTP ${res.status}`);
+      }
+      console.log(`Email accepted [${payload.subject}]:`, res.status, JSON.stringify(responseBody));
+      return responseBody;
     };
 
     // ======================================================================
@@ -1268,6 +1274,65 @@ Deno.serve(async (req) => {
     // ======================================================================
     // FULL PAYMENT CONFIRMED
     // ======================================================================
+    // ======================================================================
+    // BOOKING CONFIRMED AFTER DEPOSIT PAYMENT
+    // This event is sent only after a verified gateway payment. It must not
+    // be used when a checkout/paylink is merely created.
+    // ======================================================================
+    if (email_type === "booking_confirmed") {
+      if (!clientEmail) {
+        throw new Error("Cannot send booking confirmation: booking has no client email address");
+      }
+
+      const locationRow = clientMapsLink
+        ? detailRow(clientLocationLabel, `<a href="${clientMapsLink}" target="_blank" class="tlink" style="color:#111111;font-weight:600;text-decoration:underline;">${clientLocationValue}</a>`, true)
+        : detailRow(clientLocationLabel, clientLocationValue || tenantName, true);
+
+      const clientBody = `
+        <tr><td style="padding:28px 36px 10px;">
+          <p class="tm" style="margin:0;font-size:15px;color:#000;line-height:1.5;">Hi <strong>${clientName}</strong>, your booking is confirmed! &#10003;</p>
+          <p class="tl" style="margin:10px 0 0;font-size:14px;color:#555;line-height:1.7;">
+            We have received your deposit and secured your appointment with ${tenantName}.
+          </p>
+        </td></tr>
+        <tr><td style="padding:18px 36px 26px;">
+          <p class="tl" style="margin:0 0 10px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#999;">Booking Details</p>
+          ${detailTable(
+            detailRow("Service", serviceNames) +
+            detailRow("Date", formattedDate) +
+            detailRow("Time", formattedTime) +
+            detailRow("Deposit Paid", depositAmount) +
+            detailRow("Balance Due", balanceDue) +
+            locationRow
+          )}
+        </td></tr>
+        <tr><td style="padding:0 36px 26px;text-align:center;">
+          ${calendarButton(gcalBookingLink)}
+        </td></tr>
+        ${consistencyEmailSection}
+        <tr><td style="padding:0 36px 26px;">
+          <p class="tl" style="margin:0;font-size:13px;color:#666;line-height:1.5;">
+            Questions? <a href="tel:${tenantPhone}" class="tlink" style="color:#111111;font-weight:600;">${tenantPhone}</a>
+          </p>
+        </td></tr>
+      `;
+
+      await send({
+        from: `${tenantName} <bookings@nextslot.co.za>`,
+        reply_to: tenantEmail ?? undefined,
+        to: [clientEmail],
+        subject: `Your booking is confirmed — ${formattedDate}`,
+        html: emailWrapper(
+          logoHtml,
+          tenantName,
+          "Booking Confirmed",
+          clientBody,
+          `&copy; ${new Date().getFullYear()} ${tenantName} &middot; Powered by NextSlot`,
+          `Your appointment with ${tenantName} is confirmed.`
+        ),
+      });
+    }
+
     if (email_type === "full_payment_confirmed") {
 
       if (clientEmail) {
@@ -1752,7 +1817,26 @@ Deno.serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({ success: true }), {
+    const supportedEmailTypes = [
+      "payshap_instructions",
+      "booking_confirmed",
+      "full_payment_confirmed",
+      "balance_request",
+      "balance_paid",
+      "service_thank_you",
+    ];
+    if (!supportedEmailTypes.includes(email_type)) {
+      console.error("send-booking-email: unsupported email_type", email_type);
+      return new Response(JSON.stringify({
+        success: false,
+        error: "Unsupported email_type",
+        email_type,
+      }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    return new Response(JSON.stringify({ success: true, email_type }), {
       status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
 
