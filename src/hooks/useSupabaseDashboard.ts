@@ -100,7 +100,8 @@ function buildTopServices(
   limit = 5,
 ): { name: string; count: number; revenue: number }[] {
   const svcMap = new Map<string, { count: number; revenue: number }>();
-  bookingRows.filter((b: any) => b.status !== "cancelled" && b.status !== "no_show").forEach((b: any) => {
+  // No-shows still represent a booking demand event and reserved capacity.
+  bookingRows.filter((b: any) => b.status !== "cancelled").forEach((b: any) => {
     const perBooking = new Map<string, number>();
     [...(b.items ?? [])].sort((a: any, z: any) => (a.sort_order ?? 0) - (z.sort_order ?? 0)).forEach((i: any) => {
       const name = String(i.service_name ?? "").trim();
@@ -418,7 +419,7 @@ export function useDashboardData() {
   const heatmap = useMemo(() => {
     const heatSlots = buildHeatSlots(heatmapAvailabilityRows);
     const idx: Record<string, number> = {};
-    active.forEach((b: any) => {
+    booked.forEach((b: any) => {
       const dow  = DOW_TO_IDX[new Date(b.booking_date + "T00:00:00").getDay()];
       const hour = parseInt((b.start_time || "0").split(":")[0]);
       if (dow === undefined) return;
@@ -437,7 +438,7 @@ export function useDashboardData() {
         intensity: idx[`${di}__${si}`] || 0,
       })),
     }));
-  }, [active, heatmapAvailabilityRows]);
+  }, [booked, heatmapAvailabilityRows]);
 
   // ─── unified client identity and first-booking attribution ───────────────
   const identityKeys = useMemo(
