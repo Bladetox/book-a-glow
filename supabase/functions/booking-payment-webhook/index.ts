@@ -244,7 +244,7 @@ Deno.serve(async (req) => {
   // and service edits clear it; never let an older externally-held link settle
   // a booking after the amount due has changed.
   if (paymentType === "balance" && booking.yoco_final_checkout_id !== checkoutId) {
-    const staleAmountCents = (eventData as any)?.total_amount?.amount as number | undefined;
+    const staleAmountCents = (eventData as any)?.amount as number | undefined;
     const { error: staleEventError } = await supabase
       .from("stale_payment_webhook_events")
       .insert({
@@ -281,7 +281,7 @@ Deno.serve(async (req) => {
   // Verify the amount Yoco actually collected before changing booking state.
   // Yoco reports amounts in cents. Mismatches are retained for reconciliation
   // and must never confirm or settle the booking.
-  const amountCents = (eventData as any)?.total_amount?.amount;
+  const amountCents = (eventData as any)?.amount;
   const expectedAmountRands =
     paymentType === "deposit"
       ? Number(booking.deposit_amount)
