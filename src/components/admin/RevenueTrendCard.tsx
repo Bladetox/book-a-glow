@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { TrendingUp, TrendingDown, Info, X, BarChart3 } from "lucide-react";
+import { TrendingUp, TrendingDown, Info, BarChart3 } from "lucide-react";
+import { AdminMetricExplanation } from "@/components/admin/AdminMetricExplanation";
+import { ADMIN_METRIC_INFO } from "@/components/admin/metricDefinitions";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -8,11 +10,6 @@ export interface RevenueTrendEntry {
   day: number;
   value: number;
   date?: string;
-}
-
-interface InfoLine {
-  term: string;
-  def: string;
 }
 
 interface Props {
@@ -30,14 +27,6 @@ const PERIODS = [
   { label: "90D", days: 90 },
 ] as const;
 type PeriodLabel = typeof PERIODS[number]["label"];
-
-const INFO_LINES: InfoLine[] = [
-  { term: "Collections Trend", def: "Daily completed payment receipts recorded across the selected period." },
-  { term: "Peak Days",         def: "The tallest bars are the days with the highest payment collections." },
-  { term: "Zero Bars",         def: "Dashed outline = no payment receipts recorded that day. It does not mean no bookings occurred." },
-  { term: "Faint Bars",        def: "Days with lower payment collections." },
-  { term: "Period comparison", def: "The selected number of days is compared with the immediately preceding equal-length period." },
-];
 
 const PERIOD_COMPARE_LABEL: Record<PeriodLabel, string> = {
   "7D":  "prev 7 days",
@@ -84,30 +73,6 @@ const EmptyState = () => (
     <BarChart3 className="w-5 h-5 text-white/10" />
     <p className="text-xs text-white/25">No payment receipts recorded for this period</p>
   </div>
-);
-
-const InfoPanel = ({ lines, onClose }: { lines: InfoLine[]; onClose: () => void }) => (
-  <motion.div
-    initial={{ opacity: 0, height: 0 }}
-    animate={{ opacity: 1, height: "auto" }}
-    exit={{ opacity: 0, height: 0 }}
-    className="overflow-hidden"
-  >
-    <div className="mb-3 rounded-lg border border-white/[0.06] bg-white/[0.04] p-3 flex flex-col gap-2">
-      <div className="flex items-center justify-between mb-1">
-        <span className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/30">How to read this</span>
-        <button onClick={onClose} className="text-white/20 hover:text-white/50 transition-colors">
-          <X className="w-3 h-3" />
-        </button>
-      </div>
-      {lines.map(l => (
-        <div key={l.term} className="flex gap-2">
-          <span className="text-[10px] font-semibold text-emerald-400/80 shrink-0 w-28 leading-snug">{l.term}</span>
-          <span className="text-[11px] text-white/55 leading-snug">{l.def}</span>
-        </div>
-      ))}
-    </div>
-  </motion.div>
 );
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -199,24 +164,23 @@ const RevenueTrendCard = ({ revenueTrend, periodRevenue: _periodRevenue, lastPer
 
   return (
     <div
-      className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-5 flex flex-col gap-3 overflow-hidden"
+      className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-4 sm:p-5 flex flex-col gap-3 overflow-hidden"
       onTouchStart={() => setTappedIdx(null)}
     >
+      <AdminMetricExplanation open={showInfo} onOpenChange={setShowInfo} title="Collections Trend" description="This chart shows completed payment receipts over time. It tracks money received, not the number or value of appointments booked." extraLines={ADMIN_METRIC_INFO.collectionsTrend} extraLinesTitle="How to read it" />
 
       <div className="flex items-center justify-between">
         <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25">Collections Trend</p>
         <button
-          onClick={() => setShowInfo(v => !v)}
-          className="text-white/20 hover:text-white/50 transition-colors"
-          aria-label="Collections trend info"
+          type="button"
+          onClick={() => setShowInfo(true)}
+          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-white/35 hover:text-white/70 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+          aria-label="Explain the collections trend"
+          aria-haspopup="dialog"
         >
           <Info className="w-3.5 h-3.5" />
         </button>
       </div>
-
-      <AnimatePresence>
-        {showInfo && <InfoPanel lines={INFO_LINES} onClose={() => setShowInfo(false)} />}
-      </AnimatePresence>
 
       <div className="flex items-start justify-between gap-4">
         <div>
@@ -283,10 +247,13 @@ const RevenueTrendCard = ({ revenueTrend, periodRevenue: _periodRevenue, lastPer
               const barX      = (i / filtered.length) * containerWidth;
 
               return (
-                <div
+                <button
+                  type="button"
                   key={i}
-                  className="relative flex-1 flex flex-col justify-end cursor-crosshair"
+                  className="relative flex-1 flex flex-col justify-end cursor-crosshair focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-emerald-300/70 rounded-sm"
                   style={{ height: "100%" }}
+                  aria-label={"Collections for " + (d.date || "day " + d.day) + ": R " + Number(d.value).toFixed(2)}
+                  aria-pressed={tappedIdx === i}
                   onMouseEnter={() => setHoveredIdx(i)}
                   onMouseLeave={() => setHoveredIdx(null)}
                   onTouchStart={e => {
@@ -347,7 +314,7 @@ const RevenueTrendCard = ({ revenueTrend, periodRevenue: _periodRevenue, lastPer
                       }),
                     }}
                   />
-                </div>
+                </button>
               );
             })}
           </div>
@@ -382,12 +349,12 @@ const RevenueTrendCard = ({ revenueTrend, periodRevenue: _periodRevenue, lastPer
           </div>
 
           <div className="flex justify-center pt-1">
-            <div className="flex items-center gap-0.5 rounded-lg bg-white/[0.04] p-0.5">
+            <div className="flex items-center gap-0.5 rounded-lg bg-white/[0.04] p-0.5" role="group" aria-label="Collections chart period">
               {PERIODS.map(p => (
                 <button
                   key={p.label}
                   onClick={() => setPeriod(p.label)}
-                  className={`px-3 py-1 rounded-md text-[10px] font-semibold transition-all ${
+                  className={`min-h-11 min-w-11 px-3 py-1 rounded-md text-[10px] font-semibold transition-all ${
                     period === p.label
                       ? "bg-white/[0.1] text-white/80"
                       : "text-white/25 hover:text-white/50"

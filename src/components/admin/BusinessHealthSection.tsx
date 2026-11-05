@@ -154,7 +154,7 @@ const MetricCard = ({
     type="button"
     layoutId={id}
     onClick={() => onExpand({ id, label, value, valueColor: color, title, explain, benchmark })}
-    className={`w-full text-left rounded-xl border cursor-pointer select-none transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 ${cardAlertClass(alertStatus)}`}
+    className={`w-full min-h-24 text-left rounded-xl border cursor-pointer select-none transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 ${cardAlertClass(alertStatus)}`}
     whileTap={{ scale: 0.97 }}
     transition={SPRING}
     aria-label={`Learn more about ${label}`}
@@ -274,14 +274,15 @@ export default function BusinessHealthSection({
 
   return (
     <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.04 }}>
-      <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25 mb-3">
-        Business Health
-      </p>
+      <div className="mb-3">
+        <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/55">Business Health</p>
+        <p className="mt-1 text-xs text-white/30">A quick view of capacity, booking activity and repeat clients.</p>
+      </div>
 
       {/* ── Hick's Law: Critical row — Fill Rate + Cancellation Rate ────────
            These two metrics demand the most urgent action so they get a
            primary full-width row with larger presence.                      */}
-      <div className="grid grid-cols-2 gap-3 mb-3">
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-3">
         <MetricCard
           id="mc-fill"
           icon={Percent}

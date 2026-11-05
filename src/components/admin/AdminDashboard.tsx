@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useDashboardData } from "@/hooks/useSupabaseDashboard";
 import RevenueTrendCard from "@/components/admin/RevenueTrendCard";
+import { AdminMetricExplanation } from "@/components/admin/AdminMetricExplanation";
 import { useClientAlerts, type OverdueLoyaltyClient, type InactiveClient } from "@/hooks/useClientAlerts";
 import ClientAlertsModal, { alertCardLayoutId } from "@/components/admin/ClientAlertsModal";
 import { useTenant } from "@/contexts/TenantContext";
@@ -209,17 +210,6 @@ const ClientMiniCard = ({
       <p className="text-[10px] text-white/30">{label}</p>
     </div>
   </motion.button>
-);
-
-const SectionInfoPanel = ({ lines }: { lines: InfoLine[] }) => (
-  <div className="mt-3 mb-1 rounded-lg border border-white/[0.10] bg-white/[0.04] p-3 flex flex-col gap-2">
-    {lines.map((l) => (
-      <div key={l.term} className="flex gap-2">
-        <span className="text-[10px] font-semibold text-emerald-400/80 shrink-0 w-28 leading-snug">{l.term}</span>
-        <span className="text-xs text-white/55 leading-snug">{l.def}</span>
-      </div>
-    ))}
-  </div>
 );
 
 const AppointmentsList = ({
@@ -479,6 +469,7 @@ export const AdminDashboardView = ({
   return (
     <div className="flex flex-col gap-6">
       <MetricExpandOverlay card={expandedCard} onClose={() => setExpandedCard(null)} />
+      <AdminMetricExplanation open={showHeatInfo} onOpenChange={setShowHeatInfo} title="Booking Heatmap" description="See when bookings are concentrated across weekdays and time windows. It shows booking volume, not attendance, conversion or capacity utilisation." extraLines={METRIC_COPY.heatmap} extraLinesTitle="How to read it" />
       {!demo && (
         <ClientAlertsModal
           isOpen={alertModalOpen}
@@ -580,8 +571,11 @@ export const AdminDashboardView = ({
                 {/* Peak-End Rule: projection */}
                 {projectedRevenue !== null && dayOfMonth < totalDays && (
                   <p className="text-[11px] text-white/40 tabular-nums">
-                    On track for R {projectedRevenue.toLocaleString()} collected this month
+                    Estimated month-end collections: R {projectedRevenue.toLocaleString()}
                   </p>
+                )}
+                {projectedRevenue !== null && dayOfMonth < totalDays && (
+                  <p className="text-[10px] text-white/25">Estimate based on collections recorded so far. Actual results may differ.</p>
                 )}
 
                 {/* MoM delta */}
@@ -677,6 +671,23 @@ export const AdminDashboardView = ({
               ))}
             </div>
 
+          </div>
+        </motion.section>
+      )}
+
+      {visibility.todayAppointments && (
+        <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.16 }}>
+          <div className="rounded-2xl border border-white/[0.10] bg-white/[0.02] p-5">
+            <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/55 mb-1">Today's Schedule</p>
+            <p className="text-xs text-white/30 mb-4">Appointments and payment status for today.</p>
+            {(data.todayAppointments ?? []).length === 0 ? (
+              <p className="text-xs text-white/20">No appointments today.</p>
+            ) : (
+              <AppointmentsList
+                appointments={data.todayAppointments ?? []}
+                onSelect={onSelectAppointment}
+              />
+            )}
           </div>
         </motion.section>
       )}
@@ -816,34 +827,21 @@ export const AdminDashboardView = ({
             <div className="flex items-center justify-between mb-4">
               <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25">Booking Heatmap</p>
               <button
-                onClick={() => setShowHeatInfo((v) => !v)}
-                className="text-white/20 hover:text-white/50 transition-colors"
-                aria-label="Heatmap info"
+                type="button"
+                onClick={() => setShowHeatInfo(true)}
+                className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-white/35 hover:text-white/70 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+                aria-label="Explain the booking heatmap"
+                aria-haspopup="dialog"
               >
                 <Info className="w-3.5 h-3.5" />
               </button>
             </div>
-            {showHeatInfo && <SectionInfoPanel lines={METRIC_COPY.heatmap} />}
             <BookingHeatmap data={data.heatmap ?? []} />
           </div>
         </motion.section>
       )}
 
-      {visibility.todayAppointments && (
-        <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.16 }}>
-          <div className="rounded-2xl border border-white/[0.10] bg-white/[0.02] p-5">
-            <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25 mb-4">Today's Appointments</p>
-            {(data.todayAppointments ?? []).length === 0 ? (
-              <p className="text-xs text-white/20">No appointments today.</p>
-            ) : (
-              <AppointmentsList
-                appointments={data.todayAppointments ?? []}
-                onSelect={onSelectAppointment}
-              />
-            )}
-          </div>
-        </motion.section>
-      )}
+
 
       {visibility.leadSource && (
         <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.18 }}>
