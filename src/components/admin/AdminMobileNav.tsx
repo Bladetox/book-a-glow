@@ -1,5 +1,6 @@
 // Compact-shell bottom navigation for the admin app.
 import { motion } from "framer-motion";
+import { ADMIN_NAV_GROUPS } from "@/components/admin/adminNavigation";
 import {
   DashboardIcon,
   BookingsIcon,
@@ -8,47 +9,20 @@ import {
   SettingsIcon,
 } from "@/components/icons/BrandIcons";
 
-type NavGroup = {
-  label: string;
-  icon: React.ElementType;
-  /** The view to navigate to when tapped */
-  targetView: string;
-  /** All views that belong to this group (for active state) */
-  views: string[];
+const mobileIconMap: Record<string, React.ElementType> = {
+  dashboard: DashboardIcon,
+  schedule: BookingsIcon,
+  catalogue: ServicesIcon,
+  clients: ClientManagementIcon,
+  business: SettingsIcon,
 };
 
-const NAV_GROUPS: NavGroup[] = [
-  {
-    label:      "Dashboard",
-    icon:       DashboardIcon,
-    targetView: "Dashboard",
-    views:      ["Dashboard", "Recommendations"],
-  },
-  {
-    label:      "Schedule",
-    icon:       BookingsIcon,
-    targetView: "Bookings",
-    views:      ["Calendar", "Bookings", "Availability"],
-  },
-  {
-    label:      "Catalogue",
-    icon:       ServicesIcon,
-    targetView: "Services",
-    views:      ["Services", "Stock"],
-  },
-  {
-    label:      "Clients",
-    icon:       ClientManagementIcon,
-    targetView: "Client Management",
-    views:      ["Client Management", "Consultations", "Special Occasions", "Loyalty", "Consistency Pricing"],
-  },
-  {
-    label:      "Business",
-    icon:       SettingsIcon,
-    targetView: "Settings",
-    views:      ["Integrations", "Communications", "Settings", "Terms & Conditions", "Help"],
-  },
-];
+const NAV_GROUPS = ADMIN_NAV_GROUPS.map(({ label, iconKey, targetView, views }) => ({
+  label,
+  icon: mobileIconMap[iconKey],
+  targetView,
+  views,
+}));
 
 interface AdminMobileNavProps {
   activeView: string;
