@@ -176,7 +176,8 @@ const PillPicker = ({
         <button
           key={p.value}
           onClick={() => onSelect(p.value)}
-          className={`py-2 rounded-xl border text-xs font-semibold transition-all ${
+          aria-pressed={value === p.value}
+          className={`min-h-[44px] py-2 rounded-xl border text-xs font-semibold transition-all ${
             value === p.value
               ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-400"
               : "border-white/[0.08] bg-white/[0.03] text-white/50 hover:border-white/20"
@@ -215,7 +216,8 @@ const ServiceModeToggle = ({
       <button
         type="button"
         onClick={() => onChange(false)}
-        className={`flex flex-col items-center gap-2 py-4 px-3 rounded-2xl border transition-all ${
+        aria-pressed={!enabled}
+        className={`min-h-[96px] flex flex-col items-center justify-center gap-2 py-4 px-3 rounded-2xl border transition-all ${
           !enabled
             ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-400"
             : "border-white/[0.08] bg-white/[0.03] text-white/40 hover:border-white/20"
@@ -232,7 +234,8 @@ const ServiceModeToggle = ({
       <button
         type="button"
         onClick={() => onChange(true)}
-        className={`flex flex-col items-center gap-2 py-4 px-3 rounded-2xl border transition-all ${
+        aria-pressed={enabled}
+        className={`min-h-[96px] flex flex-col items-center justify-center gap-2 py-4 px-3 rounded-2xl border transition-all ${
           enabled
             ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-400"
             : "border-white/[0.08] bg-white/[0.03] text-white/40 hover:border-white/20"
@@ -527,7 +530,7 @@ const AdminSettings = () => {
             <SettingRow id="logo-url" label="Logo URL" placeholder="https://..." value={draft.logo_url} onChange={(v) => update("logo_url", v)} />
             <div className="flex items-center gap-3">
               <button onClick={() => logoInputRef.current?.click()} disabled={logoUploading}
-                className="px-4 py-2 rounded-xl bg-white/[0.08] border border-white/[0.1] text-xs font-semibold text-white/80 hover:bg-white/[0.12] transition-colors flex items-center gap-1.5 disabled:opacity-50">
+                className="min-h-[44px] px-4 py-2 rounded-xl bg-white/[0.08] border border-white/[0.1] text-xs font-semibold text-white/80 hover:bg-white/[0.12] transition-colors flex items-center gap-1.5 disabled:opacity-50">
                 {logoUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
                 {logoUploading ? "Uploading..." : "Upload File"}
               </button>
@@ -596,7 +599,7 @@ const AdminSettings = () => {
               ))}
             </div>
             <div className="flex gap-2">
-              <input id="new-acquisition-channel" value={newReferralOption} onChange={(e) => setNewReferralOption(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addReferralOption(); } }} placeholder="Add an acquisition channel" className="min-w-0 flex-1 px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors" />
+              <input id="new-acquisition-channel" value={newReferralOption} onChange={(e) => setNewReferralOption(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addReferralOption(); } }} placeholder="Add an acquisition channel" className="min-h-[44px] min-w-0 flex-1 px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors" />
               <button type="button" onClick={addReferralOption} className="min-h-[44px] min-w-[44px] px-3 py-2 rounded-xl bg-white/[0.08] border border-white/[0.1] text-xs font-semibold text-white/80"><Plus className="w-3.5 h-3.5" /></button>
             </div>
             <p className="text-[10px] text-white/25 leading-relaxed">These are guest-reported acquisition sources. Returning-client status is determined automatically from booking history and is not an acquisition channel. Existing bookings retain their saved source.</p>
@@ -844,7 +847,7 @@ const AdminSettings = () => {
             <SettingRow id="settings-confirm-password" label="Confirm Password" placeholder="Confirm new password" type="password" value={confirmPw} onChange={setConfirmPw} />
             {pwError && <p className="text-xs text-red-400">{pwError}</p>}
             {pwSuccess && <p className="text-xs text-emerald-400 flex items-center gap-1"><Check className="w-3 h-3" /> {pwSuccess}</p>}
-            <button onClick={handlePasswordChange} className="self-start px-4 py-2 rounded-xl bg-white/[0.08] border border-white/[0.1] text-xs font-semibold text-white/80 hover:bg-white/[0.12] transition-colors flex items-center gap-1.5">
+            <button onClick={handlePasswordChange} className="min-h-[44px] self-start px-4 py-2 rounded-xl bg-white/[0.08] border border-white/[0.1] text-xs font-semibold text-white/80 hover:bg-white/[0.12] transition-colors flex items-center gap-1.5">
               <KeyRound className="w-3 h-3" /> Update Password
             </button>
           </SettingsCard>

@@ -11,6 +11,21 @@ import { useAdminReducedMotion } from "@/components/admin/adminMotion";
 import { AdminNextyOrb } from "@/components/admin/AdminNextyOrb";
 import { NextyFinancialValue, NextyOutcomeNote } from "@/components/admin/NextyInsightPresentation";
 
+type InsightFilterKey = "critical" | "growth" | "retention" | "ops";
+
+function getFilterKey(insight: NextyInsight): InsightFilterKey | null {
+  if (insight.priority === "critical") return "critical";
+  switch (insight.type) {
+    case "retention": return "retention";
+    case "ops":
+    case "capacity": return "ops";
+    case "growth":
+    case "margin":
+    case "leakage": return "growth";
+    default: return null;
+  }
+}
+
 function InsightIcon({ type, priority }: { type: string; priority: string }) {
   const cls = "w-4 h-4";
   if (priority === "critical") return <AlertTriangle className={cls} />;

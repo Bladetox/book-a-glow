@@ -2,7 +2,7 @@
 // Accessible from the sidebar under Business > Help.
 // Contains full setup guides for all integrations + general FAQs.
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   CreditCard, Calendar, Mail, ChevronDown,
@@ -10,6 +10,7 @@ import {
   MessageCircle,
 } from "lucide-react";
 import { AdminPageHeader, SectionLabel } from "@/components/admin/AdminSharedUI";
+import { adminTransition, useAdminReducedMotion } from "@/components/admin/adminMotion";
 
 // ── Primitives ────────────────────────────────────────────────────────────────
 
@@ -75,6 +76,8 @@ const AccordionCard = ({
   children: React.ReactNode;
 }) => {
   const [open, setOpen] = useState(defaultOpen);
+  const contentId = useId();
+  const reduceMotion = useAdminReducedMotion();
   const badgeStyles: Record<string, string> = {
     amber:   "bg-amber-400/10 border-amber-400/20 text-amber-400/90",
     purple:  "bg-purple-500/10 border-purple-500/20 text-purple-400/90",
@@ -88,6 +91,7 @@ const AccordionCard = ({
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
+        aria-controls={contentId}
         className="flex min-h-[64px] w-full items-center gap-3 p-5 text-left hover:bg-white/[0.02] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-amber-400/70"
       >
         <div className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.06] shrink-0">
@@ -99,11 +103,12 @@ const AccordionCard = ({
             {badge}
           </span>
         )}
-        <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }}>
+        <motion.div animate={{ rotate: open ? 180 : 0 }} transition={adminTransition(reduceMotion)}>
           <ChevronDown className="w-4 h-4 text-white/25 shrink-0" />
         </motion.div>
       </button>
 
+      <div id={contentId}>
       <AnimatePresence initial={false}>
         {open && (
           <motion.div
@@ -111,7 +116,7 @@ const AccordionCard = ({
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25, ease: "easeInOut" }}
+            transition={adminTransition(reduceMotion, 0.25)}
             className="overflow-hidden"
           >
             <div className="border-t border-white/[0.04] flex flex-col gap-4 px-5 py-5">
@@ -120,6 +125,7 @@ const AccordionCard = ({
           </motion.div>
         )}
       </AnimatePresence>
+      </div>
     </div>
   );
 };
@@ -235,19 +241,23 @@ const FAQS = [
 
 const FaqItem = ({ q, a }: { q: string; a: string }) => {
   const [open, setOpen] = useState(false);
+  const contentId = useId();
+  const reduceMotion = useAdminReducedMotion();
   return (
     <div className="border-b border-white/[0.05] last:border-0">
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
+        aria-controls={contentId}
         className="flex min-h-[56px] w-full items-start justify-between gap-3 py-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-amber-400/70"
       >
         <span className="text-sm text-white/65 font-medium leading-snug">{q}</span>
-        <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }} className="shrink-0 mt-0.5">
+        <motion.div animate={{ rotate: open ? 180 : 0 }} transition={adminTransition(reduceMotion)} className="shrink-0 mt-0.5">
           <ChevronDown className="w-4 h-4 text-white/25" />
         </motion.div>
       </button>
+      <div id={contentId}>
       <AnimatePresence initial={false}>
         {open && (
           <motion.div
@@ -255,13 +265,14 @@ const FaqItem = ({ q, a }: { q: string; a: string }) => {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: "easeInOut" }}
+            transition={adminTransition(reduceMotion)}
             className="overflow-hidden"
           >
             <p className="text-[12px] text-white/40 leading-relaxed pb-4">{a}</p>
           </motion.div>
         )}
       </AnimatePresence>
+      </div>
     </div>
   );
 };

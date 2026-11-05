@@ -317,7 +317,7 @@ const AdminTerms = () => {
                     <button
                       onClick={() => moveSection(i, 1)}
                       disabled={i === sections.length - 1}
-                      aria-label={`Move ${s.title} up`}
+                      aria-label={`Move ${s.title} down`}
                       className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg hover:bg-white/[0.06] text-white/40 hover:text-white/70 disabled:opacity-20 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70"
                     >
                       <ChevronDown className="w-3.5 h-3.5" />
@@ -325,10 +325,10 @@ const AdminTerms = () => {
                   </div>
 
                   {/* Content */}
-                  <div role="button" tabIndex={0} aria-label={`Edit ${s.title}`} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); startEdit(s); } }} className="flex-1 min-w-0 cursor-pointer rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70" onClick={() => startEdit(s)}>
+                  <button type="button" aria-label={`Edit ${s.title}`} className="flex-1 min-w-0 cursor-pointer rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70" onClick={() => startEdit(s)}>
                     <h4 className="text-sm font-bold text-white/85">{s.title}</h4>
                     <p className="text-xs text-white/35 mt-1.5 leading-relaxed line-clamp-3">{s.content}</p>
-                  </div>
+                  </button>
 
                   {/* Delete */}
                   <button
