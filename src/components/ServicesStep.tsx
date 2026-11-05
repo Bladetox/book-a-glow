@@ -103,7 +103,7 @@ const ServicesStep = ({ selectedTreatments, onAdd, onRemove }: ServicesStepProps
                 <motion.div
                   key={t.id}
                   layout
-                  className={`glass-card-service rounded-xl px-4 py-3.5 flex items-center gap-3 w-full transition-all duration-150 ${
+                  className={`glass-card-service shrink-0 rounded-xl px-4 py-3.5 flex items-center gap-3 w-full transition-all duration-150 ${
                     isSelected ? "selected" : ""
                   }`}
                 >
