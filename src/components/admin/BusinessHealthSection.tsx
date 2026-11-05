@@ -282,7 +282,7 @@ export default function BusinessHealthSection({
       {/* ── Hick's Law: Critical row — Fill Rate + Cancellation Rate ────────
            These two metrics demand the most urgent action so they get a
            primary full-width row with larger presence.                      */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 mb-3">
+      <div className="grid grid-cols-2 gap-3 mb-3">
         <MetricCard
           id="mc-fill"
           icon={Percent}
