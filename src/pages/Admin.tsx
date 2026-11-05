@@ -1,4 +1,5 @@
 import { useState, useEffect, lazy, Suspense, Component } from "react";
+import { MotionConfig } from "framer-motion";
 import type { ReactNode } from "react";
 import { Menu, Loader2, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,6 +16,7 @@ import { NotificationBell } from "@/components/admin/NotificationBell";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { useLocation } from "react-router-dom";
 import { useShellBackground } from "@/hooks/useShellBackground";
+import { useAdminViewport } from "@/hooks/use-admin-viewport";
 
 const AdminBookings         = lazy(() => import("@/components/admin/AdminBookings"));
 const AdminCalendar         = lazy(() => import("@/components/admin/AdminCalendar"));
@@ -142,6 +144,8 @@ const TenantAvatar = ({ tenant }: { tenant: Tenant | null }) => {
 };
 
 const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
+  const viewport = useAdminViewport();
+  const isCompact = viewport === "compact";
   const isLifetimeFree = tenant?.is_lifetime_free === true;
 
   const { flags, loading: flagsLoading, accountState } = useFeatureFlags(
@@ -209,13 +213,15 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
   }
 
   return (
-    <div className="admin-app h-dvh bg-black text-white flex flex-col lg:flex-row overflow-hidden">
+    <MotionConfig reducedMotion="user">
+    <div className={`admin-app h-dvh bg-black text-white flex overflow-hidden ${isCompact ? "flex-col" : "flex-row"}`} data-admin-viewport={viewport}>
       <AdminSidebar
         views={allowedViews as unknown as string[]}
         activeView={activeView}
         onSelect={(v) => { setActiveView(v as ViewName); setSidebarOpen(false); }}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
+        viewport={viewport}
       />
 
       <main className="flex-1 flex flex-col min-w-0 relative h-dvh overflow-hidden">
@@ -223,27 +229,28 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
         {isArrears && <ArrearsBanner />}
 
         <header
-          className="border-b border-black bg-black flex items-center justify-between px-4 lg:px-8 flex-shrink-0 relative z-30"
+          className={`border-b border-black bg-black flex items-center justify-between flex-shrink-0 relative z-30 ${viewport === "desktop" ? "px-8" : "px-4"}`}
           style={{ height: "calc(4rem + env(safe-area-inset-top, 0px))", paddingTop: "env(safe-area-inset-top, 0px)" }}
         >
           {/* Left: hamburger (mobile only) + view title */}
           <div className="flex items-center gap-3 min-w-0">
-            <button
+            {isCompact && <button
+              type="button"
               onClick={() => setSidebarOpen(true)}
-              className="lg:hidden p-2 -ml-2 text-white/40 hover:text-white transition-colors shrink-0"
+              className="min-h-11 min-w-11 flex items-center justify-center -ml-2 text-white/40 hover:text-white transition-colors shrink-0"
               aria-label="Open navigation"
             >
               <Menu className="w-5 h-5" />
-            </button>
+            </button>}
             <h1 className="text-sm font-semibold tracking-tight text-white/90 truncate">{activeView}</h1>
           </div>
 
           {/* Right: tenant brand (mobile only) + bell + divider + tenant name (desktop only) */}
           <div className="flex items-center gap-3">
             {/* Tenant logo + name — visible on mobile only, hidden on lg+ (sidebar already shows it) */}
-            <div className="lg:hidden">
+            {isCompact && <div>
               <TenantAvatar tenant={tenant} />
-            </div>
+            </div>}
 
             <NotificationBell />
 
@@ -258,7 +265,7 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
         </header>
 
         {/* Content region */}
-        <div className="flex-1 overflow-y-auto p-4 lg:p-8 scroll-smooth relative z-10 scrollbar-hide">
+        <div className={`flex-1 min-h-0 overflow-y-auto scroll-smooth relative z-10 scrollbar-hide ${viewport === "desktop" ? "p-8" : viewport === "tablet" ? "p-5" : "p-4"}`}>
           <AdminErrorBoundary>
             <Suspense
               fallback={
@@ -289,13 +296,14 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
         </div>
 
         {/* AdminMobileNav is a flex sibling — pinned to bottom by the flex column, no position:fixed needed */}
-        <AdminMobileNav
+        {isCompact && <AdminMobileNav
           activeView={activeView}
           onSelect={(v) => setActiveView(v as ViewName)}
           pendingCount={pendingCount}
-        />
+        />}
       </main>
     </div>
+  </MotionConfig>
   );
 };
 

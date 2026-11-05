@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight, ChevronsLeft, ChevronsRight, Heart, CalendarDays, MessageSquare } from "lucide-react";
+import { ChevronRight, ChevronsLeft, ChevronsRight, Heart, CalendarDays, MessageSquare, ClipboardList, Cake, TrendingUp } from "lucide-react";
 import {
   DashboardIcon,
   BookingsIcon,
@@ -15,7 +15,9 @@ import {
 import { HelpCircle } from "lucide-react";
 import { useTenant } from "@/contexts/TenantContext";
 import { useTenantSettings } from "@/hooks/useSupabaseSettings";
-import { useIsMobile } from "@/hooks/use-mobile";
+import { useAdminViewport, type AdminViewport } from "@/hooks/use-admin-viewport";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useStockAlerts } from "@/hooks/useStockAlerts";
 import { useSupabaseBookings } from "@/hooks/useSupabaseBookings";
 
@@ -34,6 +36,9 @@ const iconMap: Record<string, React.ElementType> = {
   "Settings":           SettingsIcon,
   "Terms & Conditions": TermsIcon,
   "Help":               HelpCircle,
+  "Recommendations":    TrendingUp,
+  "Consultations":       ClipboardList,
+  "Special Occasions":   Cake,
 };
 
 type NavItem =
@@ -43,9 +48,10 @@ type NavItem =
 const NAV: NavItem[] = [
   { kind: "direct", label: "Dashboard",        view: "Dashboard" },
   { kind: "direct", label: "Calendar",          view: "Calendar" },
+  { kind: "direct", label: "Recommendations",   view: "Recommendations" },
   { kind: "group",  label: "Schedule",          icon: BookingsIcon,        children: ["Bookings", "Availability"] },
   { kind: "group",  label: "Catalogue",         icon: ServicesIcon,        children: ["Services", "Stock"] },
-  { kind: "group",  label: "Clients",           icon: ClientManagementIcon, children: ["Client Management", "Loyalty", "Consistency Pricing"] },
+  { kind: "group",  label: "Clients",           icon: ClientManagementIcon, children: ["Client Management", "Consultations", "Special Occasions", "Loyalty", "Consistency Pricing"] },
   { kind: "group",  label: "Business",          icon: SettingsIcon,        children: ["Integrations", "Communications", "Settings", "Terms & Conditions", "Help"] },
 ];
 
@@ -62,6 +68,7 @@ interface AdminSidebarProps {
   onSelect: (view: string) => void;
   isOpen: boolean;
   onClose?: () => void;
+  viewport?: AdminViewport;
 }
 
 const DESKTOP_COLLAPSE_KEY = "ns_admin_sidebar_collapsed";
@@ -74,13 +81,14 @@ export interface AdminSidebarViewProps extends AdminSidebarProps {
   isMobile: boolean;
   /** false in the marketing demo so it never touches a real admin's saved preference */
   persistCollapse?: boolean;
+  viewport?: AdminViewport;
 }
 
 /** Presentational sidebar. Used by the live admin (via AdminSidebar) and the marketing demo. */
 export const AdminSidebarView = ({
   views, activeView, onSelect, isOpen, onClose,
   tenantName, logoUrl: logoUrlProp = null, stockAlerts, pendingCount, isMobile,
-  persistCollapse = true,
+  persistCollapse = true, viewport: viewportProp,
 }: AdminSidebarViewProps) => {
 
   // Desktop-only icon-rail collapse. Mobile keeps its own full off-canvas
@@ -95,6 +103,10 @@ export const AdminSidebarView = ({
     window.localStorage.setItem(DESKTOP_COLLAPSE_KEY, collapsed ? "1" : "0");
   }, [collapsed, persistCollapse]);
 
+  const viewport = viewportProp ?? (isMobile ? "compact" : "desktop");
+  const isCompact = viewport === "compact";
+  const isTablet = viewport === "tablet";
+  const [openRailGroup, setOpenRailGroup] = useState<string | null>(null);
   const [openGroups, setOpenGroups] = useState<Set<string>>(() => {
     const parent = parentGroupOf(activeView);
     return parent ? new Set([parent]) : new Set();
@@ -124,8 +136,8 @@ export const AdminSidebarView = ({
   const businessName = tenantName;
   const logoUrl      = logoUrlProp;
   const abbreviation = businessName ? getAbbreviation(String(businessName)) : "NS";
-  const xPos = isMobile ? (isOpen ? 0 : "-100%") : 0;
-  const railCollapsed = !isMobile && collapsed;
+  const xPos = isCompact ? (isOpen ? 0 : "-100%") : 0;
+  const railCollapsed = isTablet || (!isCompact && collapsed);
 
   // ── Child item ──────────────────────────────────────────────────────────────
   const renderChild = (view: string) => {
@@ -179,35 +191,35 @@ export const AdminSidebarView = ({
   // ── Direct nav item ──────────────────────────────────────────────────
   const renderDirect = (item: Extract<NavItem, { kind: "direct" }>) => {
     if (!views.includes(item.view)) return null;
-    const Icon     = iconMap[item.view] || DashboardIcon;
+    const Icon = iconMap[item.view] || DashboardIcon;
     const isActive = activeView === item.view;
 
-    return (
+    const button = (
       <button
         key={item.view}
+        type="button"
         onClick={() => { handleSelect(item.view); onClose?.(); }}
         title={railCollapsed ? item.label : undefined}
         aria-label={item.label}
-        className={`relative flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-200 text-left w-full overflow-hidden ${
+        aria-current={isActive ? "page" : undefined}
+        className={`relative flex min-h-11 w-full items-center gap-3 rounded-xl text-left text-sm font-medium transition-all duration-200 overflow-hidden ${
           railCollapsed ? "justify-center px-0 py-2.5" : "px-4 py-2.5"
         } ${
-          isActive
-            ? "bg-white/[0.08] text-white"
-            : "text-white/40 hover:text-white/70 hover:bg-white/[0.03]"
+          isActive ? "bg-white/[0.08] text-white" : "text-white/40 hover:text-white/70 hover:bg-white/[0.03]"
         }`}
       >
-        {isActive && (
-          <motion.div
-            layoutId="sidebar-active"
-            className="absolute inset-0 rounded-xl bg-white/[0.06]"
-            transition={{ type: "spring", stiffness: 380, damping: 32 }}
-          />
-        )}
-        <div className="relative z-10 w-4 h-4 shrink-0">
-          <Icon className="w-4 h-4" />
-        </div>
+        {isActive && <motion.div layoutId="sidebar-active" className="absolute inset-0 rounded-xl bg-white/[0.06]" transition={{ type: "spring", stiffness: 380, damping: 32 }} />}
+        <div className="relative z-10 w-4 h-4 shrink-0"><Icon className="w-4 h-4" /></div>
         {!railCollapsed && <span className="relative z-10 truncate">{item.label}</span>}
       </button>
+    );
+
+    if (!railCollapsed) return button;
+    return (
+      <Tooltip key={item.view}>
+        <TooltipTrigger asChild>{button}</TooltipTrigger>
+        <TooltipContent side="right" className="border-white/10 bg-zinc-900 text-white">{item.label}</TooltipContent>
+      </Tooltip>
     );
   };
 
@@ -220,27 +232,49 @@ export const AdminSidebarView = ({
     const GroupIcon  = item.icon;
 
     if (railCollapsed) {
-      // Icon-only rail: tapping a group expands the sidebar back out and
-      // opens that group, rather than trying to fit a flyout in a rail.
       return (
-        <button
-          key={item.label}
-          onClick={() => {
-            setCollapsed(false);
-            setOpenGroups(prev => new Set([...prev, item.label]));
-          }}
-          title={item.label}
-          aria-label={item.label}
-          className={`flex items-center justify-center rounded-xl px-0 py-2.5 w-full transition-colors duration-200 ${
-            hasActive
-              ? "text-white/85 bg-white/[0.05]"
-              : "text-white/40 hover:text-white/70 hover:bg-white/[0.03]"
-          }`}
-        >
-          <div className="w-4 h-4 shrink-0">
-            <GroupIcon className="w-4 h-4" />
-          </div>
-        </button>
+        <Popover key={item.label} open={openRailGroup === item.label} onOpenChange={(open) => setOpenRailGroup(open ? item.label : null)}>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              title={item.label}
+              aria-label={item.label}
+              aria-expanded={openRailGroup === item.label}
+              className={`flex min-h-11 w-full items-center justify-center rounded-xl px-0 py-2.5 transition-colors duration-200 ${
+                hasActive ? "text-white/85 bg-white/[0.05]" : "text-white/40 hover:text-white/70 hover:bg-white/[0.03]"
+              }`}
+            >
+              <div className="w-4 h-4 shrink-0"><GroupIcon className="w-4 h-4" /></div>
+            </button>
+          </PopoverTrigger>
+          <PopoverContent side="right" align="start" sideOffset={10} className="z-[70] w-60 border-white/[0.10] bg-[#111111] p-2 text-white shadow-2xl">
+            <p className="px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/35">{item.label}</p>
+            <div className="flex flex-col gap-1">
+              {visibleChildren.map((view) => {
+                const Icon = iconMap[view] || DashboardIcon;
+                const active = activeView === view;
+                const isStock = view === "Stock";
+                const isBookings = view === "Bookings";
+                return (
+                  <button
+                    key={view}
+                    type="button"
+                    onClick={() => { handleSelect(view); onClose?.(); setOpenRailGroup(null); }}
+                    aria-current={active ? "page" : undefined}
+                    className={`flex min-h-11 w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                      active ? "bg-white/[0.09] text-white" : "text-white/65 hover:bg-white/[0.05] hover:text-white"
+                    }`}
+                  >
+                    <Icon className="h-4 w-4 shrink-0" />
+                    <span className="min-w-0 flex-1 truncate">{view}</span>
+                    {isBookings && pendingCount > 0 && <span className="rounded-full bg-white/[0.12] px-1.5 text-[10px] font-bold text-white">{pendingCount}</span>}
+                    {isStock && stockAlerts.total > 0 && <span className={`rounded-full px-1.5 text-[10px] font-bold ${stockAlerts.out > 0 ? "bg-red-500/20 text-red-400" : "bg-amber-500/20 text-amber-400"}`}>{stockAlerts.total}</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </PopoverContent>
+        </Popover>
       );
     }
 
@@ -287,14 +321,14 @@ export const AdminSidebarView = ({
 
   return (
     <>
-      {isMobile && isOpen && (
+      {isCompact && isOpen && (
         <div className="fixed inset-0 z-40 bg-black/60" onClick={onClose} />
       )}
 
       <motion.aside
         animate={{ x: xPos, width: railCollapsed ? 76 : 256 }}
         transition={{ type: "spring", stiffness: 300, damping: 35 }}
-        className="fixed lg:relative z-50 lg:z-auto flex flex-col h-dvh bg-black border-r border-white/[0.06] overflow-y-auto overflow-x-hidden shrink-0"
+        className={`${isCompact ? "fixed z-50" : "relative z-auto"} flex flex-col h-dvh bg-black border-r border-white/[0.06] overflow-y-auto overflow-x-hidden shrink-0`}
       >
         {/* Brand header */}
         <div className={`flex items-center gap-3 py-5 border-b border-white/[0.05] ${railCollapsed ? "justify-center px-2" : "px-4"}`}>
@@ -328,7 +362,7 @@ export const AdminSidebarView = ({
             </div>
           )}
 
-          {isMobile && !railCollapsed && (
+          {isCompact && !railCollapsed && (
             <button onClick={onClose} className="text-white/30 hover:text-white/60 transition-colors shrink-0" aria-label="Close navigation">
               <svg viewBox="0 0 24 24" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2}>
                 <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" />
@@ -337,10 +371,10 @@ export const AdminSidebarView = ({
           )}
 
           {/* Desktop-only rail collapse toggle */}
-          {!isMobile && (
+          {!isCompact && !isTablet && (
             <button
               onClick={() => setCollapsed((v) => !v)}
-              className="hidden lg:flex items-center justify-center text-white/30 hover:text-white/60 transition-colors shrink-0"
+              className="flex min-h-11 min-w-11 items-center justify-center text-white/30 hover:text-white/60 transition-colors shrink-0"
               aria-label={railCollapsed ? "Expand navigation" : "Collapse navigation"}
               title={railCollapsed ? "Expand" : "Collapse"}
             >
@@ -350,11 +384,13 @@ export const AdminSidebarView = ({
         </div>
 
         {/* Nav */}
-        <nav className={`flex flex-col gap-0.5 py-3 flex-1 ${railCollapsed ? "px-2" : "px-2"}`}>
+        <TooltipProvider delayDuration={250}>
+        <nav aria-label="Main navigation" className={`flex flex-col gap-0.5 py-3 flex-1 ${railCollapsed ? "px-2" : "px-2"}`}>
           {NAV.map((item) =>
             item.kind === "direct" ? renderDirect(item) : renderGroup(item)
           )}
         </nav>
+        </TooltipProvider>
       </motion.aside>
     </>
   );
@@ -363,7 +399,9 @@ export const AdminSidebarView = ({
 const AdminSidebar = (props: AdminSidebarProps) => {
   const { tenantId }            = useTenant();
   const { data: tenant }        = useTenantSettings();
-  const isMobile                = useIsMobile();
+  const detectedViewport        = useAdminViewport();
+  const viewport                = props.viewport ?? detectedViewport;
+  const isMobile                = viewport === "compact";
   const stockAlerts             = useStockAlerts();
   const { data: bookings = [] } = useSupabaseBookings();
   const pendingCount = bookings.filter(b => b.status === "pending").length;
@@ -376,6 +414,7 @@ const AdminSidebar = (props: AdminSidebarProps) => {
       stockAlerts={stockAlerts}
       pendingCount={pendingCount}
       isMobile={isMobile}
+      viewport={viewport}
     />
   );
 };

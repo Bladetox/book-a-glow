@@ -168,6 +168,26 @@
     font-family: var(--font-body);
     letter-spacing: normal;
   }
+  .admin-app {
+    --admin-bg: #080808;
+    --admin-surface: #101010;
+    --admin-surface-raised: #161616;
+    --admin-border: rgba(255, 255, 255, 0.08);
+    --admin-border-strong: rgba(255, 255, 255, 0.14);
+    --admin-text: #f2f2ef;
+    --admin-text-muted: rgba(255, 255, 255, 0.62);
+    --admin-text-subtle: rgba(255, 255, 255, 0.34);
+    --admin-accent: #c8a46b;
+    --admin-radius-control: 0.75rem;
+    --admin-radius-card: 1rem;
+    --admin-radius-panel: 1.5rem;
+    --admin-target-primary: 44px;
+    --admin-target-dense: 24px;
+    --admin-motion-fast: 140ms;
+    --admin-motion-standard: 200ms;
+    --admin-motion-slow: 280ms;
+    color-scheme: dark;
+  }
   .booking-app h1, .booking-app h2, .booking-app h3,
   .admin-app h1, .admin-app h2, .admin-app h3 {
     font-family: inherit;
@@ -755,3 +775,46 @@ html:not(.dark) .booking-app .tenant-logo-img {
   }
 }
 
+
+
+/* Admin design-system foundations. Kept scoped away from marketing and booking. */
+.admin-app button,
+.admin-app [role="button"] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.admin-app button:focus-visible,
+.admin-app [role="button"]:focus-visible,
+.admin-app a:focus-visible,
+.admin-app input:focus-visible,
+.admin-app select:focus-visible,
+.admin-app textarea:focus-visible {
+  outline: 2px solid var(--admin-accent);
+  outline-offset: 3px;
+}
+
+.admin-app .admin-dense-target {
+  min-width: var(--admin-target-dense);
+  min-height: var(--admin-target-dense);
+}
+
+.admin-app .admin-touch-target {
+  min-width: var(--admin-target-primary);
+  min-height: var(--admin-target-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-app *,
+  .admin-app *::before,
+  .admin-app *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .admin-dialog-surface {
+    animation: none !important;
+    transition: none !important;
+  }
+}

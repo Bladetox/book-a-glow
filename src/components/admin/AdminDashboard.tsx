@@ -20,6 +20,9 @@ import BusinessHealthSection, { MetricExpandOverlay, type ExpandedCard } from "@
 import DashboardStockAlerts from "@/components/admin/DashboardStockAlerts";
 import AdminPayshapQueue from "@/components/admin/AdminPayshapQueue";
 import { TrialCountdownNudge } from "@/components/admin/TrialCountdownNudge";
+import { ADMIN_METRIC_DEFINITIONS, ADMIN_METRIC_INFO, type AdminMetricDefinition, type AdminMetricInfoLine } from "@/components/admin/metricDefinitions";
+type MetricEntry = AdminMetricDefinition;
+type InfoLine = AdminMetricInfoLine;
 
 const DASHBOARD_VIS_KEY = "pb_dashboard_visibility";
 
@@ -69,77 +72,17 @@ interface Appointment {
   balance: number;
 }
 
-interface MetricEntry {
-  title: string;
-  explain: string;
-  benchmark?: string;
-}
-
-interface InfoLine {
-  term: string;
-  def: string;
-}
-
-interface MetricCopyShape {
-  revenueToday: MetricEntry;
-  appointmentsToday: MetricEntry;
-  remaining: MetricEntry;
-  nextUp: MetricEntry;
-  retention: MetricEntry;
-  leadSource: MetricEntry;
-  clients: MetricEntry;
-  returning: MetricEntry;
-  revenueTrend: InfoLine[];
-  heatmap: InfoLine[];
-}
-
-const METRIC_COPY: MetricCopyShape = {
-  revenueToday: {
-    title: "Daily Revenue",
-    explain: "Total money received today.",
-    benchmark: "Aim: consistent with your weekday average.",
-  },
-  appointmentsToday: {
-    title: "Today's Bookings",
-    explain: "How many clients are booked in today.",
-  },
-  remaining: {
-    title: "Remaining Appointments",
-    explain: "Appointments still ahead today. If this drops suddenly a no-show may have occurred.",
-  },
-  nextUp: {
-    title: "Next Appointment",
-    explain: "Your next client. Knowing their service lets you prep and deliver a great experience.",
-  },
-  clients: {
-    title: "Clients Booked This Month",
-    explain: "Unique client identities with at least one appointment this month that is not cancelled or marked no-show. Includes future bookings.",
-  },
-  returning: {
-    title: "Returning Clients",
-    explain: "Clients who booked this month and had a completed appointment before their latest appointment this month. A client becomes returning after their first completed visit.",
-  },
-  retention: {
-    title: "Returning Client Share",
-    explain: "The percentage of this month's identifiable clients who had completed an appointment before their latest appointment this month. This is a repeat-client share, not a month-over-month cohort retention calculation.",
-  },
-  leadSource: {
-    title: "Original Client Acquisition",
-    explain: "The guest-reported acquisition source on each client's earliest booking. Each client is counted once. Repeat bookings do not increase the count. Channel percentages use clients with a valid recorded source; Not recorded is shown separately as a share of all clients.",
-    benchmark: "Use this breakdown to understand which channels are bringing new clients into your business.",
-  },
-  revenueTrend: [
-    { term: "Collections Trend", def: "Daily completed payment receipts recorded across the month." },
-    { term: "Peak Days", def: "The tallest bars are the days with the highest payment collections." },
-    { term: "Flat / Zero Bars", def: "No payment receipt was recorded that day. Bookings may still have occurred." },
-    { term: "Period comparison", def: "The selected number of days is compared with the immediately preceding equal-length period." },
-  ],
-  heatmap: [
-    { term: "Booking Heatmap", def: "Shows booking volume by weekday and time window for the selected month." },
-    { term: "Bright Green", def: "Highest booking volume in the displayed period. This is not a capacity-utilisation percentage." },
-    { term: "Faint / Empty", def: "Lower booking volume. Check available hours and staffing before choosing promotions." },
-    { term: "Day Patterns", def: "Shows when bookings are concentrated, not attendance or conversion rates." },
-  ],
+const METRIC_COPY = {
+  revenueToday: ADMIN_METRIC_DEFINITIONS.dailyRevenue,
+  appointmentsToday: ADMIN_METRIC_DEFINITIONS.todaysBookings,
+  remaining: ADMIN_METRIC_DEFINITIONS.remainingAppointments,
+  nextUp: ADMIN_METRIC_DEFINITIONS.nextAppointment,
+  clients: ADMIN_METRIC_DEFINITIONS.clientsBookedThisMonth,
+  returning: ADMIN_METRIC_DEFINITIONS.returningClients,
+  retention: ADMIN_METRIC_DEFINITIONS.returningClientShare,
+  leadSource: ADMIN_METRIC_DEFINITIONS.originalClientAcquisition,
+  revenueTrend: ADMIN_METRIC_INFO.collectionsTrend,
+  heatmap: ADMIN_METRIC_INFO.bookingHeatmap,
 };
 
 const fadeUp = { initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 } };
@@ -251,13 +194,13 @@ const ClientMiniCard = ({
   label: string;
   onExpand: (c: ExpandedCard) => void;
 } & MetricEntry) => (
-  <motion.div
+  <motion.button
+    type="button"
     layoutId={id}
     onClick={() => onExpand({ id, label, value, valueColor, title, explain, benchmark })}
-    className="rounded-xl border border-white/[0.10] bg-white/[0.02] cursor-pointer select-none"
+    className="w-full text-left rounded-xl border border-white/[0.10] bg-white/[0.02] cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
     whileTap={{ scale: 0.97 }}
     transition={{ type: "spring", stiffness: 340, damping: 30 }}
-    role="button"
     aria-label={`Learn more about ${label}`}
   >
     <div className="flex flex-col items-center justify-center gap-1 py-4 px-2">
@@ -265,7 +208,7 @@ const ClientMiniCard = ({
       <p className={`text-2xl font-bold ${valueColor ?? "text-white/90"}`}>{value}</p>
       <p className="text-[10px] text-white/30">{label}</p>
     </div>
-  </motion.div>
+  </motion.button>
 );
 
 const SectionInfoPanel = ({ lines }: { lines: InfoLine[] }) => (
@@ -905,7 +848,8 @@ export const AdminDashboardView = ({
       {visibility.leadSource && (
         <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.18 }}>
           {/* Lead source uses a MetricCard-like structure — inline here as it needs extraLines */}
-          <motion.div
+          <motion.button
+            type="button"
             layoutId="mc-lead"
             onClick={() => setExpandedCard({
               id: "mc-lead",
@@ -916,10 +860,9 @@ export const AdminDashboardView = ({
               benchmark: METRIC_COPY.leadSource.benchmark,
               extraLines: leadSourceExtraLines,
             })}
-            className="rounded-xl border border-white/[0.10] bg-white/[0.02] cursor-pointer select-none"
+            className="w-full text-left rounded-xl border border-white/[0.10] bg-white/[0.02] cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
             whileTap={{ scale: 0.97 }}
             transition={{ type: "spring", stiffness: 340, damping: 30 }}
-            role="button"
             aria-label="Learn more about Top Acquisition Channel"
           >
             <div className="flex items-start gap-2 p-3 sm:p-4">
@@ -935,7 +878,7 @@ export const AdminDashboardView = ({
                 <Info className="w-3 h-3 text-white/15" />
               </div>
             </div>
-          </motion.div>
+          </motion.button>
         </motion.section>
       )}
 

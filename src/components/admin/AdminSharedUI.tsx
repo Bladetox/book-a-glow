@@ -2,10 +2,11 @@
 // Import from here instead of rebuilding inline in each view.
 // Zero logic — purely presentational.
 
-import { useState, useRef, useEffect } from "react";
-import { createPortal } from "react-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { useId, useState } from "react";
+import { motion } from "framer-motion";
 import { ChevronDown, Loader2, HelpCircle } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { adminTransition, useAdminReducedMotion } from "@/components/admin/adminMotion";
 
 // ── SectionLabel ─────────────────────────────────────────────────────────────
 export const SectionLabel = ({ label }: { label: string }) => (
@@ -16,13 +17,8 @@ export const SectionLabel = ({ label }: { label: string }) => (
 
 // ── AdminCard ─────────────────────────────────────────────────────────────────
 export const AdminCard = ({
-  title,
-  icon: Icon,
-  gradient = "from-white/[0.05] to-white/[0.02]",
-  children,
-  collapsible = false,
-  defaultOpen = false,
-  actions,
+  title, icon: Icon, gradient = "from-white/[0.05] to-white/[0.02]",
+  children, collapsible = false, defaultOpen = false, actions,
 }: {
   title: string;
   icon?: React.ElementType;
@@ -33,43 +29,49 @@ export const AdminCard = ({
   actions?: React.ReactNode;
 }) => {
   const [open, setOpen] = useState(defaultOpen);
+  const contentId = useId();
+  const reduceMotion = useAdminReducedMotion();
+
+  const heading = (
+    <>
+      {Icon && <div className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.06] shrink-0"><Icon className="w-4 h-4 text-white/40" /></div>}
+      <h4 className="text-base font-bold text-white/80 flex-1 text-left">{title}</h4>
+      {collapsible && <ChevronDown aria-hidden="true" className={`w-4 h-4 text-white/25 shrink-0 ${open ? "rotate-180" : ""}`} />}
+    </>
+  );
 
   return (
-    <div
-      className={`flex flex-col rounded-3xl bg-gradient-to-br ${gradient} border border-white/[0.05] overflow-hidden`}
-    >
-      <div
-        className={`flex items-center gap-3 p-5 ${collapsible ? "cursor-pointer select-none" : ""}`}
-        onClick={collapsible ? () => setOpen((v) => !v) : undefined}
-      >
-        {Icon && (
-          <div className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.06] shrink-0">
-            <Icon className="w-4 h-4 text-white/40" />
-          </div>
+    <div className={`flex flex-col rounded-3xl bg-gradient-to-br ${gradient} border border-white/[0.05] overflow-hidden`}>
+      <div className="flex items-center gap-3 p-4 sm:p-5">
+        {collapsible ? (
+          <button
+            type="button"
+            onClick={() => setOpen((value) => !value)}
+            aria-expanded={open}
+            aria-controls={contentId}
+            className="flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+          >
+            {heading}
+          </button>
+        ) : (
+          <div className="flex min-w-0 flex-1 items-center gap-3">{heading}</div>
         )}
-        <h4 className="text-base font-bold text-white/80 flex-1">{title}</h4>
-        {actions && <div className="flex items-center gap-2">{actions}</div>}
-        {collapsible && (
-          <ChevronDown
-            className={`w-4 h-4 text-white/25 transition-transform duration-300 shrink-0 ${open ? "rotate-180" : ""}`}
-          />
-        )}
+        {actions && <div className="flex items-center gap-2 shrink-0">{actions}</div>}
       </div>
-
-      <AnimatePresence initial={false}>
-        {(!collapsible || open) && (
+      {collapsible ? (
+        <div id={contentId} role="region" aria-label={title} aria-hidden={!open} inert={!open}>
           <motion.div
-            key="content"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25, ease: "easeInOut" }}
+            initial={false}
+            animate={{ height: open ? "auto" : 0, opacity: open ? 1 : 0 }}
+            transition={adminTransition(reduceMotion)}
             className="overflow-hidden"
           >
             <div className="flex flex-col gap-5 px-5 pb-5">{children}</div>
           </motion.div>
-        )}
-      </AnimatePresence>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-5 px-5 pb-5">{children}</div>
+      )}
     </div>
   );
 };
@@ -113,7 +115,8 @@ export const FieldRow = ({
         </p>
         <button
           onClick={onUnmask}
-          className="px-3 py-2 rounded-xl bg-white/[0.06] border border-white/[0.08] text-[10px] font-bold text-white/40 hover:text-white/70 transition-colors"
+          type="button"
+          className="min-h-11 min-w-11 px-3 py-2 rounded-xl bg-white/[0.06] border border-white/[0.08] text-[10px] font-bold text-white/40 hover:text-white/70 transition-colors"
         >
           Edit
         </button>
@@ -189,7 +192,7 @@ export const SaveButton = ({
   variant?: "primary" | "secondary" | "danger";
   icon?: React.ReactNode;
 }) => {
-  const base = "px-5 py-2 rounded-xl text-xs font-bold transition-colors disabled:opacity-50 flex items-center gap-2";
+  const base = "min-h-11 px-5 py-2 rounded-xl text-xs font-bold transition-colors disabled:opacity-50 flex items-center gap-2";
   const variants = {
     primary:   "bg-white text-zinc-950 hover:bg-white/90",
     secondary: "bg-white/[0.08] border border-white/[0.1] text-white/80 hover:bg-white/[0.12]",
@@ -327,89 +330,22 @@ export const AdminPageHeader = ({
 // Dismisses on outside click or Escape key.
 // Usage: <HintTooltip text="Found at app.yoco.com → Developers → API Keys" />
 export const HintTooltip = ({ text }: { text: string }) => {
-  const [open, setOpen]   = useState(false);
-  const [coords, setCoords] = useState({ top: 0, left: 0 });
-  const btnRef = useRef<HTMLButtonElement>(null);
-  const popRef = useRef<HTMLDivElement>(null);
-
-  const updatePosition = () => {
-    if (!btnRef.current) return;
-    const r = btnRef.current.getBoundingClientRect();
-    setCoords({
-      top:  r.top + window.scrollY - 8,
-      left: r.left + r.width / 2 + window.scrollX,
-    });
-  };
-
-  const handleOpen = () => {
-    updatePosition();
-    setOpen((v) => !v);
-  };
-
-  useEffect(() => {
-    if (!open) return;
-    const onKey   = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
-    const onClick = (e: MouseEvent) => {
-      if (
-        popRef.current && !popRef.current.contains(e.target as Node) &&
-        btnRef.current && !btnRef.current.contains(e.target as Node)
-      ) setOpen(false);
-    };
-    document.addEventListener("keydown", onClick as any);
-    document.addEventListener("keydown", onKey);
-    document.addEventListener("mousedown", onClick);
-    return () => {
-      document.removeEventListener("keydown", onClick as any);
-      document.removeEventListener("keydown", onKey);
-      document.removeEventListener("mousedown", onClick);
-    };
-  }, [open]);
-
-  const popover = (
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          ref={popRef}
-          initial={{ opacity: 0, scale: 0.92, y: 4 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.92, y: 4 }}
-          transition={{ duration: 0.15, ease: "easeOut" }}
-          style={{
-            position: "fixed",
-            top:  coords.top,
-            left: coords.left,
-            transform: "translate(-50%, -100%)",
-            zIndex: 9999,
-          }}
-          className="w-60 rounded-xl bg-zinc-900 border border-white/[0.12] shadow-2xl px-3 py-2.5 pointer-events-auto"
-        >
-          <div
-            className="absolute left-1/2 -translate-x-1/2 w-0 h-0"
-            style={{
-              bottom: "-6px",
-              borderLeft: "5px solid transparent",
-              borderRight: "5px solid transparent",
-              borderTop: "6px solid rgba(255,255,255,0.12)",
-            }}
-          />
-          <p className="text-xs text-white/65 leading-relaxed">{text}</p>
-        </motion.div>
-      )}
-    </AnimatePresence>
-  );
-
+  const [open, setOpen] = useState(false);
   return (
-    <>
-      <button
-        ref={btnRef}
-        type="button"
-        aria-label="Show hint"
-        onClick={handleOpen}
-        className="inline-flex items-center justify-center w-4 h-4 rounded-full text-white/25 hover:text-white/65 transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-white/30"
-      >
-        <HelpCircle className="w-3.5 h-3.5" />
-      </button>
-      {typeof document !== "undefined" && createPortal(popover, document.body)}
-    </>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label="Show hint"
+          aria-expanded={open}
+          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full text-white/35 hover:text-white/75 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+        >
+          <HelpCircle className="w-4 h-4" aria-hidden="true" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent side="top" align="center" className="w-60 rounded-xl border border-white/[0.12] bg-zinc-900 px-3 py-2.5 text-white shadow-2xl">
+        <p className="text-xs text-white/70 leading-relaxed">{text}</p>
+      </PopoverContent>
+    </Popover>
   );
 };

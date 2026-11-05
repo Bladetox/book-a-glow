@@ -27,16 +27,10 @@
 
 import { motion } from "framer-motion";
 import {
-  Percent,
-  ShoppingBag,
-  CalendarCheck,
-  XCircle,
-  UserPlus,
-  UserCheck,
-  Info,
-  X,
+  Percent, ShoppingBag, CalendarCheck, XCircle, UserPlus, UserCheck, Info,
 } from "lucide-react";
-import { AnimatePresence } from "framer-motion";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ADMIN_METRIC_DEFINITIONS } from "@/components/admin/metricDefinitions";
 
 // ---------------------------------------------------------------------------
 // Shared types  (unchanged — AdminDashboard.tsx depends on these)
@@ -66,34 +60,12 @@ export interface ExpandedCard extends MetricEntry {
 // ---------------------------------------------------------------------------
 
 export const HEALTH_METRIC_COPY = {
-  fillRate: {
-    title: "Monthly Capacity Utilisation",
-    explain: "Booked appointment minutes divided by available staff minutes across the full calendar month. Future confirmed bookings and no-shows count because they reserve capacity.",
-    benchmark: "Use this to understand how much of your available appointment time has been committed.",
-  },
-  avgBasket: {
-    title: "Average Booking Value",
-    explain: "Average listed value of this month's appointments that are not cancelled or marked no-show. This is booked value, not money collected.",
-    benchmark: "Increase booking value through appropriate service combinations and add-ons.",
-  },
-  appointments: {
-    title: "Monthly Appointment Volume",
-    explain: "Appointments this month that are not cancelled or marked no-show. This includes appointments awaiting payment confirmation.",
-  },
-  cancellations: {
-    title: "Cancellation Rate",
-    explain: "Cancelled bookings divided by all booking outcomes. No-shows are tracked separately and are not counted as cancellations.",
-    benchmark: "Target: below 10%. Above 20% warrants attention.",
-  },
-  clients: {
-    title: "Clients Booked This Month",
-    explain: "Unique client identities with at least one appointment this month that is not cancelled or marked no-show. Includes future bookings.",
-  },
-  returning: {
-    title: "Returning Clients",
-    explain: "Clients who booked this month and had a completed appointment before their latest appointment this month. A client becomes returning after their first completed visit.",
-    benchmark: "Track the share of this month's clients who have completed a previous appointment.",
-  },
+  fillRate: ADMIN_METRIC_DEFINITIONS.monthlyCapacityUtilisation,
+  avgBasket: ADMIN_METRIC_DEFINITIONS.averageBookingValue,
+  appointments: ADMIN_METRIC_DEFINITIONS.monthlyAppointmentVolume,
+  cancellations: ADMIN_METRIC_DEFINITIONS.cancellationRate,
+  clients: ADMIN_METRIC_DEFINITIONS.clientsBookedThisMonth,
+  returning: ADMIN_METRIC_DEFINITIONS.returningClients,
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -114,100 +86,36 @@ const SPRING = {
 // ---------------------------------------------------------------------------
 
 export const MetricExpandOverlay = ({
-  card,
-  onClose,
-}: {
-  card: ExpandedCard | null;
-  onClose: () => void;
-}) => (
-  <AnimatePresence>
+  card, onClose,
+}: { card: ExpandedCard | null; onClose: () => void }) => (
+  <Dialog open={!!card} onOpenChange={(open) => { if (!open) onClose(); }}>
     {card && (
-      <>
-        {/* Backdrop */}
-        <motion.div
-          key="backdrop"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.22 }}
-          className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
-          onClick={onClose}
-          aria-hidden="true"
-        />
-
-        {/* Panel */}
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 pointer-events-none">
-          <motion.div
-            key={card.id}
-            layoutId={card.id}
-            layout
-            transition={SPRING}
-            className="pointer-events-auto w-full max-w-sm rounded-2xl border border-white/[0.12] bg-[#0f0f0f] shadow-2xl overflow-hidden"
-            style={{ willChange: "transform" }}
-          >
-            {/* Header: label + value + close */}
-            <div className="flex items-start justify-between px-5 pt-5 pb-3">
-              <div className="flex flex-col gap-0.5">
-                <span className="text-[10px] tracking-[0.14em] uppercase text-white/30">
-                  {card.label}
-                </span>
-                <span className={`text-2xl font-bold ${card.valueColor ?? "text-white/90"}`}>
-                  {card.value}
-                </span>
-              </div>
-              <button
-                onClick={onClose}
-                className="w-7 h-7 rounded-full bg-white/[0.06] flex items-center justify-center text-white/40 hover:text-white/80 transition-colors shrink-0 mt-0.5"
-                aria-label="Close"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            <div className="mx-5 border-t border-white/[0.06]" />
-
-            {/* Body */}
-            <div className="px-5 py-4 flex flex-col gap-3">
-              <p className="text-sm font-semibold text-white/85 leading-snug">{card.title}</p>
-              <p className="text-[13px] text-white/55 leading-relaxed">{card.explain}</p>
-
-              {/* Benchmark — Peak-End Rule: promoted size + icon so it lands */}
-              {card.benchmark && (
-                <div className="mt-1 rounded-lg bg-emerald-400/[0.07] border border-emerald-400/[0.15] px-3 py-3">
-                  <p className="text-[13px] text-emerald-400/90 leading-relaxed font-medium">
-                    {card.benchmark}
-                  </p>
-                </div>
-              )}
-
-              {/* Extra lines (e.g. lead-source breakdown) */}
-              {card.extraLines && card.extraLines.length > 0 && (
-                <div className="mt-1 flex flex-col gap-1.5">
-                  <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/25 mb-0.5">
-                    All-time breakdown
-                  </p>
-                  {card.extraLines.map((l, i) => (
-                    <div key={i} className="flex items-center justify-between gap-3">
-                      <span className="text-[12px] text-white/60 truncate flex-1">{l.term}</span>
-                      <span className="text-[12px] font-semibold text-white/85 shrink-0">{l.def}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Footer — removed "Tap outside to close" noise (Peak-End Rule) */}
-            <div className="px-5 pb-5">
-              <div className="h-px bg-white/[0.05] mb-3" />
-              <p className="text-[11px] text-white/20 leading-snug">
-                Tap anywhere outside to close
-              </p>
-            </div>
-          </motion.div>
+      <DialogContent className="admin-dialog-surface fixed inset-x-0 bottom-0 left-0 top-auto z-50 w-full max-w-none translate-x-0 translate-y-0 rounded-t-3xl border border-white/[0.12] bg-[#0f0f0f] p-0 text-white shadow-2xl sm:left-[50%] sm:right-auto sm:top-[50%] sm:bottom-auto sm:w-[calc(100%-3rem)] sm:max-w-sm sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl [&>button]:right-4 [&>button]:top-4 [&>button]:min-h-11 [&>button]:min-w-11 [&>button]:rounded-full [&>button]:bg-white/[0.06] [&>button]:text-white/70">
+        <div className="px-5 pt-5 pb-3 pr-16">
+          <p className="text-[10px] tracking-[0.14em] uppercase text-white/35">{card.label}</p>
+          <p className={`mt-1 text-2xl font-bold ${card.valueColor ?? "text-white/90"}`}>{card.value}</p>
         </div>
-      </>
+        <div className="mx-5 border-t border-white/[0.07]" />
+        <DialogHeader className="gap-2 px-5 py-4 text-left">
+          <DialogTitle className="text-base font-semibold leading-snug text-white/90">{card.title}</DialogTitle>
+          <DialogDescription className="text-[13px] leading-relaxed text-white/60">{card.explain}</DialogDescription>
+        </DialogHeader>
+        {card.benchmark && <div className="mx-5 mb-4 rounded-lg border border-emerald-400/[0.15] bg-emerald-400/[0.07] px-3 py-3"><p className="text-[13px] leading-relaxed font-medium text-emerald-300/90">{card.benchmark}</p></div>}
+        {card.extraLines && card.extraLines.length > 0 && (
+          <div className="mx-5 mb-5 flex flex-col gap-2">
+            <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/35">Channel breakdown</p>
+            {card.extraLines.map((line, index) => (
+              <div key={index} className="flex items-center justify-between gap-3">
+                <span className="min-w-0 flex-1 truncate text-[12px] text-white/65">{line.term}</span>
+                <span className="shrink-0 text-[12px] font-semibold text-white/90">{line.def}</span>
+              </div>
+            ))}
+          </div>
+        )}
+        <div className="h-[env(safe-area-inset-bottom,0px)] sm:hidden" />
+      </DialogContent>
     )}
-  </AnimatePresence>
+  </Dialog>
 );
 
 // ---------------------------------------------------------------------------
@@ -254,13 +162,13 @@ const MetricCard = ({
   alertStatus?: "good" | "warning" | "critical" | "neutral";
   onExpand: (c: ExpandedCard) => void;
 } & MetricEntry) => (
-  <motion.div
+  <motion.button
+    type="button"
     layoutId={id}
     onClick={() => onExpand({ id, label, value, valueColor: color, title, explain, benchmark })}
-    className={`rounded-xl border cursor-pointer select-none transition-colors ${cardAlertClass(alertStatus)}`}
+    className={`w-full text-left rounded-xl border cursor-pointer select-none transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 ${cardAlertClass(alertStatus)}`}
     whileTap={{ scale: 0.97 }}
     transition={SPRING}
-    role="button"
     aria-label={`Learn more about ${label}`}
   >
     <div className="flex items-start gap-2 p-3 sm:p-4">
@@ -286,7 +194,7 @@ const MetricCard = ({
         <Info className="w-4 h-4 text-white/30" />
       </div>
     </div>
-  </motion.div>
+  </motion.button>
 );
 
 // ---------------------------------------------------------------------------

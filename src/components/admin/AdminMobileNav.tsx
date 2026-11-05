@@ -1,4 +1,4 @@
-// C7 — Mobile bottom navigation bar for admin (flex sibling inside <main>, shown on < lg screens)
+// Compact-shell bottom navigation for the admin app.
 import { motion } from "framer-motion";
 import {
   DashboardIcon,
@@ -22,13 +22,13 @@ const NAV_GROUPS: NavGroup[] = [
     label:      "Dashboard",
     icon:       DashboardIcon,
     targetView: "Dashboard",
-    views:      ["Dashboard"],
+    views:      ["Dashboard", "Recommendations"],"
   },
   {
     label:      "Schedule",
     icon:       BookingsIcon,
     targetView: "Bookings",
-    views:      ["Bookings", "Availability"],
+    views:      ["Calendar", "Bookings", "Availability"],"
   },
   {
     label:      "Catalogue",
@@ -40,13 +40,13 @@ const NAV_GROUPS: NavGroup[] = [
     label:      "Clients",
     icon:       ClientManagementIcon,
     targetView: "Client Management",
-    views:      ["Client Management"],
+    views:      ["Client Management", "Consultations", "Special Occasions", "Loyalty", "Consistency Pricing"],"
   },
   {
     label:      "Business",
     icon:       SettingsIcon,
     targetView: "Settings",
-    views:      ["Integrations", "Communications", "Settings", "Terms & Conditions"],
+    views:      ["Integrations", "Communications", "Settings", "Terms & Conditions", "Help"],"
   },
 ];
 
@@ -61,7 +61,8 @@ const AdminMobileNav = ({ activeView, onSelect, pendingCount = 0 }: AdminMobileN
   // naturally. No position:fixed needed. Safe-area inset preserved for iOS home indicator.
   // FIX: removed backdrop-blur-md — causes blank screen on low-end mobile browsers
     <nav
-      className="lg:hidden flex-shrink-0 border-t border-white/[0.07] bg-black"
+      aria-label="Primary navigation"
+      className="flex-shrink-0 border-t border-white/[0.07] bg-black"
       style={{
         paddingBottom: "env(safe-area-inset-bottom, 0px)",
         height: "calc(56px + env(safe-area-inset-bottom, 0px))",
@@ -76,9 +77,11 @@ const AdminMobileNav = ({ activeView, onSelect, pendingCount = 0 }: AdminMobileN
         return (
           <button
             key={label}
+            type="button"
             onClick={() => onSelect(targetView)}
-            className="relative flex flex-col items-center justify-center flex-1 h-full gap-0.5"
+            className="relative flex flex-col items-center justify-center flex-1 h-full min-h-11 gap-0.5"
             aria-label={label}
+            aria-current={isActive ? "page" : undefined}
           >
             {isActive && (
               <motion.div
