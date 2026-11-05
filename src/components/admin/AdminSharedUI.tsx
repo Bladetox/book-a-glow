@@ -2,7 +2,7 @@
 // Import from here instead of rebuilding inline in each view.
 // Zero logic — purely presentational.
 
-import { useId, useState } from "react";
+import { forwardRef, useId, useState } from "react";
 import { motion } from "framer-motion";
 import { ChevronDown, Loader2, HelpCircle } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -175,6 +175,31 @@ export const FieldTextarea = ({
     {hint && <p className="text-[10px] text-white/20 italic px-1">{hint}</p>}
   </div>
 );
+
+// ── AdminIconButton ───────────────────────────────────────────────────────────
+// A consistent 44px hit target with a restrained 20px visual icon.
+// Forwarding the ref and native button props keeps it compatible with Radix asChild.
+type AdminIconButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  icon: React.ReactNode;
+  label: string;
+};
+
+export const AdminIconButton = forwardRef<HTMLButtonElement, AdminIconButtonProps>(
+  function AdminIconButton({ icon, label, className = "", ...props }, ref) {
+    return (
+      <button
+        {...props}
+        ref={ref}
+        type={props.type ?? "button"}
+        aria-label={label}
+        className={`admin-icon-button inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-0 bg-transparent p-0 text-[#888] opacity-100 transition-colors hover:bg-transparent hover:text-[#f2f2ef] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c8a46b] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0f0f0f] disabled:pointer-events-none disabled:opacity-40 ${className}`}
+      >
+        <span className="flex h-6 w-6 items-center justify-center">{icon}</span>
+      </button>
+    );
+  },
+);
+AdminIconButton.displayName = "AdminIconButton";
 
 // ── SaveButton ────────────────────────────────────────────────────────────────
 export const SaveButton = ({

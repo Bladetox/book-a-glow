@@ -803,6 +803,14 @@ html:not(.dark) .booking-app .tenant-logo-img {
   min-height: var(--admin-target-primary);
 }
 
+/* Metric dialog close control keeps a subtle keyboard indicator without the
+   default Radix ring-offset treatment. The 44px hit target remains intact. */
+.admin-dialog-surface .admin-icon-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px #c8a46b;
+  outline-offset: 2px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .admin-app *,
   .admin-app *::before,

@@ -1,5 +1,10 @@
+import { X } from "lucide-react";
+import { useRef } from "react";
+import { AdminIconButton } from "@/components/admin/AdminSharedUI";
+import { useAdminViewport } from "@/hooks/use-admin-viewport";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogHeader,
@@ -26,12 +31,6 @@ export interface AdminMetricExplanationProps {
   extraLinesTitle?: string;
 }
 
-/**
- * Shared responsive explanation surface for admin metrics.
- * Radix Dialog provides focus management, Escape handling and focus restoration.
- * On compact screens the surface docks to the bottom; on larger screens it is
- * presented as a centred dialog.
- */
 export function AdminMetricExplanation({
   open,
   onOpenChange,
@@ -46,9 +45,53 @@ export function AdminMetricExplanation({
   extraLines,
   extraLinesTitle = "Additional detail",
 }: AdminMetricExplanationProps) {
+  const viewport = useAdminViewport();
+  const isCompact = viewport === "compact";
+  const isTablet = viewport === "tablet";
+  const swipeStartY = useRef<number | null>(null);
+
+  const surfaceLayout = isCompact
+    ? "inset-x-0 bottom-0 left-0 top-auto w-full max-w-none translate-x-0 translate-y-0 rounded-t-3xl"
+    : isTablet
+      ? "left-1/2 top-1/2 bottom-auto w-[calc(100%-3rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-2xl"
+      : "left-1/2 top-1/2 bottom-auto w-[calc(100%-4rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-2xl";
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="admin-dialog-surface fixed inset-x-0 bottom-0 left-0 top-auto z-50 w-full max-w-none translate-x-0 translate-y-0 rounded-t-3xl border border-white/[0.12] bg-[#0f0f0f] p-0 text-white shadow-2xl sm:left-[50%] sm:right-auto sm:top-[50%] sm:bottom-auto sm:w-[calc(100%-3rem)] sm:max-w-sm sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl [&>button]:right-4 [&>button]:top-4 [&>button]:min-h-11 [&>button]:min-w-11 [&>button]:rounded-full [&>button]:bg-white/[0.06] [&>button]:text-white/70">
+      <DialogContent
+        hideCloseButton
+        className={`admin-dialog-surface fixed z-50 flex max-h-[85dvh] flex-col overflow-y-auto border border-white/[0.12] bg-[#0f0f0f] p-0 text-white shadow-2xl ${surfaceLayout}`}
+      >
+        {isCompact && (
+          <div
+            className="flex justify-center pt-3 pb-1 touch-none"
+            aria-hidden="true"
+            onPointerDown={(event) => {
+              swipeStartY.current = event.clientY;
+              event.currentTarget.setPointerCapture(event.pointerId);
+            }}
+            onPointerUp={(event) => {
+              if (swipeStartY.current !== null && event.clientY - swipeStartY.current > 64) {
+                onOpenChange(false);
+              }
+              swipeStartY.current = null;
+            }}
+            onPointerCancel={() => {
+              swipeStartY.current = null;
+            }}
+          >
+            <span className="h-1.5 w-10 rounded-full bg-white/25" />
+          </div>
+        )}
+
+        <DialogClose asChild>
+          <AdminIconButton
+            icon={<X className="h-[18px] w-[18px]" aria-hidden="true" />}
+            label="Close metric explanation"
+            className="absolute right-3 top-3"
+          />
+        </DialogClose>
+
         {(label || value) && (
           <>
             <div className="px-5 pt-5 pb-3 pr-16">
@@ -79,7 +122,7 @@ export function AdminMetricExplanation({
         )}
 
         {benchmark && (
-          <div className="mx-5 mb-4 rounded-lg border border-emerald-400/[0.15] bg-emerald-400/[0.07] px-3 py-3">
+          <div className="mx-5 mb-3 rounded-lg border border-emerald-400/[0.15] bg-emerald-400/[0.07] px-3 py-2.5">
             <p className="text-[13px] leading-relaxed font-medium text-emerald-300/90">{benchmark}</p>
           </div>
         )}
@@ -95,7 +138,7 @@ export function AdminMetricExplanation({
             ))}
           </div>
         )}
-        <div className="h-[env(safe-area-inset-bottom,0px)] sm:hidden" />
+        {isCompact && <div className="h-[env(safe-area-inset-bottom,0px)]" />}
       </DialogContent>
     </Dialog>
   );
