@@ -256,10 +256,8 @@ const RevenueTrendCard = ({ revenueTrend, periodRevenue: _periodRevenue, lastPer
                   aria-pressed={tappedIdx === i}
                   onMouseEnter={() => setHoveredIdx(i)}
                   onMouseLeave={() => setHoveredIdx(null)}
-                  onTouchStart={e => {
-                    e.stopPropagation();
-                    setTappedIdx(prev => prev === i ? null : i);
-                  }}
+                  onFocus={() => setHoveredIdx(i)}
+                  onBlur={() => setHoveredIdx(null)}
                   onClick={() => setTappedIdx(prev => prev === i ? null : i)}
                 >
                   <AnimatePresence>
