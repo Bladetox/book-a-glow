@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { useNextyInsights, NextyInsight } from "@/hooks/useNextyInsights";
 import { supabase } from "@/integrations/supabase/client";
+import { useAdminReducedMotion } from "@/components/admin/adminMotion";
 
 // -- Nexty Orb ----------------------------------------------------------------
 function NextyOrb() {
@@ -16,16 +17,13 @@ function NextyOrb() {
       <div className="nexty-orb-ring" />
       <div className="nexty-orb-sphere" />
       <style>{`
-        .nexty-orb-wrapper{position:relative;width:44px;height:44px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
-        .nexty-orb-glow{position:absolute;inset:-6px;border-radius:50%;background:radial-gradient(circle,rgba(209,153,0,.35) 0%,transparent 70%);animation:nexty-pulse 2.8s ease-in-out infinite}
-        @keyframes nexty-pulse{0%,100%{opacity:.6;transform:scale(1)}50%{opacity:1;transform:scale(1.18)}}
-        .nexty-orb-ring{position:absolute;width:52px;height:52px;border-radius:50%;border:1.5px solid transparent;border-top-color:rgba(253,171,67,.9);border-right-color:rgba(253,171,67,.3);border-bottom-color:rgba(253,171,67,.05);border-left-color:rgba(253,171,67,.3);animation:nexty-orbit 2s linear infinite;filter:drop-shadow(0 0 4px rgba(253,171,67,.6))}
-        .nexty-orb-ring::after{content:'';position:absolute;inset:4px;border-radius:50%;border:1px solid transparent;border-top-color:rgba(232,175,52,.4);border-left-color:rgba(232,175,52,.15);animation:nexty-orbit-rev 3.2s linear infinite}
+        .nexty-orb-wrapper{position:relative;width:44px;height:44px;flex:0 0 44px;display:flex;align-items:center;justify-content:center}
+        .nexty-orb-glow{position:absolute;inset:-5px;border-radius:50%;background:radial-gradient(circle,rgba(245,205,139,.34) 0%,transparent 72%);animation:nexty-pulse 4s ease-in-out infinite}
+        @keyframes nexty-pulse{0%,100%{opacity:.62;transform:scale(1)}50%{opacity:.92;transform:scale(1.08)}}
+        .nexty-orb-ring{position:absolute;width:40px;height:40px;border-radius:50%;border:1px solid transparent;border-top-color:rgba(255,225,176,.78);border-right-color:rgba(253,171,67,.24);border-bottom-color:rgba(253,171,67,.06);border-left-color:rgba(253,171,67,.24);animation:nexty-orbit 12s linear infinite;filter:drop-shadow(0 0 4px rgba(253,205,139,.34))}
         @keyframes nexty-orbit{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-        @keyframes nexty-orbit-rev{from{transform:rotate(0deg)}to{transform:rotate(-360deg)}}
-        .nexty-orb-sphere{position:absolute;width:32px;height:32px;border-radius:50%;background:radial-gradient(circle at 32% 28%,rgba(255,240,180,.85) 0%,transparent 40%),radial-gradient(circle at 50% 50%,#fdab43 0%,#d19900 45%,#8a5b00 100%);box-shadow:inset -2px -3px 6px rgba(0,0,0,.45),inset 2px 2px 5px rgba(255,235,160,.25),0 4px 16px rgba(209,153,0,.45),0 1px 4px rgba(0,0,0,.5);animation:nexty-breathe 4s ease-in-out infinite}
-        @keyframes nexty-breathe{0%,100%{filter:brightness(1)}50%{filter:brightness(1.12)}}
-        @media(prefers-reduced-motion:reduce){.nexty-orb-glow,.nexty-orb-ring,.nexty-orb-ring::after,.nexty-orb-sphere{animation:none}}
+        .nexty-orb-sphere{position:absolute;width:29px;height:29px;border-radius:50%;background:radial-gradient(circle at 32% 25%,rgba(255,248,220,.98) 0%,rgba(255,232,184,.35) 24%,transparent 42%),radial-gradient(circle at 50% 58%,#f4c77e 0%,#d99b43 52%,#80551f 100%);box-shadow:inset -2px -3px 7px rgba(0,0,0,.38),inset 2px 2px 5px rgba(255,247,218,.34),0 3px 14px rgba(217,155,67,.32)}
+        @media(prefers-reduced-motion:reduce){.nexty-orb-glow,.nexty-orb-ring{animation:none}}
       `}</style>
     </div>
   );
@@ -37,6 +35,13 @@ function getFilterKey(ins: NextyInsight): string {
   if (ins.type === "retention")    return "retention";
   if (ins.type === "ops")          return "ops";
   return "growth";
+}
+
+function getFinancialContextLabel(insightId: string): string {
+  if (insightId === "no_show_leak") return "Uncollected balance · last 90 days";
+  if (insightId === "cancellation_leakage") return "Net value not recovered · last 90 days";
+  if (insightId === "loyalty_gap") return "Potential annual retention value";
+  return "Financial context";
 }
 
 function InsightIcon({ type, priority }: { type: string; priority: string }) {
@@ -57,28 +62,11 @@ const PRIORITY_STYLES: Record<string, { label: string; dot: string; iconBg: stri
 
 const MAX_CARDS = 4;
 
-// -- Counter animation hook ---------------------------------------------------
-function useCounter(target: number, run: boolean) {
-  const [value, setValue] = useState(0);
-  useEffect(() => {
-    if (!run || target === 0) return;
-    const start = performance.now();
-    const duration = 1200;
-    const frame = (ts: number) => {
-      const p = Math.min((ts - start) / duration, 1);
-      const ease = 1 - Math.pow(1 - p, 3);
-      setValue(Math.round(ease * target));
-      if (p < 1) requestAnimationFrame(frame);
-    };
-    requestAnimationFrame(frame);
-  }, [target, run]);
-  return value;
-}
-
 // -- Main Component -----------------------------------------------------------
 export default function AdminRecommendations({ onNavigate }: { onNavigate: (view: string) => void }) {
   const { data: insights, isLoading, refetch } = useNextyInsights();
   const { tenantId } = useTenant();
+  const reduceMotion = useAdminReducedMotion();
   const [activeFilter, setActiveFilter] = useState("all");
   const [showCards,    setShowCards]    = useState(false);
   const [isRescanning, setIsRescanning] = useState(false);
@@ -98,28 +86,17 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
       expires_at:  expires,
     }, { onConflict: "tenant_id,insight_id,action_type" });
   };
-  const scrollRef   = useRef<HTMLDivElement>(null);
-  const updatedAtRef = useRef<number>(Date.now());
-  const [updatedLabel, setUpdatedLabel] = useState("Updated just now");
+  const scrollRef = useRef<HTMLDivElement>(null);
 
 
   useEffect(() => {
     if (isLoading) return;
     const t = setTimeout(() => {
       setShowCards(true);
-      updatedAtRef.current = Date.now();
-      setUpdatedLabel("Updated just now");
-    }, 1600);
+    }, reduceMotion ? 0 : 1600);
     return () => clearTimeout(t);
-  }, [isLoading]);
+  }, [isLoading, reduceMotion]);
 
-  useEffect(() => {
-    const iv = setInterval(() => {
-      const mins = Math.floor((Date.now() - updatedAtRef.current) / 60000);
-      setUpdatedLabel(mins < 1 ? "Updated just now" : `Updated ${mins} min${mins === 1 ? "" : "s"} ago`);
-    }, 60000);
-    return () => clearInterval(iv);
-  }, []);
 
   const handleRescan = async () => {
     setIsRescanning(true);
@@ -130,14 +107,10 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
     setTimeout(() => {
       setIsRescanning(false);
       setShowCards(true);
-      updatedAtRef.current = Date.now();
-      setUpdatedLabel("Updated just now");
-    }, 1800);
+    }, reduceMotion ? 0 : 1800);
   };
 
-  const allInsights   = (insights ?? []).filter(i => !dismissed.has(i.id));
-  const totalImpact   = (insights ?? []).reduce((s, i) => s + (i.impactRand ?? 0), 0);
-  const displayedCount = useCounter(totalImpact, showCards);
+  const allInsights = (insights ?? []).filter(i => !dismissed.has(i.id));
 
   const FILTERS = [
     { key: "all",       label: "All",        count: allInsights.length },
@@ -217,32 +190,19 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
         </button>
       </div>
 
-      {/* -- Impact Banner -- */}
-      {totalImpact > 0 && (
-        <div style={{
-          margin: "12px 16px 0",
-          padding: "12px 14px",
-          background: "linear-gradient(135deg,rgba(253,171,67,0.07) 0%,rgba(253,171,67,0.03) 100%)",
-          border: "1px solid rgba(253,171,67,0.14)", borderRadius: 10,
-          display: "flex", alignItems: "center", gap: 10, flexShrink: 0,
-        }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: 11, color: S.faint, textTransform: "uppercase", letterSpacing: "0.08em", lineHeight: 1.4 }}>
-              Total Recoverable Revenue Identified
-            </div>
-            <div style={{ fontSize: 10, color: S.faint, marginTop: 2 }}>
-              Based on last 90 days · {updatedLabel}
-            </div>
-          </div>
-          <div style={{
-            fontSize: 20, fontWeight: 700, color: S.gold,
-            letterSpacing: "-0.03em", fontVariantNumeric: "tabular-nums",
-            flexShrink: 0,
-          }}>
-            R{displayedCount.toLocaleString("en-ZA")}
-          </div>
-        </div>
-      )}
+      {/* Financial context note */}
+      <div style={{
+        margin: "12px 16px 0",
+        padding: "11px 13px",
+        background: "rgba(255,255,255,0.025)",
+        border: `1px solid ${S.border}`,
+        borderRadius: 10,
+        color: S.muted,
+        fontSize: 11,
+        lineHeight: 1.55,
+      }}>
+        Financial figures are shown in context. Historical losses and potential future value are kept separate, and neither is a guaranteed result.
+      </div>
 
       {/* -- Filter Tabs -- */}
       <div
@@ -252,6 +212,7 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
           overflowX: "auto", flexShrink: 0,
           scrollbarWidth: "none",
           WebkitOverflowScrolling: "touch",
+          scrollSnapType: "x proximity",
         }}
       >
         {FILTERS.map(f => (
@@ -260,7 +221,8 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
             onClick={() => setActiveFilter(f.key)}
             style={{
               display: "flex", alignItems: "center", gap: 5,
-              padding: "5px 11px", borderRadius: 6, fontSize: 12, fontWeight: 500,
+              padding: "0 12px", minHeight: 44, borderRadius: 8, fontSize: 12, fontWeight: 500,
+              scrollSnapAlign: "start",
               color: activeFilter === f.key ? S.text : S.muted,
               background: activeFilter === f.key ? S.surface2 : "transparent",
               border: `1px solid ${activeFilter === f.key ? S.border2 : "transparent"}`,
@@ -282,28 +244,32 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
       {/* -- Scroll Area -- */}
       <div
         ref={scrollRef}
+        className="nexty-insight-list"
         style={{
           flex: 1,
           overflowY: "auto",
           padding: "14px 16px 32px",
-          display: "flex",
-          flexDirection: "column",
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 340px), 1fr))",
+          alignContent: "start",
           gap: 14,
           WebkitOverflowScrolling: "touch",
         }}
       >
         {/* Welcome message */}
         <motion.div
-          initial={{ opacity: 0, y: 8 }}
+          className="nexty-insight-intro"
+          initial={reduceMotion ? false : { opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
+          transition={reduceMotion ? { duration: 0 } : { duration: 0.2 }}
           style={{
             background: S.surface, border: `1px solid ${S.border}`,
             borderRadius: 14, padding: "13px 16px",
             fontSize: 13, color: S.muted, lineHeight: 1.65,
           }}
         >
-          Here are the most important moves for your business right now.
-          Start with the first card – each one is a single action you can take this week.
+          Nexty highlights patterns in your recorded business activity and suggests practical next steps.
+          Review the evidence, then choose the action that makes sense for your business.
         </motion.div>
 
         {/* Typing dots */}
@@ -311,6 +277,7 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
           {(!showCards || isRescanning) && (
             <motion.div
               key="typing"
+              className="nexty-insight-loading"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -327,12 +294,12 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
                     width: 6, height: 6, borderRadius: "50%",
                     background: "rgba(255,255,255,0.18)",
                     display: "inline-block",
-                    animation: "nexty-bounce 1.2s ease-in-out infinite",
+                    animation: reduceMotion ? "none" : "nexty-bounce 1.2s ease-in-out infinite",
                     animationDelay: `${delay}ms`,
                   }}
                 />
               ))}
-              <style>{`@keyframes nexty-bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-5px)}}`}</style>
+              <style>{`@keyframes nexty-bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-5px)}}@media(prefers-reduced-motion:reduce){.nexty-insight-loading span{animation:none!important}}`}</style>
             </motion.div>
           )}
         </AnimatePresence>
@@ -351,10 +318,10 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
             return (
               <motion.div
                 key={ins.id}
-                initial={{ opacity: 0, y: 10 }}
+                initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.97 }}
-                transition={{ delay: idx * 0.06, duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
+                exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.98 }}
+                transition={reduceMotion ? { duration: 0 } : { delay: idx * 0.06, duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
                 style={{
                   background: S.surface, borderRadius: 14,
                   border: `1px solid ${S.border}`, overflow: "hidden",
@@ -386,17 +353,25 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
                         <span style={{ width: 5, height: 5, borderRadius: "50%", background: p.dot, flexShrink: 0 }} />
                         {p.label}
                       </div>
-                      {ins.impactRand && (
+                      {typeof ins.impactRand === "number" && ins.impactRand > 0 && (
                         <div style={{
-                          display: "inline-flex", alignItems: "center", gap: 3,
-                          padding: "2px 7px",
-                          background: "rgba(253,171,67,0.09)",
-                          border: "1px solid rgba(253,171,67,0.15)",
-                          borderRadius: 6, fontSize: 11, fontWeight: 600,
-                          color: S.gold, whiteSpace: "nowrap", flexShrink: 0,
+                          display: "flex", flexDirection: "column", alignItems: "flex-end",
+                          gap: 2, maxWidth: "58%", textAlign: "right", flexShrink: 0,
                         }}>
-                          <TrendingUp size={9} />
-                          R{ins.impactRand.toLocaleString("en-ZA")}
+                          <span style={{
+                            fontSize: 9, lineHeight: 1.35, color: S.faint,
+                            letterSpacing: "0.035em",
+                          }}>
+                            {getFinancialContextLabel(ins.id)}
+                          </span>
+                          <span style={{
+                            display: "inline-flex", alignItems: "center", gap: 4,
+                            color: S.gold, fontSize: 13, fontWeight: 700,
+                            fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap",
+                          }}>
+                            <TrendingUp size={11} />
+                            R{ins.impactRand.toLocaleString("en-ZA")}
+                          </span>
                         </div>
                       )}
                     </div>
@@ -410,12 +385,18 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
                   </div>
                 </div>
 
-                {/* Card Body */}
+                {/* Evidence from recorded business activity */}
                 <div style={{
                   padding: "0 14px 12px",
                   fontSize: 13, color: S.muted, lineHeight: 1.65,
                   wordBreak: "break-word",
                 }}>
+                  <div style={{
+                    marginBottom: 5, fontSize: 9, fontWeight: 700,
+                    color: S.faint, textTransform: "uppercase", letterSpacing: "0.12em",
+                  }}>
+                    Business signal
+                  </div>
                   {bodyText}
                 </div>
 
@@ -428,6 +409,15 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
                 }}>
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                     {ins.actionLabel && (
+                      <span style={{
+                        width: "100%", padding: "7px 2px 2px",
+                        fontSize: 9, fontWeight: 700, color: S.faint,
+                        textTransform: "uppercase", letterSpacing: "0.12em",
+                      }}>
+                        Recommended next step
+                      </span>
+                    )}
+                    {ins.actionLabel && (
                       <button
                         onClick={() => { persistAction(ins.id, "actioned"); setDismissed(prev => new Set(prev).add(ins.id)); onNavigate(ins.actionView ?? "Dashboard"); }}
                         style={{
@@ -436,7 +426,9 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
                           background: S.surface2,
                           border: `1px solid ${S.border2}`, borderRadius: 6,
                           fontSize: 12, fontWeight: 500, color: S.text, cursor: "pointer",
+                          outlineOffset: 3,
                         }}
+                        className="focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-300/70"
                       >
                         {ins.actionLabel}
                         <ArrowRight size={11} style={{ color: S.faint }} />
@@ -453,7 +445,7 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
                         }}
                         style={{
                           fontSize: 11, color: S.faint,
-                          padding: "0 8px", minHeight: 44,
+                          padding: "0 10px", minHeight: 44, minWidth: 44,
                           borderRadius: 6, cursor: "pointer", background: "none",
                           border: "none", display: "flex", alignItems: "center",
                         }}
@@ -467,7 +459,7 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
                     aria-label="Dismiss this insight"
                     style={{
                       fontSize: 11, color: S.faint,
-                      padding: "0 8px", minHeight: 44,
+                      padding: "0 10px", minHeight: 44, minWidth: 44,
                       borderRadius: 6, cursor: "pointer", background: "none",
                       border: "none", display: "flex", alignItems: "center",
                     }}
@@ -483,8 +475,10 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
         {/* Empty state */}
         {showCards && !isRescanning && limited.length === 0 && (
           <motion.div
-            initial={{ opacity: 0 }}
+            className="nexty-insight-empty"
+            initial={reduceMotion ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
+            transition={reduceMotion ? { duration: 0 } : { duration: 0.2 }}
             style={{
               display: "flex", flexDirection: "column", alignItems: "center",
               justifyContent: "center", flex: 1, gap: 12,
@@ -499,6 +493,14 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
           </motion.div>
         )}
       </div>
+      <style>{`
+        .nexty-insight-list{grid-template-columns:1fr}
+        @media(min-width:900px){.nexty-insight-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
+        .nexty-insight-intro,.nexty-insight-loading,.nexty-insight-empty{grid-column:1/-1}
+        .nexty-filter-scroll{scrollbar-width:none}
+        .nexty-filter-scroll::-webkit-scrollbar{display:none}
+        @media(prefers-reduced-motion:reduce){.nexty-insight-list *{scroll-behavior:auto!important}}
+      `}</style>
     </div>
   );
 }
