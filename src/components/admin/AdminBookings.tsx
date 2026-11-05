@@ -1094,7 +1094,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
           )}
         </div>
 
-        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+        <div className="flex snap-x snap-proximity gap-2 overflow-x-auto pb-2 scrollbar-hide" style={{ scrollSnapType: "x proximity" }} role="group" aria-label="Filter bookings">
           {filters.map(f => {
             const showCount = f !== "All" && f !== "Today";
             const filterLabel = f === "Completed" ? "Serviced" : f;
@@ -1102,7 +1102,8 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
               <button
                 key={f}
                 onClick={() => setActiveFilter(f)}
-                className={`px-4 py-2 rounded-full text-xs font-semibold tracking-wider uppercase whitespace-nowrap transition-all flex items-center gap-1.5 border ${
+                aria-pressed={activeFilter === f}
+                className={`min-h-11 snap-start px-4 py-2 rounded-full text-xs font-semibold tracking-wider uppercase whitespace-nowrap transition-all flex items-center gap-1.5 border ${
                   activeFilter === f
                     ? "bg-white/[0.12] text-white border-white/[0.15]"
                     : "text-white/35 border-white/[0.06] hover:text-white/60"

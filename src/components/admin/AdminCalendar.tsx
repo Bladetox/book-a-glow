@@ -22,6 +22,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useAdminViewport } from "@/hooks/use-admin-viewport";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -275,6 +276,8 @@ const DetailDrawer = ({
   booking: CalendarBooking | null;
   onClose: () => void;
 }) => {
+  const viewport = useAdminViewport();
+  const isCompact = viewport === "compact";
   const [serviceNames, setServiceNames] = useState<string[]>([]);
   const [servicesLoading, setServicesLoading] = useState(false);
 
@@ -325,12 +328,16 @@ const DetailDrawer = ({
 
       <motion.aside
         key="dr"
-        initial={{ x: "100%" }}
-        animate={{ x: 0 }}
-        exit={{ x: "100%" }}
+        initial={isCompact ? { y: "100%" } : { x: "100%" }}
+        animate={isCompact ? { y: 0 } : { x: 0 }}
+        exit={isCompact ? { y: "100%" } : { x: "100%" }}
         transition={{ type: "spring", stiffness: 420, damping: 38 }}
-        className="fixed right-0 z-50 w-full max-w-sm bg-transparent flex flex-col pointer-events-none"
-        style={{
+        className={`fixed z-50 w-full bg-transparent flex flex-col pointer-events-none ${isCompact ? "inset-x-0 right-0 mx-auto max-w-none" : "right-0 max-w-sm"}`}
+        style={isCompact ? {
+          top: "auto",
+          bottom: "calc(56px + env(safe-area-inset-bottom, 0px))",
+          height: "min(82dvh, 720px)",
+        } : {
           top: "64px",
           bottom: "calc(56px + env(safe-area-inset-bottom, 0px))",
         }}
@@ -341,9 +348,13 @@ const DetailDrawer = ({
         <motion.div
           layoutId={`booking-${booking.id}`}
           transition={DRAWER_SPRING}
-          className="m-3 rounded-2xl bg-[#151515] border border-white/[0.08] flex flex-col flex-1 min-h-0 pointer-events-auto overflow-hidden"
+          className={`m-3 rounded-2xl bg-[#151515] border border-white/[0.08] flex flex-col flex-1 min-h-0 pointer-events-auto overflow-hidden ${isCompact ? "rounded-t-3xl rounded-b-2xl" : ""}`}
         >
-          
+          {isCompact && (
+            <div className="flex justify-center pt-3 pb-1" aria-hidden="true">
+              <span className="h-1.5 w-10 rounded-full bg-white/25" />
+            </div>
+          )}
           {/* Header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.07]">
             <div className="min-w-0">
@@ -369,7 +380,7 @@ const DetailDrawer = ({
             <button
               onClick={onClose}
               aria-label="Close"
-              className="ml-3 w-9 h-9 flex items-center justify-center rounded-xl text-white/30 hover:text-white/70 hover:bg-white/[0.06] transition-all shrink-0"
+              className="ml-3 min-h-11 min-w-11 flex items-center justify-center rounded-xl text-white/40 hover:text-white/80 hover:bg-white/[0.06] transition-all shrink-0"
             >
               <X className="w-4 h-4" />
             </button>
@@ -884,8 +895,10 @@ useEffect(() => {
   return (
     <div
       ref={scrollRef}
-      className="flex gap-1.5 overflow-x-auto scrollbar-none px-3 py-2"
-      style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}
+      className="flex snap-x snap-proximity gap-1.5 overflow-x-auto scrollbar-none px-3 py-2"
+      role="group"
+      aria-label="Choose calendar date"
+      style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch", scrollSnapType: "x proximity" }}
     >
       {pool.map((d) => {
         const active = isSameDay(d, selected);
@@ -898,7 +911,9 @@ useEffect(() => {
             key={dateKey}
             ref={active ? selectedRef : undefined}
             onClick={() => onSelect(d)}
-            className={`flex flex-col items-center shrink-0 w-11 py-2 rounded-2xl transition-all duration-150 ${
+            aria-pressed={active}
+            aria-label={d.toLocaleDateString("en-ZA", { weekday: "long", day: "numeric", month: "long" })}
+            className={`flex min-h-11 min-w-11 snap-center flex-col items-center justify-center shrink-0 w-11 py-2 rounded-2xl transition-all duration-150 ${
               active
                 ? "bg-white text-black"
                 : todayD

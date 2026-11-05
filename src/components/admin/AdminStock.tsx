@@ -516,12 +516,13 @@ const AdminStock = () => {
               className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/25 focus:outline-none focus:border-white/20 transition-colors"
             />
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2" role="group" aria-label="Stock views">
             {(["stock", "consumption"] as Tab[]).map(t => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
-                className={`px-4 py-2 rounded-full text-xs font-semibold tracking-wider uppercase transition-all border ${
+                aria-pressed={tab === t}
+                className={`min-h-11 px-4 py-2 rounded-full text-xs font-semibold tracking-wider uppercase transition-all border ${
                   tab === t
                     ? "bg-white/[0.12] text-white border-white/[0.15]"
                     : "text-white/35 border-white/[0.06] hover:text-white/60"
@@ -610,8 +611,8 @@ const AdminStock = () => {
                               </button>
                             </div>
                             <div className="flex items-center gap-1 justify-end border-t border-white/[0.04] pt-2">
-                              <button onClick={() => startEdit(item)} className="p-2 rounded-lg hover:bg-white/[0.06] text-white/35 hover:text-white/70 transition-colors"><Edit3 className="w-3.5 h-3.5" /></button>
-                              <button onClick={() => setDeleteItem(item)} className="p-2 rounded-lg hover:bg-white/[0.06] text-red-400/35 hover:text-red-400 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
+                              <button onClick={() => startEdit(item)} className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl hover:bg-white/[0.06] text-white/45 hover:text-white/80 transition-colors"><Edit3 className="w-3.5 h-3.5" /></button>
+                              <button onClick={() => setDeleteItem(item)} className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl hover:bg-white/[0.06] text-red-400/45 hover:text-red-400 transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
                             </div>
                           </div>
                         </motion.div>

@@ -157,12 +157,13 @@ const AdminClientManagement = () => {
       />
 
       {/* Tab bar */}
-      <div className="flex items-center gap-1 p-1 rounded-2xl bg-white/[0.04] border border-white/[0.06] overflow-x-auto scrollbar-hide">
+      <div className="flex items-center gap-1 p-1 rounded-2xl bg-white/[0.04] border border-white/[0.06] overflow-x-auto scrollbar-hide" role="group" aria-label="Client management sections">
         {TABS.map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all whitespace-nowrap shrink-0 ${
+            aria-pressed={activeTab === tab}
+            className={`flex min-h-11 items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all whitespace-nowrap shrink-0 ${
               activeTab === tab
                 ? "bg-white/[0.12] text-white border border-white/[0.1]"
                 : "text-white/40 hover:text-white/70"
@@ -179,9 +180,11 @@ const AdminClientManagement = () => {
       </div>
 
       {/* Active tab content */}
-      <Suspense fallback={<TabLoader />}>
-        {renderTab()}
-      </Suspense>
+      <div id="client-management-tabpanel">
+        <Suspense fallback={<TabLoader />}>
+          {renderTab()}
+        </Suspense>
+      </div>
 
       {/* Client Alerts Modal */}
       <ClientAlertsModal

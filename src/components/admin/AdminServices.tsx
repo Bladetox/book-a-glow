@@ -358,7 +358,7 @@ const ServiceReorderRow = ({
         <button
           onClick={onMoveUp}
           disabled={index === 0}
-          className="p-2 rounded-lg text-white/25 hover:text-white/70 hover:bg-white/[0.06] disabled:opacity-20 disabled:pointer-events-none transition-colors"
+          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl text-white/45 hover:text-white/80 hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c8a46b] disabled:opacity-20 disabled:pointer-events-none transition-colors"
           aria-label={`Move ${service.name} up`}
         >
           <ArrowUp className="w-3.5 h-3.5" />
@@ -366,7 +366,7 @@ const ServiceReorderRow = ({
         <button
           onClick={onMoveDown}
           disabled={index === total - 1}
-          className="p-2 rounded-lg text-white/25 hover:text-white/70 hover:bg-white/[0.06] disabled:opacity-20 disabled:pointer-events-none transition-colors"
+          className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl text-white/45 hover:text-white/80 hover:bg-white/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#c8a46b] disabled:opacity-20 disabled:pointer-events-none transition-colors"
           aria-label={`Move ${service.name} down`}
         >
           <ArrowDown className="w-3.5 h-3.5" />
@@ -592,6 +592,7 @@ const AdminServices = () => {
   const [localSvcOrder, setLocalSvcOrder] = useState<Map<string, Service[]>>(new Map());
   const [svcOrderSaving, setSvcOrderSaving] = useState(false);
   const [svcOrderSaved, setSvcOrderSaved] = useState(false);
+  const [reorderAnnouncement, setReorderAnnouncement] = useState("");
 
   const openReorderCategory = (catId: string | null) => {
     setReorderCatId(catId);
@@ -622,6 +623,7 @@ const AdminServices = () => {
 
   const moveServiceUp = (index: number) => {
     if (!reorderCatId || index === 0) return;
+    setReorderAnnouncement(`${reorderCatServices[index].name} moved to position ${index} of ${reorderCatServices.length}.`);
     setLocalSvcOrder((prev) => {
       const list = [...(prev.get(reorderCatId) ?? [])];
       [list[index - 1], list[index]] = [list[index], list[index - 1]];
@@ -632,7 +634,8 @@ const AdminServices = () => {
   };
 
   const moveServiceDown = (index: number) => {
-    if (!reorderCatId) return;
+    if (!reorderCatId || index >= reorderCatServices.length - 1) return;
+    setReorderAnnouncement(`${reorderCatServices[index].name} moved to position ${index + 2} of ${reorderCatServices.length}.`);
     setLocalSvcOrder((prev) => {
       const list = [...(prev.get(reorderCatId) ?? [])];
       if (index >= list.length - 1) return prev;
@@ -989,8 +992,9 @@ const AdminServices = () => {
           )}
         </div>
         <p className="text-[11px] text-white/30 -mt-1">
-          Select a category, use ↑ ↓ to reorder its services, then click Save Order.
+          Select a category, use the move controls to reorder its services, then click Save Order.
         </p>
+        <p className="sr-only" aria-live="polite" aria-atomic="true">{reorderAnnouncement}</p>
 
         <div className="flex flex-wrap gap-2">
           {orderedCategories.map((cat) => {
@@ -999,7 +1003,7 @@ const AdminServices = () => {
               <button
                 key={cat.id}
                 onClick={() => openReorderCategory(isActive ? null : cat.id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all ${
+                className={`min-h-11 px-3 py-2 rounded-xl text-xs font-semibold border transition-all ${
                   isActive
                     ? "bg-white/[0.10] border-white/[0.20] text-white/90"
                     : "bg-white/[0.03] border-white/[0.07] text-white/45 hover:border-white/[0.15] hover:text-white/70"

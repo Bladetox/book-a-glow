@@ -355,7 +355,7 @@ const AdminAvailability = () => {
                     </div>
                     <button
                       onClick={() => toggleDayEnabled(day)}
-                      className="text-white/60 transition-colors hover:text-white"
+                      className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl text-white/60 transition-colors hover:bg-white/[0.05] hover:text-white"
                     >
                       {config.enabled ? (
                         <ToggleRight className="h-6 w-6 text-emerald-400" />
@@ -371,7 +371,7 @@ const AdminAvailability = () => {
                         <button
                           key={slot}
                           onClick={() => toggleWeekSlot(day, slot)}
-                          className={`rounded-xl py-1.5 text-[11px] font-medium transition-all ${
+                          className={`min-h-11 rounded-xl px-1 py-2 text-[11px] font-medium transition-all ${
                             config.slots.includes(slot)
                               ? "border border-white/[0.15] bg-white/[0.12] text-white"
                               : "border border-white/[0.04] text-white/20 hover:border-white/[0.08] hover:text-white/40"
@@ -414,13 +414,13 @@ const AdminAvailability = () => {
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => setCurrentMonth((month) => subMonths(month, 1))}
-                    className="rounded-xl p-2 text-white/40 transition-colors hover:bg-white/[0.06] hover:text-white"
+                    className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl p-2 text-white/55 transition-colors hover:bg-white/[0.06] hover:text-white"
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </button>
                   <button
                     onClick={() => setCurrentMonth((month) => addMonths(month, 1))}
-                    className="rounded-xl p-2 text-white/40 transition-colors hover:bg-white/[0.06] hover:text-white"
+                    className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl p-2 text-white/55 transition-colors hover:bg-white/[0.06] hover:text-white"
                   >
                     <ChevronRight className="h-4 w-4" />
                   </button>
@@ -453,7 +453,7 @@ const AdminAvailability = () => {
                     <button
                       key={iso}
                       onClick={() => setSelectedDate(day)}
-                      className={`relative aspect-square w-full rounded-xl text-sm font-medium transition-all duration-200 ${
+                      className={`relative aspect-square min-h-11 w-full rounded-xl text-sm font-medium transition-all duration-200 ${
                         active
                           ? "bg-white/[0.15] text-white ring-1 ring-white/20"
                           : "hover:bg-white/[0.06]"
@@ -529,7 +529,7 @@ const AdminAvailability = () => {
                           )}
                           <button
                             onClick={() => toggleDailyEnabled(selectedDate)}
-                            className="text-white/60 transition-colors hover:text-white"
+                            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl text-white/60 transition-colors hover:bg-white/[0.05] hover:text-white"
                           >
                             {config.enabled ? (
                               <ToggleRight className="h-6 w-6 text-emerald-400" />
@@ -552,7 +552,7 @@ const AdminAvailability = () => {
                               <button
                                 key={slot}
                                 onClick={() => toggleDailySlot(selectedDate, slot)}
-                                className={`rounded-xl py-1.5 text-[11px] font-medium transition-all ${
+                                className={`min-h-11 rounded-xl px-1 py-2 text-[11px] font-medium transition-all ${
                                   config.slots.includes(slot)
                                     ? "border border-white/[0.15] bg-white/[0.12] text-white"
                                     : "border border-white/[0.04] text-white/20 hover:border-white/[0.08] hover:text-white/40"
