@@ -493,7 +493,7 @@ export default function AdminConsistencyPricing() {
                 setEnabled((value) => !value);
                 markDirty();
               }}
-              className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full p-0.5 transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b0b0b] disabled:cursor-not-allowed disabled:opacity-50 ${enabled ? "bg-green-500" : "bg-white/15"}`}
+              className={`relative inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full p-0.5 transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b0b0b] disabled:cursor-not-allowed disabled:opacity-50 ${enabled ? "bg-green-500" : "bg-white/15"}`}
             >
               <span className={`h-6 w-6 rounded-full bg-white shadow-sm transition-transform duration-200 ${enabled ? "translate-x-5" : "translate-x-0"}`} />
             </button>
@@ -504,7 +504,7 @@ export default function AdminConsistencyPricing() {
                 aria-expanded={expanded}
                 aria-label={expanded ? "Collapse settings" : "Edit settings"}
                 disabled={saving || reviewRequired}
-                className="flex h-9 w-9 items-center justify-center rounded-lg text-white/40 transition-colors hover:bg-white/[0.06] hover:text-white/70 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex h-11 w-11 min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-white/40 transition-colors hover:bg-white/[0.06] hover:text-white/70 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-400/70"
               >
                 {expanded ? <ChevronDown className="h-4 w-4" /> : <Pencil className="h-3.5 w-3.5" />}
               </button>

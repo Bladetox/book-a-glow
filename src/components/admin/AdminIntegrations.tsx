@@ -116,7 +116,8 @@ const IntegrationCard = ({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between p-5 text-left"
+        aria-expanded={open}
+        className="flex min-h-[64px] w-full items-center justify-between p-5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-amber-400/70"
       >
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.06] shrink-0">
@@ -158,7 +159,7 @@ const IntegrationCard = ({
                   {configured && !editing && (
                     <button
                       onClick={onEdit}
-                      className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition-colors font-semibold px-3 py-1.5 rounded-lg border border-white/[0.06] hover:border-white/[0.12]"
+                      className="flex min-h-[44px] items-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition-colors font-semibold px-3 py-1.5 rounded-lg border border-white/[0.06] hover:border-white/[0.12]"
                     >
                       <Edit2 className="w-3 h-3" /> Edit
                     </button>
@@ -263,7 +264,8 @@ const GoogleCalendarCard = ({ connected, tenantId }: GoogleCalendarCardProps) =>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between p-5 text-left"
+        aria-expanded={open}
+        className="flex min-h-[64px] w-full items-center justify-between p-5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-amber-400/70"
       >
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.06] shrink-0">
@@ -456,7 +458,8 @@ const PayfastCard = ({ settings, onSaved, payshapEnabled }: PayfastCardProps) =>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between p-5 text-left"
+        aria-expanded={open}
+        className="flex min-h-[64px] w-full items-center justify-between p-5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-amber-400/70"
       >
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.06] shrink-0">
@@ -574,7 +577,7 @@ const PayfastCard = ({ settings, onSaved, payshapEnabled }: PayfastCardProps) =>
                       {anyConfigured && !editing && (
                         <button
                           onClick={() => setEditing(true)}
-                          className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition-colors font-semibold px-3 py-1.5 rounded-lg border border-white/[0.06] hover:border-white/[0.12]"
+                          className="flex min-h-[44px] items-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition-colors font-semibold px-3 py-1.5 rounded-lg border border-white/[0.06] hover:border-white/[0.12]"
                         >
                           <Edit2 className="w-3 h-3" /> Edit
                         </button>
@@ -771,7 +774,8 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved, payshapEnabled }: YocoC
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between p-5 text-left"
+        aria-expanded={open}
+        className="flex min-h-[64px] w-full items-center justify-between p-5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-amber-400/70"
       >
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.06] shrink-0">
@@ -860,7 +864,7 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved, payshapEnabled }: YocoC
                       {liveHasKeys && !liveEditing && (
                         <button
                           onClick={() => setLiveEditing(true)}
-                          className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition-colors font-semibold px-3 py-1.5 rounded-lg border border-white/[0.06] hover:border-white/[0.12]"
+                          className="flex min-h-[44px] items-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition-colors font-semibold px-3 py-1.5 rounded-lg border border-white/[0.06] hover:border-white/[0.12]"
                         >
                           <Edit2 className="w-3 h-3" /> Edit
                         </button>
@@ -943,7 +947,7 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved, payshapEnabled }: YocoC
                               {testConfigured && !testEditing && (
                                 <button
                                   onClick={() => setTestEditing(true)}
-                                  className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition-colors font-semibold px-3 py-1.5 rounded-lg border border-white/[0.06] hover:border-white/[0.12]"
+                                  className="flex min-h-[44px] items-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition-colors font-semibold px-3 py-1.5 rounded-lg border border-white/[0.06] hover:border-white/[0.12]"
                                 >
                                   <Edit2 className="w-3 h-3" /> Edit
                                 </button>
@@ -1075,7 +1079,8 @@ const PayshapCard = ({ settings, tenantId, onSaved }: PayshapCardProps) => {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between p-5 text-left"
+        aria-expanded={open}
+        className="flex min-h-[64px] w-full items-center justify-between p-5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-amber-400/70"
       >
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.06] shrink-0">

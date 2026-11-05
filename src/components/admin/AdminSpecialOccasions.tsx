@@ -134,13 +134,13 @@ const OccasionCard = ({
             <div className="flex items-center gap-1">
               <button
                 onClick={() => onDelete(row.id)}
-                className="text-[10px] text-red-400 hover:text-red-300 font-semibold px-2 py-1.5 rounded-lg hover:bg-red-500/10 transition-colors min-w-[36px] text-center"
+                className="min-h-[44px] min-w-[44px] text-[10px] text-red-400 hover:text-red-300 font-semibold px-2 py-1.5 rounded-lg hover:bg-red-500/10 transition-colors text-center"
               >
                 Yes
               </button>
               <button
                 onClick={() => setConfirmDelete(false)}
-                className="text-[10px] text-white/30 hover:text-white/60 font-semibold px-2 py-1.5 rounded-lg hover:bg-white/[0.05] transition-colors min-w-[36px] text-center"
+                className="min-h-[44px] min-w-[44px] text-[10px] text-white/30 hover:text-white/60 font-semibold px-2 py-1.5 rounded-lg hover:bg-white/[0.05] transition-colors text-center"
               >
                 No
               </button>
@@ -148,7 +148,7 @@ const OccasionCard = ({
           ) : (
             <button
               onClick={() => setConfirmDelete(true)}
-              className="p-1.5 rounded-lg text-white/20 hover:text-red-400 hover:bg-red-500/5 transition-colors"
+              className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-white/20 hover:text-red-400 hover:bg-red-500/5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/70"
               title="Delete"
             >
               <Trash2 className="w-3.5 h-3.5" />
@@ -202,7 +202,7 @@ const AddOccasionForm = ({
       <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/[0.03] p-4 flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <p className="text-[11px] font-semibold tracking-[0.1em] uppercase text-emerald-400/80">Add Occasion</p>
-          <button onClick={onClose} className="text-white/25 hover:text-white/60 transition-colors">
+          <button type="button" onClick={onClose} aria-label="Close add occasion form" className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-white/25 hover:text-white/60 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70">
             <X className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -216,7 +216,7 @@ const AddOccasionForm = ({
               onChange={e => setName(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="e.g. Sarah Jones"
-              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-emerald-400/40 transition-colors"
+              className="min-h-[44px] w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-emerald-400/40 transition-colors"
             />
           </div>
           <div className="flex flex-col gap-1">
@@ -226,7 +226,7 @@ const AddOccasionForm = ({
               onChange={e => setPhone(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="e.g. 0821234567"
-              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-emerald-400/40 transition-colors"
+              className="min-h-[44px] w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-emerald-400/40 transition-colors"
             />
           </div>
           <div className="flex flex-col gap-1">
@@ -234,7 +234,7 @@ const AddOccasionForm = ({
             <select
               value={type}
               onChange={e => setType(e.target.value as OccasionType)}
-              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white/80 focus:outline-none focus:border-emerald-400/40 transition-colors appearance-none"
+              className="min-h-[44px] w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white/80 focus:outline-none focus:border-emerald-400/40 transition-colors appearance-none"
             >
               <option value="birthday">🎂 Birthday</option>
               <option value="anniversary">💖 Anniversary</option>
@@ -247,7 +247,7 @@ const AddOccasionForm = ({
               type="date"
               value={date}
               onChange={e => setDate(e.target.value)}
-              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white/80 focus:outline-none focus:border-emerald-400/40 transition-colors"
+              className="min-h-[44px] w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white/80 focus:outline-none focus:border-emerald-400/40 transition-colors"
             />
           </div>
           <div className="flex flex-col gap-1 sm:col-span-2">
@@ -257,7 +257,7 @@ const AddOccasionForm = ({
               onChange={e => setLabel(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="e.g. husband's birthday, 5 year anniversary"
-              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-emerald-400/40 transition-colors"
+              className="min-h-[44px] w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2 text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-emerald-400/40 transition-colors"
             />
           </div>
         </div>
@@ -265,14 +265,14 @@ const AddOccasionForm = ({
         <div className="flex justify-end gap-2">
           <button
             onClick={onClose}
-            className="px-3 py-2 rounded-xl text-sm text-white/40 hover:text-white/70 hover:bg-white/[0.04] transition-colors"
+            className="min-h-[44px] px-4 py-2 rounded-xl text-sm text-white/40 hover:text-white/70 hover:bg-white/[0.04] transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={saving || !name.trim() || !date}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 text-sm font-semibold hover:bg-emerald-500/25 transition-colors disabled:opacity-40"
+            className="flex min-h-[44px] items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500/15 border border-emerald-500/25 text-emerald-400 text-sm font-semibold hover:bg-emerald-500/25 transition-colors disabled:opacity-40"
           >
             {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
             {saving ? "Saving…" : "Save"}
@@ -362,7 +362,7 @@ const AdminSpecialOccasions = () => {
         </p>
         <button
           onClick={() => setShowAddForm(v => !v)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold hover:bg-emerald-500/20 transition-colors"
+          className="flex min-h-[44px] items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold hover:bg-emerald-500/20 transition-colors"
         >
           <Plus className="w-3.5 h-3.5" />
           Add Occasion
@@ -381,7 +381,7 @@ const AdminSpecialOccasions = () => {
       </AnimatePresence>
 
       {/* Filter chips — hide zero-count chips (except "All") */}
-      <div className="flex gap-1.5 overflow-x-auto scrollbar-hide">
+      <div className="flex gap-1.5 overflow-x-auto overscroll-x-contain snap-x snap-proximity scrollbar-hide">
         {FILTER_CHIPS.map(chip => {
           const count = chip.key === "all" ? rows.length : counts[chip.key as keyof typeof counts] ?? 0;
           // Hide non-"all" chips that have zero items
@@ -390,7 +390,8 @@ const AdminSpecialOccasions = () => {
             <button
               key={chip.key}
               onClick={() => setActiveFilter(chip.key)}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+              aria-pressed={activeFilter === chip.key}
+              className={`flex min-h-[44px] items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
                 activeFilter === chip.key
                   ? "bg-white/[0.1] text-white border border-white/[0.18]"
                   : "text-white/35 border border-white/[0.06] hover:text-white/60 hover:bg-white/[0.04]"

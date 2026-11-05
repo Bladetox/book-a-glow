@@ -103,7 +103,8 @@ export default function AdminCommunications() {
           {WHATSAPP_TONES.map(option => (
             <button key={option.value} type="button" disabled={toneLoading || toneError || saveTone.isPending}
               onClick={() => setTone(option.value)}
-              className={"rounded-xl border p-4 text-left transition-colors " + (tone === option.value ? "border-amber-400/40 bg-amber-400/[0.07]" : "border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.04]")}>
+              aria-pressed={tone === option.value}
+              className={"min-h-[72px] rounded-xl border p-4 text-left transition-colors " + (tone === option.value ? "border-amber-400/40 bg-amber-400/[0.07]" : "border-white/[0.08] bg-white/[0.02] hover:bg-white/[0.04]")}>
               <span className="flex items-center justify-between gap-2">
                 <span className="text-sm font-semibold text-white/85">{option.label}</span>
                 {tone === option.value && <Check className="w-4 h-4 text-amber-300" />}
@@ -114,7 +115,7 @@ export default function AdminCommunications() {
         </div>
         {toneError && <div className="rounded-xl border border-red-400/20 bg-red-400/[0.05] p-3 flex items-center justify-between gap-3">
           <p className="text-xs text-red-200/80">We could not load your saved tone preference.</p>
-          <button type="button" onClick={() => refetchTone()} className="text-xs font-semibold text-red-200 underline">Try again</button>
+          <button type="button" onClick={() => refetchTone()} className="inline-flex min-h-[44px] items-center text-xs font-semibold text-red-200 underline">Try again</button>
         </div>}
         <div className="flex items-center justify-between gap-3 pt-1">
           <div>{toneLoading ? <span className="text-xs text-white/35">Loading…</span> : toneError ? <span className="text-xs text-red-300">Unable to load preference</span> : saveTone.isPending ? <span className="text-xs text-amber-300">Saving…</span> : toneDirty ? <span className="text-xs text-amber-300">Unsaved changes</span> : <SavedBadge visible />}</div>
@@ -129,7 +130,7 @@ export default function AdminCommunications() {
         </div>
         {templatesError && <div className="rounded-xl border border-red-400/20 bg-red-400/[0.05] p-3 flex items-center justify-between gap-3">
           <p className="text-xs text-red-200/80">We could not load your saved message wording. Your saved messages will not be overwritten.</p>
-          <button type="button" onClick={() => refetchTemplates()} className="text-xs font-semibold text-red-200 underline">Try again</button>
+          <button type="button" onClick={() => refetchTemplates()} className="inline-flex min-h-[44px] items-center text-xs font-semibold text-red-200 underline">Try again</button>
         </div>}
         <div className="flex flex-col gap-2">
           {WHATSAPP_TEMPLATE_DEFINITIONS.map(definition => {
@@ -145,7 +146,7 @@ export default function AdminCommunications() {
             return (
               <article key={type} className="rounded-xl border border-white/[0.08] bg-white/[0.02] overflow-hidden min-w-0">
                 <button type="button" aria-expanded={isOpen} onClick={() => setOpenTemplate(isOpen ? null : type)}
-                  className="w-full min-w-0 flex items-center justify-between gap-3 px-4 py-3.5 text-left hover:bg-white/[0.035] transition-colors">
+                  className="flex min-h-[56px] w-full min-w-0 items-center justify-between gap-3 px-4 py-3.5 text-left hover:bg-white/[0.035] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-amber-400/70">
                   <span className="min-w-0 flex-1">
                     <span className="flex flex-wrap items-center gap-2">
                       <span className="text-sm font-semibold text-white/85">{definition.label}</span>
@@ -162,7 +163,7 @@ export default function AdminCommunications() {
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="text-[10px] uppercase tracking-wider font-semibold text-white/35">Available placeholders</span>
                     <button type="button" onClick={() => setDrafts(previous => ({ ...previous, [type]: suggested }))}
-                      className="inline-flex items-center gap-1.5 text-xs text-amber-200/80 hover:text-amber-100"><RotateCcw className="w-3 h-3" /> Use suggested wording</button>
+                      className="inline-flex min-h-[44px] items-center gap-1.5 text-xs text-amber-200/80 hover:text-amber-100"><RotateCcw className="w-3 h-3" /> Use suggested wording</button>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {variables.map(variable => <code key={variable} className="rounded-md bg-white/[0.06] px-2 py-1 text-[10px] text-white/65">{"{{" + variable + "}}"} <span className="text-white/30">· {WHATSAPP_TEMPLATE_VARIABLE_LABELS[variable]}</span></code>)}
@@ -171,7 +172,7 @@ export default function AdminCommunications() {
                     <span className="text-xs font-semibold text-white/65">Message wording</span>
                     <textarea value={current} onChange={event => setDrafts(previous => ({ ...previous, [type]: event.target.value }))}
                       rows={5} maxLength={2000} spellCheck
-                      className="w-full min-w-0 resize-y rounded-xl border border-white/[0.1] bg-black/30 p-3 text-sm leading-relaxed text-white/85 placeholder:text-white/25 focus:outline-none focus:border-amber-300/40" />
+                      className="min-h-[160px] w-full min-w-0 resize-y rounded-xl border border-white/[0.1] bg-black/30 p-3 text-sm leading-relaxed text-white/85 placeholder:text-white/25 focus:outline-none focus:border-amber-300/40" />
                   </label>
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="text-[10px] text-white/30">{current.length}/2000 characters</span>

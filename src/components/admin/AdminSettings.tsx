@@ -193,7 +193,7 @@ const PillPicker = ({
 const SaveBtn = ({ onClick, label = "Save", loading }: { onClick: () => void; label?: string; loading?: boolean }) => (
   <button
     onClick={onClick} disabled={loading}
-    className="px-5 py-2 rounded-xl bg-white text-zinc-950 text-xs font-bold hover:bg-white/90 transition-colors disabled:opacity-50 flex items-center gap-2"
+    className="min-h-[44px] px-5 py-2 rounded-xl bg-white text-zinc-950 text-xs font-bold hover:bg-white/90 transition-colors disabled:opacity-50 flex items-center gap-2"
   >
     {loading && <Loader2 className="w-3 h-3 animate-spin" />}
     {label}
@@ -490,7 +490,7 @@ const AdminSettings = () => {
         <div className="p-5 rounded-3xl bg-gradient-to-br from-white/[0.06] to-white/[0.02] border border-white/[0.05] flex flex-col gap-4">
           <div className="flex items-center gap-2">
             <p className="flex-1 text-sm text-white/90 px-4 py-3 rounded-xl bg-white/[0.02] border border-white/[0.06] font-mono truncate">{activeBookingUrl}</p>
-            <button onClick={() => copyUrl(activeBookingUrl)} className="shrink-0 flex items-center gap-1.5 px-3 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/20 transition-colors">
+            <button onClick={() => copyUrl(activeBookingUrl)} className="shrink-0 flex min-h-[44px] items-center gap-1.5 px-3 py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-xs font-semibold text-emerald-400 hover:bg-emerald-500/20 transition-colors">
               <Copy className="w-3.5 h-3.5" /> Copy
             </button>
             <a href={activeBookingUrl} target="_blank" rel="noreferrer" className="shrink-0 p-2.5 rounded-xl bg-white/[0.04] border border-white/[0.06] text-white/40 hover:text-white/70 hover:bg-white/[0.08] transition-colors">
@@ -562,7 +562,7 @@ const AdminSettings = () => {
           <SettingsCard title="Booking Page Theme" icon={Palette} gradient="from-white/[0.05] to-white/[0.02]" collapsible>
             <div className="grid grid-cols-2 gap-2">
               {businessThemes.map((t) => (
-                <button key={t.id} onClick={() => update("theme_id", t.id)} className={`p-3 rounded-xl border text-left transition-all flex flex-col gap-1.5 ${draft.theme_id === t.id ? "border-white/30 bg-white/[0.1]" : "border-white/[0.06] hover:border-white/[0.12]"}`}>
+                <button key={t.id} onClick={() => update("theme_id", t.id)} className={`min-h-[72px] p-3 rounded-xl border text-left transition-all flex flex-col gap-1.5 ${draft.theme_id === t.id ? "border-white/30 bg-white/[0.1]" : "border-white/[0.06] hover:border-white/[0.12]"}`}>
                   <span className="text-xs font-bold text-white/80">{t.label}</span><span className="text-[10px] text-white/30 truncate">{t.vibe}</span>
                 </button>
               ))}
@@ -589,15 +589,15 @@ const AdminSettings = () => {
               {referralChannels.map((channel, index) => (
                 <div key={`${channel}-${index}`} className="flex items-center gap-2 rounded-xl border border-white/[0.07] bg-white/[0.025] px-3 py-2">
                   <span className="w-6 text-xs text-white/30 tabular-nums">{index + 1}.</span><span className="flex-1 text-sm text-white/80">{channel}</span>
-                  <button type="button" onClick={() => moveReferralOption(index, -1)} disabled={index === 0} aria-label={`Move ${channel} up`} className="p-1.5 rounded-lg text-white/50 hover:bg-white/[0.08] disabled:opacity-20"><ArrowUp className="w-3.5 h-3.5" /></button>
-                  <button type="button" onClick={() => moveReferralOption(index, 1)} disabled={index === referralChannels.length - 1} aria-label={`Move ${channel} down`} className="p-1.5 rounded-lg text-white/50 hover:bg-white/[0.08] disabled:opacity-20"><ArrowDown className="w-3.5 h-3.5" /></button>
-                  <button type="button" onClick={() => removeReferralOption(index)} aria-label={`Remove ${channel}`} className="p-1.5 rounded-lg text-red-300/60 hover:bg-red-400/10"><Trash2 className="w-3.5 h-3.5" /></button>
+                  <button type="button" onClick={() => moveReferralOption(index, -1)} disabled={index === 0} aria-label={`Move ${channel} up`} className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-white/50 hover:bg-white/[0.08] disabled:opacity-20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70"><ArrowUp className="w-3.5 h-3.5" /></button>
+                  <button type="button" onClick={() => moveReferralOption(index, 1)} disabled={index === referralChannels.length - 1} aria-label={`Move ${channel} down`} className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-white/50 hover:bg-white/[0.08] disabled:opacity-20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70"><ArrowDown className="w-3.5 h-3.5" /></button>
+                  <button type="button" onClick={() => removeReferralOption(index)} aria-label={`Remove ${channel}`} className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-red-300/60 hover:bg-red-400/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/70"><Trash2 className="w-3.5 h-3.5" /></button>
                 </div>
               ))}
             </div>
             <div className="flex gap-2">
               <input id="new-acquisition-channel" value={newReferralOption} onChange={(e) => setNewReferralOption(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addReferralOption(); } }} placeholder="Add an acquisition channel" className="min-w-0 flex-1 px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors" />
-              <button type="button" onClick={addReferralOption} className="px-3 py-2 rounded-xl bg-white/[0.08] border border-white/[0.1] text-xs font-semibold text-white/80"><Plus className="w-3.5 h-3.5" /></button>
+              <button type="button" onClick={addReferralOption} className="min-h-[44px] min-w-[44px] px-3 py-2 rounded-xl bg-white/[0.08] border border-white/[0.1] text-xs font-semibold text-white/80"><Plus className="w-3.5 h-3.5" /></button>
             </div>
             <p className="text-[10px] text-white/25 leading-relaxed">These are guest-reported acquisition sources. Returning-client status is determined automatically from booking history and is not an acquisition channel. Existing bookings retain their saved source.</p>
             <div className="flex items-center gap-3"><SaveBtn onClick={saveReferralOptions} loading={upsertSetting.isPending} /><SavedBadge section="referral" /></div>

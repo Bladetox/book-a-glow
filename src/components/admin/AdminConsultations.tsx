@@ -216,12 +216,13 @@ const AdminConsultations = () => {
       <div className="flex flex-col gap-3">
         {/* filters row */}
         <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+          <div className="flex gap-2 overflow-x-auto overscroll-x-contain snap-x snap-proximity pb-1 scrollbar-hide">
             {filters.map((f) => (
               <button
                 key={f}
                 onClick={() => setActiveFilter(f)}
-                className={`px-4 py-2 rounded-full text-xs font-semibold tracking-wider uppercase whitespace-nowrap transition-all
+                aria-pressed={activeFilter === f}
+                className={`min-h-[44px] px-4 py-2 rounded-full text-xs font-semibold tracking-wider uppercase whitespace-nowrap transition-all
                   ${activeFilter === f
                     ? "bg-white/[0.12] text-white border border-white/[0.15]"
                     : "text-white/35 border border-white/[0.06] hover:text-white/60"
@@ -239,7 +240,7 @@ const AdminConsultations = () => {
           {filtered.length > 0 && (
             <button
               onClick={() => exportCSV(filtered)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium text-white/50 border border-white/[0.07] hover:text-white/80 hover:border-white/20 transition-all whitespace-nowrap"
+              className="flex min-h-[44px] items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-medium text-white/50 border border-white/[0.07] hover:text-white/80 hover:border-white/20 transition-all whitespace-nowrap"
             >
               <Download className="w-3.5 h-3.5" />
               Export CSV
@@ -257,7 +258,7 @@ const AdminConsultations = () => {
             placeholder="Search by client name…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-white/[0.04] border border-white/[0.07] rounded-xl pl-9 pr-4 py-2 text-xs text-white/70 placeholder:text-white/25 focus:outline-none focus:border-white/20 transition-colors"
+            className="min-h-[44px] w-full bg-white/[0.04] border border-white/[0.07] rounded-xl pl-9 pr-4 py-2 text-sm text-white/70 placeholder:text-white/25 focus:outline-none focus:border-white/20 transition-colors"
           />
         </div>
       </div>

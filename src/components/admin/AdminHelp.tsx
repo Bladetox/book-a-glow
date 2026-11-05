@@ -87,7 +87,8 @@ const AccordionCard = ({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center gap-3 p-5 text-left hover:bg-white/[0.02] transition-colors"
+        aria-expanded={open}
+        className="flex min-h-[64px] w-full items-center gap-3 p-5 text-left hover:bg-white/[0.02] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-amber-400/70"
       >
         <div className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.06] shrink-0">
           <Icon className="w-4 h-4 text-white/40" />
@@ -239,7 +240,8 @@ const FaqItem = ({ q, a }: { q: string; a: string }) => {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-start justify-between gap-3 py-4 text-left"
+        aria-expanded={open}
+        className="flex min-h-[56px] w-full items-start justify-between gap-3 py-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-amber-400/70"
       >
         <span className="text-sm text-white/65 font-medium leading-snug">{q}</span>
         <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.2 }} className="shrink-0 mt-0.5">

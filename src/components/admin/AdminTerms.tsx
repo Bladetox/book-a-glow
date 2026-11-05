@@ -305,25 +305,27 @@ const AdminTerms = () => {
               ) : (
                 <div className="flex items-start gap-3">
                   {/* Reorder arrows */}
-                  <div className="flex flex-col gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity pt-0.5">
+                  <div className="flex shrink-0 flex-col gap-0.5 pt-0.5 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100">
                     <button
                       onClick={() => moveSection(i, -1)}
                       disabled={i === 0}
-                      className="p-1 rounded-lg hover:bg-white/[0.06] text-white/20 hover:text-white/50 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+                      aria-label={`Move ${s.title} up`}
+                      className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg hover:bg-white/[0.06] text-white/40 hover:text-white/70 disabled:opacity-20 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70"
                     >
                       <ChevronUp className="w-3.5 h-3.5" />
                     </button>
                     <button
                       onClick={() => moveSection(i, 1)}
                       disabled={i === sections.length - 1}
-                      className="p-1 rounded-lg hover:bg-white/[0.06] text-white/20 hover:text-white/50 disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+                      aria-label={`Move ${s.title} up`}
+                      className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg hover:bg-white/[0.06] text-white/40 hover:text-white/70 disabled:opacity-20 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70"
                     >
                       <ChevronDown className="w-3.5 h-3.5" />
                     </button>
                   </div>
 
                   {/* Content */}
-                  <div className="flex-1 min-w-0 cursor-pointer" onClick={() => startEdit(s)}>
+                  <div role="button" tabIndex={0} aria-label={`Edit ${s.title}`} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); startEdit(s); } }} className="flex-1 min-w-0 cursor-pointer rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70" onClick={() => startEdit(s)}>
                     <h4 className="text-sm font-bold text-white/85">{s.title}</h4>
                     <p className="text-xs text-white/35 mt-1.5 leading-relaxed line-clamp-3">{s.content}</p>
                   </div>
@@ -331,7 +333,8 @@ const AdminTerms = () => {
                   {/* Delete */}
                   <button
                     onClick={() => deleteSection(s.id)}
-                    className="p-2 rounded-xl hover:bg-red-500/10 text-white/20 hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100 shrink-0"
+                    aria-label={`Delete ${s.title}`}
+                    className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-xl hover:bg-red-500/10 text-white/40 hover:text-red-400 transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100 shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400/70"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
