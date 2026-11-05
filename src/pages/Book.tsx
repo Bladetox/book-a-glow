@@ -242,8 +242,14 @@ const Index = () => {
           The header, step indicator, and bottom bar are all fixed chrome.
           AnimatePresence and stepVariants are completely unchanged.
         */}
-        <div data-booking-scroll className="flex-1 overflow-y-auto scrollbar-hide">
-          <div className="w-full max-w-md mx-auto px-4 pt-4" style={{ paddingBottom: "calc(var(--bottom-bar-height, 80px) + 16px)" }}>
+        <div
+          data-booking-scroll
+          className={`flex-1 min-h-0 ${step === 0 ? "overflow-hidden" : "overflow-y-auto scrollbar-hide"}`}
+        >
+          <div
+            className={`w-full max-w-md mx-auto px-4 pt-4 ${step === 0 ? "h-full min-h-0 flex flex-col" : ""}`}
+            style={{ paddingBottom: "calc(var(--bottom-bar-height, 80px) + 16px)" }}
+          >
             <AnimatePresence mode="wait" custom={direction}>
               <motion.div
                 key={step}
@@ -252,6 +258,7 @@ const Index = () => {
                 initial="enter"
                 animate="center"
                 exit="exit"
+                className={step === 0 ? "h-full min-h-0 flex flex-col" : undefined}
               >
                 {step === 0 && (
                   <ServicesStep
@@ -297,7 +304,7 @@ const Index = () => {
               </motion.div>
             </AnimatePresence>
 
-            <p className="text-[9px] text-muted-foreground/40 tracking-[0.12em] text-center mt-6 pb-2">
+            <p className="flex-shrink-0 text-[9px] text-muted-foreground/40 tracking-[0.12em] text-center mt-6 pb-2">
               {"Powered by "}
               <a
                 href="https://nextslot.co.za"
