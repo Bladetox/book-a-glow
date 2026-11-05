@@ -185,6 +185,7 @@ const ClientMiniCard = ({
   title,
   explain,
   benchmark,
+  calculationNote,
   onExpand,
 }: {
   id: string;
@@ -198,7 +199,7 @@ const ClientMiniCard = ({
   <motion.button
     type="button"
     layoutId={id}
-    onClick={() => onExpand({ id, label, value, valueColor, title, explain, benchmark })}
+    onClick={() => onExpand({ id, label, value, valueColor, title, explain, benchmark, calculationNote })}
     className="w-full min-h-28 text-left rounded-xl border border-white/[0.10] bg-white/[0.02] cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
     whileTap={{ scale: 0.97 }}
     transition={{ type: "spring", stiffness: 340, damping: 30 }}
@@ -857,6 +858,7 @@ export const AdminDashboardView = ({
               title: METRIC_COPY.leadSource.title,
               explain: METRIC_COPY.leadSource.explain,
               benchmark: METRIC_COPY.leadSource.benchmark,
+              calculationNote: METRIC_COPY.leadSource.calculationNote,
               extraLines: leadSourceExtraLines,
             })}
             className="w-full text-left rounded-xl border border-white/[0.10] bg-white/[0.02] cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
