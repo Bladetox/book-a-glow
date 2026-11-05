@@ -248,7 +248,7 @@ const Index = () => {
         >
           <div
             className={`w-full max-w-md mx-auto px-4 pt-4 ${step === 0 ? "h-full min-h-0 flex flex-col" : ""}`}
-            style={{ paddingBottom: "calc(var(--bottom-bar-height, 80px) + 16px)" }}
+            style={{ paddingBottom: step === 0 ? "16px" : "calc(var(--bottom-bar-height, 80px) + 16px)" }}
           >
             <AnimatePresence mode="wait" custom={direction}>
               <motion.div
