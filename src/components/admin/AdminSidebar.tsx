@@ -16,6 +16,7 @@ import { HelpCircle } from "lucide-react";
 import { useTenant } from "@/contexts/TenantContext";
 import { useTenantSettings } from "@/hooks/useSupabaseSettings";
 import { useAdminViewport, type AdminViewport } from "@/hooks/use-admin-viewport";
+import { ADMIN_NAV_GROUPS } from "@/components/admin/adminNavigation";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useStockAlerts } from "@/hooks/useStockAlerts";
@@ -45,14 +46,23 @@ type NavItem =
   | { kind: "direct"; label: string; view: string }
   | { kind: "group";  label: string; icon: React.ElementType; children: string[] };
 
+const groupIconMap: Record<string, React.ElementType> = {
+  schedule: BookingsIcon,
+  catalogue: ServicesIcon,
+  clients: ClientManagementIcon,
+  business: SettingsIcon,
+};
+
 const NAV: NavItem[] = [
-  { kind: "direct", label: "Dashboard",        view: "Dashboard" },
-  { kind: "direct", label: "Calendar",          view: "Calendar" },
-  { kind: "direct", label: "Recommendations",   view: "Recommendations" },
-  { kind: "group",  label: "Schedule",          icon: BookingsIcon,        children: ["Bookings", "Availability"] },
-  { kind: "group",  label: "Catalogue",         icon: ServicesIcon,        children: ["Services", "Stock"] },
-  { kind: "group",  label: "Clients",           icon: ClientManagementIcon, children: ["Client Management", "Consultations", "Special Occasions", "Loyalty", "Consistency Pricing"] },
-  { kind: "group",  label: "Business",          icon: SettingsIcon,        children: ["Integrations", "Communications", "Settings", "Terms & Conditions", "Help"] },
+  { kind: "direct", label: "Dashboard", view: "Dashboard" },
+  { kind: "direct", label: "Calendar", view: "Calendar" },
+  { kind: "direct", label: "Recommendations", view: "Recommendations" },
+  ...ADMIN_NAV_GROUPS.filter((group) => group.sidebarChildren.length > 0).map((group) => ({
+    kind: "group" as const,
+    label: group.label,
+    icon: groupIconMap[group.iconKey],
+    children: [...group.sidebarChildren],
+  })),
 ];
 
 const parentGroupOf = (view: string): string | null => {
