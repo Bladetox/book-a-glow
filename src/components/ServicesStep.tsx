@@ -46,7 +46,7 @@ const ServicesStep = ({ selectedTreatments, onAdd, onRemove }: ServicesStepProps
     selectedTreatments.filter((selectedId) => selectedId === id).length;
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="h-full min-h-0 flex flex-col gap-4">
       {/* Title row */}
       <div className="flex items-center justify-between">
         <h3 className="text-xs font-semibold tracking-[0.2em] uppercase text-muted-foreground">
@@ -81,14 +81,15 @@ const ServicesStep = ({ selectedTreatments, onAdd, onRemove }: ServicesStepProps
       )}
 
       {/* Services for active category */}
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={activeCat ?? "empty"}
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -6 }}
-          transition={{ duration: 0.18 }}
-          className="flex flex-col gap-2"
+      <div className="flex-1 min-h-0">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeCat ?? "empty"}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.18 }}
+            className="h-full min-h-0 overflow-y-auto overscroll-contain scrollbar-hide flex flex-col gap-2"
         >
           {visibleTreatments.length === 0 ? (
             <p className="text-xs text-muted-foreground py-4 text-center">
@@ -165,8 +166,9 @@ const ServicesStep = ({ selectedTreatments, onAdd, onRemove }: ServicesStepProps
               );
             })
           )}
-        </motion.div>
-      </AnimatePresence>
+          </motion.div>
+        </AnimatePresence>
+      </div>
     </div>
   );
 };
