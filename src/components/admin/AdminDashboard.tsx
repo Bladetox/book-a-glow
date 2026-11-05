@@ -199,15 +199,16 @@ const ClientMiniCard = ({
     type="button"
     layoutId={id}
     onClick={() => onExpand({ id, label, value, valueColor, title, explain, benchmark })}
-    className="w-full text-left rounded-xl border border-white/[0.10] bg-white/[0.02] cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+    className="w-full min-h-28 text-left rounded-xl border border-white/[0.10] bg-white/[0.02] cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
     whileTap={{ scale: 0.97 }}
     transition={{ type: "spring", stiffness: 340, damping: 30 }}
     aria-label={`Learn more about ${label}`}
+    aria-haspopup="dialog"
   >
     <div className="flex flex-col items-center justify-center gap-1 py-4 px-2">
       <Icon className={`w-4 h-4 ${iconColor ?? "text-white/30"}`} />
       <p className={`text-2xl font-bold ${valueColor ?? "text-white/90"}`}>{value}</p>
-      <p className="text-[10px] text-white/30">{label}</p>
+      <span className="inline-flex items-center gap-1 text-[10px] text-white/40">{label}<Info className="h-3 w-3 text-white/25" aria-hidden="true" /></span>
     </div>
   </motion.button>
 );
