@@ -95,6 +95,9 @@ import {
 import { LoyaltyTenantCriteria } from "./loyalty/LoyaltyTenantCriteria";
 import { useNextyInsights, NextyInsight } from "@/hooks/useNextyInsights";
 import { useWhatsAppTone } from "@/hooks/useWhatsAppTone";
+import { AdminNextyOrb } from "@/components/admin/AdminNextyOrb";
+import { NextyFinancialValue, NextyOutcomeNote } from "@/components/admin/NextyInsightPresentation";
+import { adminTransition, useAdminReducedMotion } from "@/components/admin/adminMotion";
 
 // ──────────────────────────────────────────────────────────────────
 // Loyalty-relevant insight IDs
@@ -112,60 +115,6 @@ const LOYALTY_INSIGHT_IDS = new Set([
 
 // ──────────────────────────────────────────────────────────────────
 // Mini gold orb
-// ──────────────────────────────────────────────────────────────────
-function MiniNextyOrb() {
-  return (
-    <span className="nexty-mini-orb" aria-hidden="true">
-      <style>{`
-        .nexty-mini-orb {
-          position: relative;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          width: 18px;
-          height: 18px;
-          flex-shrink: 0;
-        }
-        .nexty-mini-orb::before {
-          content: '';
-          position: absolute;
-          inset: -3px;
-          border-radius: 50%;
-          background: radial-gradient(circle, rgba(209,153,0,0.4) 0%, transparent 70%);
-          animation: nexty-mini-pulse 2.8s ease-in-out infinite;
-        }
-        .nexty-mini-orb::after {
-          content: '';
-          position: absolute;
-          width: 14px;
-          height: 14px;
-          border-radius: 50%;
-          background:
-            radial-gradient(circle at 32% 28%, rgba(255,240,180,0.9) 0%, transparent 38%),
-            radial-gradient(circle at 50% 50%, #fdab43 0%, #d19900 45%, #8a5b00 100%);
-          box-shadow:
-            inset -1px -2px 4px rgba(0,0,0,0.45),
-            inset  1px  1px 3px rgba(255,235,160,0.25),
-            0 2px 8px rgba(209,153,0,0.5);
-          animation: nexty-mini-breathe 4s ease-in-out infinite;
-        }
-        @keyframes nexty-mini-pulse {
-          0%, 100% { opacity: 0.55; transform: scale(1); }
-          50%       { opacity: 1;    transform: scale(1.2); }
-        }
-        @keyframes nexty-mini-breathe {
-          0%, 100% { filter: brightness(1); }
-          50%       { filter: brightness(1.15); }
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .nexty-mini-orb::before,
-          .nexty-mini-orb::after { animation: none; }
-        }
-      `}</style>
-    </span>
-  );
-}
-
 // ──────────────────────────────────────────────────────────────────
 // Nexty loyalty insights panel
 // ──────────────────────────────────────────────────────────────────
@@ -188,6 +137,7 @@ function NextyLoyaltyPanel({ onNavigate }: { onNavigate?: (view: string) => void
   const { data: allInsights, isLoading } = useNextyInsights();
   const [open, setOpen]         = useState(false);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const reduceMotion = useAdminReducedMotion();
   const { tenantId } = useTenant();
 
   const insights: NextyInsight[] = useMemo(
@@ -215,7 +165,7 @@ function NextyLoyaltyPanel({ onNavigate }: { onNavigate?: (view: string) => void
         onClick={() => setOpen(s => !s)}
         className="flex items-center gap-2.5 w-full px-4 py-3 hover:bg-white/[0.04] transition-colors"
       >
-        <MiniNextyOrb />
+        <AdminNextyOrb size="small" />
         <span className="text-xs font-semibold text-white/60 flex-1 text-left">
           Ask Nexty for loyalty insights &amp; re-engagement ideas
         </span>
@@ -237,7 +187,7 @@ function NextyLoyaltyPanel({ onNavigate }: { onNavigate?: (view: string) => void
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+            transition={adminTransition(reduceMotion, 0.22)}
             className="overflow-hidden"
           >
             <div className="border-t border-white/[0.06] p-4 space-y-3">
@@ -264,8 +214,9 @@ function NextyLoyaltyPanel({ onNavigate }: { onNavigate?: (view: string) => void
                 return (
                   <motion.div
                     key={ins.id}
-                    initial={{ opacity: 0, y: 6 }}
+                    initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
+                    transition={adminTransition(reduceMotion, 0.18)}
                     className="bg-white/[0.03] border border-white/[0.05] rounded-2xl overflow-hidden"
                   >
                     <div className="flex items-start gap-2.5 p-3 pb-2">
@@ -287,12 +238,7 @@ function NextyLoyaltyPanel({ onNavigate }: { onNavigate?: (view: string) => void
                           >
                             {p.label}
                           </span>
-                          {ins.impactRand && (
-                            <span className="ml-auto flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/15">
-                              <TrendingUp className="w-2.5 h-2.5" />
-                              R{ins.impactRand.toLocaleString("en-ZA")}
-                            </span>
-                          )}
+                          <NextyFinancialValue insight={ins} />
                         </div>
                         <div className="text-xs font-semibold text-white/85 leading-snug">
                           {ins.title}
@@ -301,8 +247,11 @@ function NextyLoyaltyPanel({ onNavigate }: { onNavigate?: (view: string) => void
                     </div>
 
                     <div className="px-3 pb-2 text-xs text-white/50 leading-relaxed">
+                      <span className="mb-1 block text-[8px] font-bold uppercase tracking-[0.14em] text-white/30">Business signal</span>
                       {bodyText}
                     </div>
+
+                    <NextyOutcomeNote compact />
 
                     <div className="border-t border-white/[0.04] px-3 py-1.5 flex items-center gap-2 flex-wrap">
                       {ins.actionLabel && ins.actionView && onNavigate && (

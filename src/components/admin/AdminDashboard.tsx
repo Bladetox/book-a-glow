@@ -17,6 +17,7 @@ import ClientAlertsModal, { alertCardLayoutId } from "@/components/admin/ClientA
 import { useTenant } from "@/contexts/TenantContext";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { useNextyInsights } from "@/hooks/useNextyInsights";
+import { AdminNextyOrb } from "@/components/admin/AdminNextyOrb";
 import BusinessHealthSection, { MetricExpandOverlay, type ExpandedCard } from "@/components/admin/BusinessHealthSection";
 import DashboardStockAlerts from "@/components/admin/DashboardStockAlerts";
 import AdminPayshapQueue from "@/components/admin/AdminPayshapQueue";
@@ -90,60 +91,6 @@ const fadeUp = { initial: { opacity: 0, y: 10 }, animate: { opacity: 1, y: 0 } }
 
 // ---------------------------------------------------------------------------
 // Mini gold orb — used in the dashboard Nexty AI Insights section header.
-// ---------------------------------------------------------------------------
-function MiniNextyOrb() {
-  return (
-    <span className="nexty-mini-orb" aria-hidden="true">
-      <style>{`
-        .nexty-mini-orb {
-          position: relative;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          width: 18px;
-          height: 18px;
-          flex-shrink: 0;
-        }
-        .nexty-mini-orb::before {
-          content: '';
-          position: absolute;
-          inset: -3px;
-          border-radius: 50%;
-          background: radial-gradient(circle, rgba(209,153,0,0.4) 0%, transparent 70%);
-          animation: nexty-mini-pulse 2.8s ease-in-out infinite;
-        }
-        .nexty-mini-orb::after {
-          content: '';
-          position: absolute;
-          width: 14px;
-          height: 14px;
-          border-radius: 50%;
-          background:
-            radial-gradient(circle at 32% 28%, rgba(255,240,180,0.9) 0%, transparent 38%),
-            radial-gradient(circle at 50% 50%, #fdab43 0%, #d19900 45%, #8a5b00 100%);
-          box-shadow:
-            inset -1px -2px 4px rgba(0,0,0,0.45),
-            inset  1px  1px 3px rgba(255,235,160,0.25),
-            0 2px 8px rgba(209,153,0,0.5);
-          animation: nexty-mini-breathe 4s ease-in-out infinite;
-        }
-        @keyframes nexty-mini-pulse {
-          0%, 100% { opacity: 0.55; transform: scale(1); }
-          50%       { opacity: 1;    transform: scale(1.2); }
-        }
-        @keyframes nexty-mini-breathe {
-          0%, 100% { filter: brightness(1); }
-          50%       { filter: brightness(1.15); }
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .nexty-mini-orb::before,
-          .nexty-mini-orb::after { animation: none; }
-        }
-      `}</style>
-    </span>
-  );
-}
-
 // ---------------------------------------------------------------------------
 // Aesthetic-Usability: 7-day sparkline replacing the decorative BarChart3 icon.
 // Renders a tiny SVG polyline from the last 7 revenue data points.
@@ -537,7 +484,7 @@ export const AdminDashboardView = ({
             className="w-full flex items-center justify-between gap-3 rounded-2xl border border-white/[0.07] bg-white/[0.02] px-4 py-3.5 hover:bg-white/[0.05] hover:border-white/[0.12] transition-all group"
           >
             <div className="flex items-center gap-3 min-w-0">
-              <MiniNextyOrb />
+              <AdminNextyOrb size="small" />
               <div className="flex flex-col items-start gap-0.5 min-w-0">
                 <p className="text-xs font-semibold text-white/80 leading-none">Nexty has insights for you</p>
                 <p className="text-[10px] text-white/30 leading-none">Open Nexty to see your business analysis</p>

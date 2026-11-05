@@ -8,41 +8,8 @@ import {
 import { useNextyInsights, NextyInsight } from "@/hooks/useNextyInsights";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdminReducedMotion } from "@/components/admin/adminMotion";
-
-// -- Nexty Orb ----------------------------------------------------------------
-function NextyOrb() {
-  return (
-    <div className="nexty-orb-wrapper" aria-hidden="true">
-      <div className="nexty-orb-glow" />
-      <div className="nexty-orb-ring" />
-      <div className="nexty-orb-sphere" />
-      <style>{`
-        .nexty-orb-wrapper{position:relative;width:44px;height:44px;flex:0 0 44px;display:flex;align-items:center;justify-content:center}
-        .nexty-orb-glow{position:absolute;inset:-5px;border-radius:50%;background:radial-gradient(circle,rgba(245,205,139,.34) 0%,transparent 72%);animation:nexty-pulse 4s ease-in-out infinite}
-        @keyframes nexty-pulse{0%,100%{opacity:.62;transform:scale(1)}50%{opacity:.92;transform:scale(1.08)}}
-        .nexty-orb-ring{position:absolute;width:40px;height:40px;border-radius:50%;border:1px solid transparent;border-top-color:rgba(255,225,176,.78);border-right-color:rgba(253,171,67,.24);border-bottom-color:rgba(253,171,67,.06);border-left-color:rgba(253,171,67,.24);animation:nexty-orbit 12s linear infinite;filter:drop-shadow(0 0 4px rgba(253,205,139,.34))}
-        @keyframes nexty-orbit{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-        .nexty-orb-sphere{position:absolute;width:29px;height:29px;border-radius:50%;background:radial-gradient(circle at 32% 25%,rgba(255,248,220,.98) 0%,rgba(255,232,184,.35) 24%,transparent 42%),radial-gradient(circle at 50% 58%,#f4c77e 0%,#d99b43 52%,#80551f 100%);box-shadow:inset -2px -3px 7px rgba(0,0,0,.38),inset 2px 2px 5px rgba(255,247,218,.34),0 3px 14px rgba(217,155,67,.32)}
-        @media(prefers-reduced-motion:reduce){.nexty-orb-glow,.nexty-orb-ring{animation:none}}
-      `}</style>
-    </div>
-  );
-}
-
-// -- Helpers ------------------------------------------------------------------
-function getFilterKey(ins: NextyInsight): string {
-  if (ins.priority === "critical") return "critical";
-  if (ins.type === "retention")    return "retention";
-  if (ins.type === "ops")          return "ops";
-  return "growth";
-}
-
-function getFinancialContextLabel(insightId: string): string {
-  if (insightId === "no_show_leak") return "Uncollected balance · last 90 days";
-  if (insightId === "cancellation_leakage") return "Net value not recovered · last 90 days";
-  if (insightId === "loyalty_gap") return "Potential annual retention value";
-  return "Financial context";
-}
+import { AdminNextyOrb } from "@/components/admin/AdminNextyOrb";
+import { NextyFinancialValue, NextyOutcomeNote } from "@/components/admin/NextyInsightPresentation";
 
 function InsightIcon({ type, priority }: { type: string; priority: string }) {
   const cls = "w-4 h-4";
@@ -160,7 +127,7 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
         background: "rgba(255,255,255,0.015)",
         display: "flex", alignItems: "center", gap: 12, flexShrink: 0,
       }}>
-        <NextyOrb />
+        <AdminNextyOrb size="medium" />
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 14, fontWeight: 600, color: S.text, letterSpacing: "-0.01em" }}>Nexty AI</div>
           <div style={{ fontSize: 10, color: S.faint, textTransform: "uppercase", letterSpacing: "0.12em", marginTop: 1 }}>
@@ -172,7 +139,7 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
           aria-label="Re-scan business data"
           style={{
             display: "flex", alignItems: "center", gap: 6,
-            padding: "7px 12px", background: S.surface2,
+            padding: "0 12px", minHeight: 44, background: S.surface2,
             border: `1px solid ${S.border2}`, borderRadius: 6,
             fontSize: 12, fontWeight: 500, color: S.muted, cursor: "pointer",
             flexShrink: 0,
@@ -182,7 +149,7 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
             size={13}
             style={{
               opacity: 0.5,
-              animation: isRescanning ? "nexty-spin 1s linear infinite" : "none",
+              animation: isRescanning && !reduceMotion ? "nexty-spin 1s linear infinite" : "none",
             }}
           />
           Re-scan
@@ -353,27 +320,7 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
                         <span style={{ width: 5, height: 5, borderRadius: "50%", background: p.dot, flexShrink: 0 }} />
                         {p.label}
                       </div>
-                      {typeof ins.impactRand === "number" && ins.impactRand > 0 && (
-                        <div style={{
-                          display: "flex", flexDirection: "column", alignItems: "flex-end",
-                          gap: 2, maxWidth: "58%", textAlign: "right", flexShrink: 0,
-                        }}>
-                          <span style={{
-                            fontSize: 9, lineHeight: 1.35, color: S.faint,
-                            letterSpacing: "0.035em",
-                          }}>
-                            {getFinancialContextLabel(ins.id)}
-                          </span>
-                          <span style={{
-                            display: "inline-flex", alignItems: "center", gap: 4,
-                            color: S.gold, fontSize: 13, fontWeight: 700,
-                            fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap",
-                          }}>
-                            <TrendingUp size={11} />
-                            R{ins.impactRand.toLocaleString("en-ZA")}
-                          </span>
-                        </div>
-                      )}
+                      <NextyFinancialValue insight={ins} />
                     </div>
                     <div style={{
                       fontSize: 13, fontWeight: 600, color: S.text,
@@ -399,6 +346,8 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
                   </div>
                   {bodyText}
                 </div>
+
+                <NextyOutcomeNote />
 
                 {/* Card Footer */}
                 <div style={{
