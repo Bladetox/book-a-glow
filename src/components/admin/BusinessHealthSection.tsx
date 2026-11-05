@@ -29,7 +29,7 @@ import { motion } from "framer-motion";
 import {
   Percent, ShoppingBag, CalendarCheck, XCircle, UserPlus, UserCheck, Info,
 } from "lucide-react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AdminMetricExplanation } from "@/components/admin/AdminMetricExplanation";
 import { ADMIN_METRIC_DEFINITIONS } from "@/components/admin/metricDefinitions";
 
 // ---------------------------------------------------------------------------
@@ -40,6 +40,8 @@ export interface MetricEntry {
   title: string;
   explain: string;
   benchmark?: string;
+  example?: string;
+  calculationNote?: string;
 }
 
 export interface InfoLine {
@@ -88,34 +90,20 @@ const SPRING = {
 export const MetricExpandOverlay = ({
   card, onClose,
 }: { card: ExpandedCard | null; onClose: () => void }) => (
-  <Dialog open={!!card} onOpenChange={(open) => { if (!open) onClose(); }}>
-    {card && (
-      <DialogContent className="admin-dialog-surface fixed inset-x-0 bottom-0 left-0 top-auto z-50 w-full max-w-none translate-x-0 translate-y-0 rounded-t-3xl border border-white/[0.12] bg-[#0f0f0f] p-0 text-white shadow-2xl sm:left-[50%] sm:right-auto sm:top-[50%] sm:bottom-auto sm:w-[calc(100%-3rem)] sm:max-w-sm sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl [&>button]:right-4 [&>button]:top-4 [&>button]:min-h-11 [&>button]:min-w-11 [&>button]:rounded-full [&>button]:bg-white/[0.06] [&>button]:text-white/70">
-        <div className="px-5 pt-5 pb-3 pr-16">
-          <p className="text-[10px] tracking-[0.14em] uppercase text-white/35">{card.label}</p>
-          <p className={`mt-1 text-2xl font-bold ${card.valueColor ?? "text-white/90"}`}>{card.value}</p>
-        </div>
-        <div className="mx-5 border-t border-white/[0.07]" />
-        <DialogHeader className="gap-2 px-5 py-4 text-left">
-          <DialogTitle className="text-base font-semibold leading-snug text-white/90">{card.title}</DialogTitle>
-          <DialogDescription className="text-[13px] leading-relaxed text-white/60">{card.explain}</DialogDescription>
-        </DialogHeader>
-        {card.benchmark && <div className="mx-5 mb-4 rounded-lg border border-emerald-400/[0.15] bg-emerald-400/[0.07] px-3 py-3"><p className="text-[13px] leading-relaxed font-medium text-emerald-300/90">{card.benchmark}</p></div>}
-        {card.extraLines && card.extraLines.length > 0 && (
-          <div className="mx-5 mb-5 flex flex-col gap-2">
-            <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/35">Channel breakdown</p>
-            {card.extraLines.map((line, index) => (
-              <div key={index} className="flex items-center justify-between gap-3">
-                <span className="min-w-0 flex-1 truncate text-[12px] text-white/65">{line.term}</span>
-                <span className="shrink-0 text-[12px] font-semibold text-white/90">{line.def}</span>
-              </div>
-            ))}
-          </div>
-        )}
-        <div className="h-[env(safe-area-inset-bottom,0px)] sm:hidden" />
-      </DialogContent>
-    )}
-  </Dialog>
+  <AdminMetricExplanation
+    open={!!card}
+    onOpenChange={(open) => { if (!open) onClose(); }}
+    label={card?.label}
+    value={card?.value}
+    valueClassName={card?.valueColor}
+    title={card?.title ?? ""}
+    description={card?.explain ?? ""}
+    example={card?.example}
+    calculationNote={card?.calculationNote}
+    benchmark={card?.benchmark}
+    extraLines={card?.extraLines}
+    extraLinesTitle="Channel breakdown"
+  />
 );
 
 // ---------------------------------------------------------------------------
