@@ -81,7 +81,6 @@ export interface AdminSidebarViewProps extends AdminSidebarProps {
   isMobile: boolean;
   /** false in the marketing demo so it never touches a real admin's saved preference */
   persistCollapse?: boolean;
-  viewport?: AdminViewport;
 }
 
 /** Presentational sidebar. Used by the live admin (via AdminSidebar) and the marketing demo. */

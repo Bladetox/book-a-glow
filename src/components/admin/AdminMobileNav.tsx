@@ -22,13 +22,13 @@ const NAV_GROUPS: NavGroup[] = [
     label:      "Dashboard",
     icon:       DashboardIcon,
     targetView: "Dashboard",
-    views:      ["Dashboard", "Recommendations"],"
+    views:      ["Dashboard", "Recommendations"],
   },
   {
     label:      "Schedule",
     icon:       BookingsIcon,
     targetView: "Bookings",
-    views:      ["Calendar", "Bookings", "Availability"],"
+    views:      ["Calendar", "Bookings", "Availability"],
   },
   {
     label:      "Catalogue",
@@ -40,13 +40,13 @@ const NAV_GROUPS: NavGroup[] = [
     label:      "Clients",
     icon:       ClientManagementIcon,
     targetView: "Client Management",
-    views:      ["Client Management", "Consultations", "Special Occasions", "Loyalty", "Consistency Pricing"],"
+    views:      ["Client Management", "Consultations", "Special Occasions", "Loyalty", "Consistency Pricing"],
   },
   {
     label:      "Business",
     icon:       SettingsIcon,
     targetView: "Settings",
-    views:      ["Integrations", "Communications", "Settings", "Terms & Conditions", "Help"],"
+    views:      ["Integrations", "Communications", "Settings", "Terms & Conditions", "Help"],
   },
 ];
 
