@@ -138,6 +138,7 @@ const MetricCard = ({
   title,
   explain,
   benchmark,
+  calculationNote,
   alertStatus = "neutral",
   onExpand,
 }: {
@@ -153,11 +154,12 @@ const MetricCard = ({
   <motion.button
     type="button"
     layoutId={id}
-    onClick={() => onExpand({ id, label, value, valueColor: color, title, explain, benchmark })}
+    onClick={() => onExpand({ id, label, value, valueColor: color, title, explain, benchmark, calculationNote })}
     className={`w-full min-h-24 text-left rounded-xl border cursor-pointer select-none transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 ${cardAlertClass(alertStatus)}`}
     whileTap={{ scale: 0.97 }}
     transition={SPRING}
     aria-label={`Learn more about ${label}`}
+    aria-haspopup="dialog"
   >
     <div className="flex items-start gap-2 p-3 sm:p-4">
       {/* Icon */}
