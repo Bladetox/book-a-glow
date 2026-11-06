@@ -121,9 +121,9 @@ export function useSlotHold() {
         p_hold_id: activeHoldId,
         p_session_token: sessionToken.current,
         p_service_ids: serviceIds,
-      } as any);
+      });
 
-      const row = (data as any)?.[0];
+      const row = data?.[0];
       if (error || !row?.success) {
         const msg = row?.message ?? error?.message ?? 'Could not update the held appointment time.';
         return { success: false, message: msg };

@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.1"
   }
   public: {
     Tables: {
@@ -223,6 +223,110 @@ export type Database = {
         }
         Relationships: []
       }
+      booking_callout_fee_restorations: {
+        Row: {
+          amount_paid_at_adjustment: number
+          booking_id: string
+          created_at: string
+          id: string
+          original_balance_due: number
+          original_total: number
+          performed_by: string
+          reason: string | null
+          restored_amount: number
+          revised_balance_due: number
+          revised_total: number
+          tenant_id: string
+          waiver_id: string
+        }
+        Insert: {
+          amount_paid_at_adjustment: number
+          booking_id: string
+          created_at?: string
+          id?: string
+          original_balance_due: number
+          original_total: number
+          performed_by: string
+          reason?: string | null
+          restored_amount: number
+          revised_balance_due: number
+          revised_total: number
+          tenant_id: string
+          waiver_id: string
+        }
+        Update: {
+          amount_paid_at_adjustment?: number
+          booking_id?: string
+          created_at?: string
+          id?: string
+          original_balance_due?: number
+          original_total?: number
+          performed_by?: string
+          reason?: string | null
+          restored_amount?: number
+          revised_balance_due?: number
+          revised_total?: number
+          tenant_id?: string
+          waiver_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_callout_fee_restorations_waiver_id_fkey"
+            columns: ["waiver_id"]
+            isOneToOne: true
+            referencedRelation: "booking_callout_fee_waivers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_callout_fee_waivers: {
+        Row: {
+          amount_paid_at_adjustment: number
+          booking_id: string
+          created_at: string
+          id: string
+          original_balance_due: number
+          original_call_out_fee: number
+          original_total: number
+          performed_by: string
+          reason: string | null
+          revised_balance_due: number
+          revised_total: number
+          tenant_id: string
+          waived_amount: number
+        }
+        Insert: {
+          amount_paid_at_adjustment: number
+          booking_id: string
+          created_at?: string
+          id?: string
+          original_balance_due: number
+          original_call_out_fee: number
+          original_total: number
+          performed_by: string
+          reason?: string | null
+          revised_balance_due: number
+          revised_total: number
+          tenant_id: string
+          waived_amount: number
+        }
+        Update: {
+          amount_paid_at_adjustment?: number
+          booking_id?: string
+          created_at?: string
+          id?: string
+          original_balance_due?: number
+          original_call_out_fee?: number
+          original_total?: number
+          performed_by?: string
+          reason?: string | null
+          revised_balance_due?: number
+          revised_total?: number
+          tenant_id?: string
+          waived_amount?: number
+        }
+        Relationships: []
+      }
       booking_items: {
         Row: {
           booking_id: string
@@ -393,7 +497,6 @@ export type Database = {
           payshap_claimed_at?: string | null
           payshap_payment_intent?: string | null
           payshap_proof_url?: string | null
-          payshap_reference?: string | null
           service_duration_minutes?: number | null
           service_ids?: string | null
           staff_id?: string | null
@@ -455,7 +558,6 @@ export type Database = {
           payshap_claimed_at?: string | null
           payshap_payment_intent?: string | null
           payshap_proof_url?: string | null
-          payshap_reference?: string | null
           service_duration_minutes?: number | null
           service_ids?: string | null
           staff_id?: string | null
@@ -694,6 +796,7 @@ export type Database = {
           detail?: string | null
           enabled?: boolean
           id?: string
+          is_active?: boolean
           label: string
           options: Json
           question: string
@@ -709,6 +812,7 @@ export type Database = {
           detail?: string | null
           enabled?: boolean
           id?: string
+          is_active?: boolean
           label?: string
           options?: Json
           question?: string
@@ -864,6 +968,61 @@ export type Database = {
           },
         ]
       }
+      fuel_expenses: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          expense_date: string
+          id: string
+          litres: number | null
+          note: string | null
+          tenant_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          expense_date?: string
+          id?: string
+          litres?: number | null
+          note?: string | null
+          tenant_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          expense_date?: string
+          id?: string
+          litres?: number | null
+          note?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fuel_expenses_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "public_tenant_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fuel_expenses_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "sa_platform_billing_overview"
+            referencedColumns: ["tenant_id"]
+          },
+          {
+            foreignKeyName: "fuel_expenses_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       guest_consultations: {
         Row: {
           additional_notes: string | null
@@ -946,11 +1105,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "guest_consultations_first_booking_id_fkey"
+            columns: ["first_booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings_with_client"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "guest_consultations_last_booking_id_fkey"
             columns: ["last_booking_id"]
             isOneToOne: false
             referencedRelation: "bookings"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guest_consultations_last_booking_id_fkey"
+            columns: ["last_booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings_with_client"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guest_consultations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "public_tenant_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guest_consultations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "sa_platform_billing_overview"
+            referencedColumns: ["tenant_id"]
           },
           {
             foreignKeyName: "guest_consultations_tenant_id_fkey"
@@ -978,6 +1165,20 @@ export type Database = {
           tenant_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "guest_name_aliases_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "public_tenant_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guest_name_aliases_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "sa_platform_billing_overview"
+            referencedColumns: ["tenant_id"]
+          },
           {
             foreignKeyName: "guest_name_aliases_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -1293,6 +1494,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      payments_completed_at_backup_20261024: {
+        Row: {
+          backed_up_at: string | null
+          completed_at_before: string | null
+          id: string | null
+        }
+        Insert: {
+          backed_up_at?: string | null
+          completed_at_before?: string | null
+          id?: string | null
+        }
+        Update: {
+          backed_up_at?: string | null
+          completed_at_before?: string | null
+          id?: string | null
+        }
+        Relationships: []
       }
       pending_onboarding: {
         Row: {
@@ -1701,7 +1920,7 @@ export type Database = {
           created_at?: string | null
           email: string
           full_name?: string | null
-          id?: string
+          id: string
           is_active?: boolean | null
           phone?: string | null
           postal_code?: string | null
@@ -1762,6 +1981,33 @@ export type Database = {
           id?: string
           label?: string | null
           meta?: Json | null
+        }
+        Relationships: []
+      }
+      sa_broadcasts: {
+        Row: {
+          body: string
+          created_at: string
+          created_by: string | null
+          id: string
+          title: string
+          type: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          title: string
+          type?: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          title?: string
+          type?: string
         }
         Relationships: []
       }
@@ -1956,8 +2202,8 @@ export type Database = {
           slot_end_time: string
           slot_start_time: string
           specific_date?: string | null
-          staff_id?: string
-          tenant_id?: string
+          staff_id: string
+          tenant_id: string
           updated_at?: string | null
         }
         Update: {
@@ -1985,6 +2231,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      stale_payment_webhook_events: {
+        Row: {
+          amount: number | null
+          booking_id: string
+          checkout_reference: string
+          created_at: string
+          event_payload: Json
+          gateway: string
+          id: string
+          payment_type: string
+          review_status: string
+          reviewed_at: string | null
+          reviewed_by: string | null
+          tenant_id: string
+          transaction_reference: string | null
+        }
+        Insert: {
+          amount?: number | null
+          booking_id: string
+          checkout_reference: string
+          created_at?: string
+          event_payload?: Json
+          gateway: string
+          id?: string
+          payment_type: string
+          review_status?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          tenant_id: string
+          transaction_reference?: string | null
+        }
+        Update: {
+          amount?: number | null
+          booking_id?: string
+          checkout_reference?: string
+          created_at?: string
+          event_payload?: Json
+          gateway?: string
+          id?: string
+          payment_type?: string
+          review_status?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          tenant_id?: string
+          transaction_reference?: string | null
+        }
+        Relationships: []
       }
       stock_inventory: {
         Row: {
@@ -2084,9 +2378,11 @@ export type Database = {
           billing_cycle_anchor: string | null
           billing_provider_customer_id: string | null
           business_type: string | null
+          cancelled_at: string | null
           created_at: string | null
           currency: string | null
           custom_domain: string | null
+          data_deletion_scheduled_at: string | null
           email: string | null
           google_review_url: string | null
           grace_period_days: number
@@ -2139,9 +2435,11 @@ export type Database = {
           billing_cycle_anchor?: string | null
           billing_provider_customer_id?: string | null
           business_type?: string | null
+          cancelled_at?: string | null
           created_at?: string | null
           currency?: string | null
           custom_domain?: string | null
+          data_deletion_scheduled_at?: string | null
           email?: string | null
           google_review_url?: string | null
           grace_period_days?: number
@@ -2194,9 +2492,11 @@ export type Database = {
           billing_cycle_anchor?: string | null
           billing_provider_customer_id?: string | null
           business_type?: string | null
+          cancelled_at?: string | null
           created_at?: string | null
           currency?: string | null
           custom_domain?: string | null
+          data_deletion_scheduled_at?: string | null
           email?: string | null
           google_review_url?: string | null
           grace_period_days?: number
@@ -2230,6 +2530,11 @@ export type Database = {
           subdomain?: string | null
           subscription_paid_at?: string | null
           subscription_start_date?: string | null
+          subscription_status?: string | null
+          theme_id?: string | null
+          travel_buffer_minutes?: number
+          trial_ends_at?: string | null
+          trial_started_at?: string | null
           updated_at?: string | null
           yoco_mode?: string
           yoco_secret_key?: string | null
@@ -2557,6 +2862,7 @@ export type Database = {
             }[]
           }
       cancel_expired_pending_bookings: { Args: never; Returns: number }
+      cancel_my_subscription: { Args: { p_tenant_id: string }; Returns: Json }
       check_availability: {
         Args: {
           p_date: string
@@ -2590,45 +2896,87 @@ export type Database = {
           total_amount: number
         }[]
       }
-      create_booking_with_consultation: {
-        Args: {
-          p_additional_notes: string
-          p_allergies: string
-          p_booking_date: string
-          p_callout_address: string
-          p_callout_distance_km: number
-          p_client_id: string
-          p_client_notes: string
-          p_client_type: string
-          p_consultation_answers?: Json
-          p_deposit_amount?: number
-          p_environmental_exposure: string
-          p_existing_client_changes?: string
-          p_guest_email: string
-          p_guest_name: string
-          p_guest_phone: string
-          p_hair_length_ok: string
-          p_health_conditions: string
-          p_is_callout: boolean
-          p_lead_source: string
-          p_medications: string
-          p_physical_factors: string
-          p_pregnancy: string
-          p_service_ids: string[]
-          p_skin_conditions: string
-          p_staff_id: string
-          p_start_time: string
-          p_tenant_id?: string
-          p_total_amount?: number
-        }
-        Returns: {
-          booking_id: string
-          deposit: number
-          message: string
-          success: boolean
-          total: number
-        }[]
-      }
+      create_booking_with_consultation:
+        | {
+            Args: {
+              p_additional_notes: string
+              p_allergies: string
+              p_booking_date: string
+              p_callout_address: string
+              p_callout_distance_km: number
+              p_client_id: string
+              p_client_notes: string
+              p_client_type: string
+              p_consultation_answers?: Json
+              p_deposit_amount?: number
+              p_environmental_exposure: string
+              p_existing_client_changes?: string
+              p_guest_email: string
+              p_guest_name: string
+              p_guest_phone: string
+              p_hair_length_ok: string
+              p_health_conditions: string
+              p_is_callout: boolean
+              p_lead_source: string
+              p_medications: string
+              p_physical_factors: string
+              p_pregnancy: string
+              p_service_ids: string[]
+              p_skin_conditions: string
+              p_staff_id: string
+              p_start_time: string
+              p_tenant_id?: string
+              p_total_amount?: number
+            }
+            Returns: {
+              booking_id: string
+              deposit: number
+              message: string
+              success: boolean
+              total: number
+            }[]
+          }
+        | {
+            Args: {
+              p_additional_notes: string
+              p_allergies: string
+              p_booking_date: string
+              p_callout_address: string
+              p_callout_distance_km: number
+              p_client_id: string
+              p_client_notes: string
+              p_client_type: string
+              p_consultation_answers: Json
+              p_deposit_amount: number
+              p_environmental_exposure: string
+              p_existing_client_changes: string
+              p_guest_email: string
+              p_guest_name: string
+              p_guest_phone: string
+              p_hair_length_ok: string
+              p_health_conditions: string
+              p_hold_id: string
+              p_is_callout: boolean
+              p_lead_source: string
+              p_medications: string
+              p_physical_factors: string
+              p_pregnancy: string
+              p_service_ids: string[]
+              p_session_token: string
+              p_skin_conditions: string
+              p_staff_id: string
+              p_start_time: string
+              p_tenant_id: string
+              p_total_amount: number
+            }
+            Returns: {
+              booking_id: string
+              deposit: number
+              message: string
+              success: boolean
+              total: number
+            }[]
+          }
       create_platform_invoice: {
         Args: {
           p_amount: number
@@ -2679,6 +3027,7 @@ export type Database = {
         Args: { p_service_id: string; p_tenant_id: string }
         Returns: Json
       }
+      expire_lapsed_consistency_streaks: { Args: never; Returns: number }
       get_all_bookings: {
         Args: { p_limit?: number; p_offset?: number }
         Returns: {
@@ -2775,6 +3124,24 @@ export type Database = {
           status: string
           total_amount: number
           yoco_link: string
+        }[]
+      }
+      get_booking_horizon_availability: {
+        Args: { p_duration_minutes?: number; p_staff_id: string }
+        Returns: {
+          availability_status: string
+          available_slots: string[]
+          date_str: string
+        }[]
+      }
+      get_callout_fuel_summary: {
+        Args: { p_end: string; p_start: string; p_tenant_id: string }
+        Returns: {
+          callout_count: number
+          callout_earnings: number
+          fuel_entries: number
+          fuel_logged: number
+          round_trip_km: number
         }[]
       }
       get_channel_roi: {
@@ -3027,6 +3394,10 @@ export type Database = {
       }
       get_user_tenant_id: { Args: { _user_id: string }; Returns: string }
       get_vault_secret: { Args: { secret_name: string }; Returns: string }
+      guest_person_key: {
+        Args: { p_name: string; p_tenant_id: string }
+        Returns: string
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -3037,19 +3408,12 @@ export type Database = {
       }
       increment_webhook_retry: { Args: { row_id: string }; Returns: undefined }
       is_admin: { Args: never; Returns: boolean }
+      is_platform_admin: { Args: never; Returns: boolean }
       is_platform_owner: { Args: never; Returns: boolean }
       is_super_admin: { Args: never; Returns: boolean }
       is_tenant_admin: {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
-      }
-      sa_delete_tenant: {
-        Args: {
-          p_confirm: string
-          p_delete_owner_login?: boolean
-          p_tenant_id: string
-        }
-        Returns: Json
       }
       mark_platform_invoice_paid: {
         Args: {
@@ -3104,11 +3468,30 @@ export type Database = {
       next_invoice_number: { Args: never; Returns: string }
       normalise_phone: { Args: { p: string }; Returns: string }
       normalise_phone_za: { Args: { p: string }; Returns: string }
+      normalize_guest_name: { Args: { p_name: string }; Returns: string }
       recalculate_consistency_status: {
         Args: { p_canonical_client_id: string }
         Returns: undefined
       }
       record_mrr_snapshot: { Args: never; Returns: Json }
+      reject_payshap_booking: {
+        Args: { p_booking_id: string; p_tenant_id: string }
+        Returns: {
+          message: string
+          success: boolean
+        }[]
+      }
+      release_failed_gateway_booking: {
+        Args: {
+          p_booking_id: string
+          p_checkout_reference: string
+          p_gateway: string
+          p_reason?: string
+          p_tenant_id: string
+          p_transaction_id?: string
+        }
+        Returns: boolean
+      }
       release_slot_hold: {
         Args: { p_hold_id: string; p_session_token: string }
         Returns: undefined
@@ -3138,6 +3521,32 @@ export type Database = {
           message: string
           success: boolean
         }[]
+      }
+      resize_slot_hold: {
+        Args: {
+          p_hold_id: string
+          p_service_ids: string[]
+          p_session_token: string
+        }
+        Returns: {
+          duration_mins: number
+          expires_at: string
+          hold_id: string
+          message: string
+          success: boolean
+        }[]
+      }
+      restore_call_out_fee: {
+        Args: { p_booking_id: string; p_reason?: string }
+        Returns: Json
+      }
+      sa_delete_tenant: {
+        Args: {
+          p_confirm: string
+          p_delete_owner_login?: boolean
+          p_tenant_id: string
+        }
+        Returns: Json
       }
       save_staff_availability: {
         Args: {
@@ -3230,17 +3639,13 @@ export type Database = {
           success: boolean
         }[]
       }
-      waive_call_out_fee: {
-        Args: { p_booking_id: string; p_reason?: string }
-        Returns: Json
-      }
-      restore_call_out_fee: {
-        Args: { p_booking_id: string; p_reason?: string }
-        Returns: Json
-      }
       upsert_tenant_secret: {
         Args: { p_key: string; p_tenant_id: string; p_value: string }
         Returns: undefined
+      }
+      waive_call_out_fee: {
+        Args: { p_booking_id: string; p_reason?: string }
+        Returns: Json
       }
     }
     Enums: {
