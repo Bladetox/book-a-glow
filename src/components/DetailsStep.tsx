@@ -10,12 +10,13 @@ import { User, Phone, Mail, MapPin, Star, Sparkles, X, Check } from "lucide-reac
 import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
 import { usePublicTenant } from "@/contexts/PublicTenantContext";
 import { supabase } from "@/integrations/supabase/client";
-import { isAnswered } from "@/lib/consultationSections";
+import { groupQuestionsBySection, isAnswered } from "@/lib/consultationSections";
 
 interface DetailsStepProps {
   booking: BookingState;
   onUpdate: (updates: Partial<BookingState>) => void;
   onBlockedChange?: (blocked: boolean) => void;
+  showRequiredErrors?: boolean;
 }
 
 const phoneCodes = [
@@ -253,7 +254,7 @@ const ConsultationQRenderer = ({
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) => {
+const DetailsStep = ({ booking, onUpdate, onBlockedChange, showRequiredErrors = false }: DetailsStepProps) => {
   const config = usePublicBusinessConfig();
   const { tenantId } = usePublicTenant();
   const [touched, setTouched] = useState<Record<string, boolean>>({});
@@ -277,10 +278,26 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange }: DetailsStepProps) =
   const [consultationQuestions, setConsultationQuestions] = useState<ConsultationQuestionDefinition[]>([]);
   const [consultationLoading, setConsultationLoading] = useState(true);
 
+  const missingRequiredKeys = useMemo(() => {
+    const missing = new Set<string>();
+    for (const q of consultationQuestions) {
+      if (q.required && !isAnswered(booking.consultationAnswers[q.key])) {
+        missing.add(q.key);
+      }
+    }
+    return missing;
+  }, [consultationQuestions, booking.consultationAnswers]);
+
   // Publish the questions being shown so ReviewStep can save each answer with its label.
   useEffect(() => {
     onUpdate({
-      consultationQuestions: consultationQuestions.map(({ key, label, type }) => ({ key, label, type })),
+      consultationQuestions: consultationQuestions.map(({ key, label, type, required, section }) => ({
+        key,
+        label,
+        type,
+        required: required ?? false,
+        section: section ?? null,
+      })),
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [consultationQuestions]);
@@ -382,7 +399,7 @@ useEffect(() => {
     try {
       const { data: customRows, error } = await supabase
         .from("consultation_questions")
-        .select("id, question, detail, is_active, sort_order, label, type, options, required, enabled")
+        .select("id, question, detail, is_active, sort_order, label, type, options, required, enabled, section")
         .eq("tenant_id", tenantId)
         .eq("is_active", true)
         .order("sort_order", { ascending: true });
@@ -426,6 +443,10 @@ useEffect(() => {
                   safeType === "radio" || safeType === "checkbox"
                     ? parsedOptions
                     : undefined,
+                section:
+                  typeof r.section === "string" && r.section.trim().length > 0
+                    ? r.section.trim()
+                    : null,
               } satisfies ConsultationQuestionDefinition;
             })
             .filter((q) => q.label.length > 0)
@@ -449,7 +470,24 @@ useEffect(() => {
 
       setConsultationQuestions(fallback);
     } catch {
-      if (!cancelled) setConsultationQuestions([]);
+      if (!cancelled) {
+        try {
+          const { data: fallbackTenantRow } = await supabase
+            .from("tenants")
+            .select("business_type")
+            .eq("id", tenantId)
+            .single();
+          if (cancelled) return;
+          const fallbackType = (fallbackTenantRow as any)?.business_type as BusinessType | null;
+          setConsultationQuestions(
+            fallbackType && defaultConsultationQuestions[fallbackType]
+              ? defaultConsultationQuestions[fallbackType]
+              : defaultConsultationQuestions.general,
+          );
+        } catch {
+          if (!cancelled) setConsultationQuestions(defaultConsultationQuestions.general);
+        }
+      }
     } finally {
       if (!cancelled) setConsultationLoading(false);
     }
@@ -786,102 +824,117 @@ useEffect(() => {
               ref={conditionalSectionRef}
               className="glass-card-service rounded-2xl p-4 flex flex-col gap-4"
             >
+              {/* ---------- Framing header (tenant-neutral) ---------- */}
               <div>
-                <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4" />
-                  New Client Safety Check
-                </h4>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Answer all questions honestly. Your information is strictly confidential.
+                <p className="text-[10px] font-semibold tracking-[0.2em] uppercase text-muted-foreground">
+                  New client
+                </p>
+                <h4 className="text-lg font-semibold text-foreground mt-1">Quick questions</h4>
+                <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+                  A few quick questions so your provider can prepare. Takes about 2 minutes.
+                  Your answers are confidential.
                 </p>
               </div>
 
-              {consultationLoading ? (
-                <p className="text-xs text-muted-foreground animate-pulse">Loading questions\u2026</p>
-              ) : consultationQuestions.length > 0 ? (
-                consultationQuestions.map((q, i) => (
-                  <ConsultationQRenderer
-                    key={q.key}
-                    q={q}
-                    idx={i}
-                    answers={booking.consultationAnswers}
-                    details={booking.consultationAnswerDetails}
-                    onAnswer={handleConsultationAnswer}
-                    onDetail={handleConsultationDetail}
-                    inputClass={inputClass}
-                  />
-                ))
-              ) : (
-                safetyQuestions.map((q, i) => (
-                  <motion.div
-                    key={q.id}
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.05 }}
-                    className="flex flex-col gap-2"
-                  >
-                    <div>
-                      <p className="text-sm text-foreground">{q.id}. {q.question}</p>
-                      {q.detail && <p className="text-[10px] text-muted-foreground">{q.detail}</p>}
+              {/* ---------- Progress (flat list denominator) ---------- */}
+              {!consultationLoading && consultationQuestions.length > 0 && (() => {
+                const answeredCount = consultationQuestions.filter((q) =>
+                  isAnswered(booking.consultationAnswers[q.key]),
+                ).length;
+                const total = consultationQuestions.length;
+                const pct = total ? Math.round((answeredCount / total) * 100) : 0;
+                return (
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex justify-between text-[11px] text-muted-foreground">
+                      <span>{answeredCount} of {total} answered</span>
+                      <span>{pct}%</span>
                     </div>
-                    <div className="flex gap-2">
-                      {([
-                        { label: "No", value: false },
-                        { label: "Yes", value: true },
-                      ] as const).map((opt) => (
-                        <motion.button
-                          key={String(opt.value)}
-                          whileTap={{ scale: 0.9 }}
-                          onClick={() =>
-                            onUpdate({ safetyAnswers: { ...booking.safetyAnswers, [q.id]: opt.value } })
-                          }
-                          className={`px-5 py-3 rounded-xl text-xs font-medium transition-all duration-200 min-w-[64px]
-                            ${booking.safetyAnswers[q.id] === opt.value
-                              ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
-                              : "bg-muted/60 text-muted-foreground hover:text-foreground"
-                            }`}
-                        >
-                          {opt.label}
-                        </motion.button>
+                    <div className="h-1 rounded-full bg-muted/40 overflow-hidden">
+                      <motion.div
+                        className="h-full bg-primary"
+                        initial={false}
+                        animate={{ width: `${pct}%` }}
+                        transition={{ duration: 0.35, ease: "easeOut" }}
+                      />
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* ---------- Skeleton loading ---------- */}
+              {consultationLoading ? (
+                <div className="flex flex-col gap-5">
+                  {[0, 1, 2].map((i) => (
+                    <div key={i} className="flex flex-col gap-2 animate-pulse">
+                      <div className="h-3 w-2/3 rounded bg-muted/40" />
+                      <div className="flex gap-2">
+                        <div className="h-11 flex-1 rounded-xl bg-muted/30" />
+                        <div className="h-11 flex-1 rounded-xl bg-muted/30" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : consultationQuestions.length === 0 ? (
+                <p className="text-xs text-muted-foreground italic">
+                  No consultation questions configured.
+                </p>
+              ) : (
+                groupQuestionsBySection(consultationQuestions).map((group, gi) => (
+                  <section key={group.label ?? `__default__${gi}`} className="flex flex-col gap-5">
+                    {group.label && (
+                      <header className="flex items-baseline justify-between border-b border-border/40 pb-2">
+                        <h5 className="text-sm font-semibold text-foreground">{group.label}</h5>
+                      </header>
+                    )}
+                    <div className="flex flex-col gap-6">
+                      {group.questions.map((q, i) => (
+                        <ConsultationQRenderer
+                          key={q.key}
+                          q={q}
+                          idx={i}
+                          answers={booking.consultationAnswers}
+                          details={booking.consultationAnswerDetails}
+                          onAnswer={handleConsultationAnswer}
+                          onDetail={handleConsultationDetail}
+                          inputClass={inputClass}
+                          showError={showRequiredErrors && missingRequiredKeys.has(q.key)}
+                        />
                       ))}
                     </div>
-                    <AnimatePresence>
-                      {booking.safetyAnswers[q.id] === true && q.id !== 8 && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: "auto" }}
-                          exit={{ opacity: 0, height: 0 }}
-                          transition={{ duration: 0.2 }}
-                          className="overflow-hidden mt-1"
-                        >
-                          <textarea
-                            className={`${inputClass} min-h-[50px] text-xs py-2`}
-                            placeholder="Please provide details..."
-                            value={booking.safetyAnswerDetails[q.id] || ""}
-                            onChange={(e) =>
-                              onUpdate({
-                                safetyAnswerDetails: {
-                                  ...booking.safetyAnswerDetails,
-                                  [q.id]: e.target.value,
-                                },
-                              })
-                            }
-                          />
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </motion.div>
+                  </section>
                 ))
               )}
 
+              {/* ---------- Completion moment ---------- */}
+              {!consultationLoading &&
+                consultationQuestions.length > 0 &&
+                consultationQuestions.every((q) => isAnswered(booking.consultationAnswers[q.key])) && (
+                  <p className="text-[11px] text-primary flex items-center gap-1.5">
+                    <Check className="w-3.5 h-3.5" />
+                    All questions answered — you're ready to continue.
+                  </p>
+                )}
+
+              {/* ---------- Additional notes ---------- */}
               <textarea
                 id="additional-notes"
                 name="additional-notes"
                 className={`${inputClass} min-h-[60px]`}
-                placeholder="Anything else we should know? (optional)"
+                placeholder="Anything else we should provide? (optional)"
                 value={booking.additionalNotes}
                 onChange={(e) => onUpdate({ additionalNotes: e.target.value })}
               />
+
+              {/* ---------- Closing confirmation ---------- */}
+              <label className="flex items-start gap-2.5 text-[11px] text-muted-foreground cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={booking.consentConfirmed ?? false}
+                  onChange={(e) => onUpdate({ consentConfirmed: e.target.checked })}
+                  className="mt-0.5 w-4 h-4 rounded border-border/60 text-primary focus-visible:ring-2 focus-visible:ring-primary/40"
+                />
+                <span>I confirm the information above is accurate and complete.</span>
+              </label>
             </div>
           </motion.div>
         )}
