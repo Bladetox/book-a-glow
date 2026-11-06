@@ -683,6 +683,7 @@ export type Database = {
           options: Json
           question: string
           required: boolean
+          section: string | null
           sort_order: number
           tenant_id: string
           type: string
@@ -697,6 +698,7 @@ export type Database = {
           options: Json
           question: string
           required?: boolean
+          section?: string | null
           sort_order?: number
           tenant_id: string
           type: string
@@ -711,6 +713,7 @@ export type Database = {
           options?: Json
           question?: string
           required?: boolean
+          section?: string | null
           sort_order?: number
           tenant_id?: string
           type?: string
