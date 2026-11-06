@@ -380,41 +380,41 @@ const AdminConsultations = () => {
 
                 {/* ── expanded detail ── */}
                 {isExpanded && (
-                  <div className="px-3 sm:px-4 pb-5 pt-1 border-t border-white/[0.06] flex flex-col gap-5">
+                  <div className="px-3 sm:px-4 pb-6 pt-2 border-t border-white/[0.07] flex flex-col gap-4">
 
                     {submittedAgo && (
-                      <p className="text-[10px] text-white/25 mt-2">Record updated {submittedAgo}</p>
+                      <p className="text-[11px] text-white/30">Record updated {submittedAgo}</p>
                     )}
 
                     {/* Contact + Acquisition Channel */}
-                    <div>
-                      <p className="text-[10px] font-semibold tracking-wider uppercase text-white/30 mb-2">Contact</p>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="nexty-inset rounded-xl p-4">
+                      <p className="text-[10px] font-semibold tracking-wider uppercase text-white/35 mb-3">Contact</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {displayEmail && (
                           <div>
-                            <p className="text-[10px] text-white/30 mb-0.5">Email</p>
-                            <p className="text-xs text-white/70">{displayEmail}</p>
+                            <p className="text-[10px] text-white/35 mb-1">Email</p>
+                            <p className="text-sm text-white/80">{displayEmail}</p>
                           </div>
                         )}
                         {displayPhone && (
                           <div>
-                            <p className="text-[10px] text-white/30 mb-0.5">Phone</p>
-                            <p className="text-xs text-white/70">{displayPhone}</p>
+                            <p className="text-[10px] text-white/35 mb-1">Phone</p>
+                            <p className="text-sm text-white/80">{displayPhone}</p>
                           </div>
                         )}
 
                         {/* Acquisition Channel — always shown in expanded view */}
                         <div>
-                          <p className="text-[10px] text-white/30 mb-0.5">Acquisition Channel</p>
+                          <p className="text-[10px] text-white/35 mb-1">Acquisition Channel</p>
                           {hasLeadSource ? (
                             <span
-                              className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium ${leadCfg.className}`}
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium ${leadCfg.className}`}
                             >
                               {leadCfg.icon}
                               {leadCfg.label}
                             </span>
                           ) : (
-                            <p className="text-xs text-white/25 italic">Not recorded</p>
+                            <p className="text-sm text-white/30 italic">Not recorded</p>
                           )}
                         </div>
                       </div>
@@ -422,13 +422,13 @@ const AdminConsultations = () => {
 
                     {/* Services booked */}
                     {services.length > 0 && (
-                      <div>
-                        <p className="text-[10px] font-semibold tracking-wider uppercase text-white/30 mb-2">Services Booked</p>
-                        <div className="flex flex-col gap-1">
+                      <div className="nexty-inset rounded-xl p-4">
+                        <p className="text-[10px] font-semibold tracking-wider uppercase text-white/35 mb-3">Services Booked</p>
+                        <div className="flex flex-col divide-y divide-white/[0.06]">
                           {services.map((s) => (
-                            <div key={s.sort_order} className="flex justify-between items-baseline">
-                              <p className="text-xs text-white/70">{s.service_name}</p>
-                              <p className="text-xs text-white/40 ml-4">R{s.price}</p>
+                            <div key={s.sort_order} className="flex justify-between items-baseline py-2 first:pt-0 last:pb-0">
+                              <p className="text-sm text-white/80">{s.service_name}</p>
+                              <p className="text-sm text-white/45 ml-4 tabular-nums">R{s.price}</p>
                             </div>
                           ))}
                         </div>
@@ -439,13 +439,13 @@ const AdminConsultations = () => {
                     {hasConsultationData && (
                       <>
                         {healthFields.length > 0 && (
-                          <div>
-                            <p className="text-[10px] font-semibold tracking-wider uppercase text-white/30 mb-2">Health</p>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <div className="nexty-inset rounded-xl p-4">
+                            <p className="text-[10px] font-semibold tracking-wider uppercase text-white/35 mb-3">Health</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                               {healthFields.map((f) => (
                                 <div key={f.label}>
-                                  <p className="text-[10px] text-white/30 mb-0.5">{f.label}</p>
-                                  <p className="text-xs text-white/70 whitespace-pre-line">{f.value}</p>
+                                  <p className="text-[10px] text-white/35 mb-1">{f.label}</p>
+                                  <p className="text-sm text-white/80 whitespace-pre-line leading-relaxed">{f.value}</p>
                                 </div>
                               ))}
                             </div>
@@ -453,13 +453,13 @@ const AdminConsultations = () => {
                         )}
 
                         {lifestyleFields.length > 0 && (
-                          <div>
-                            <p className="text-[10px] font-semibold tracking-wider uppercase text-white/30 mb-2">Lifestyle</p>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <div className="nexty-inset rounded-xl p-4">
+                            <p className="text-[10px] font-semibold tracking-wider uppercase text-white/35 mb-3">Lifestyle</p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                               {lifestyleFields.map((f) => (
                                 <div key={f.label}>
-                                  <p className="text-[10px] text-white/30 mb-0.5">{f.label}</p>
-                                  <p className="text-xs text-white/70 whitespace-pre-line">{f.value}</p>
+                                  <p className="text-[10px] text-white/35 mb-1">{f.label}</p>
+                                  <p className="text-sm text-white/80 whitespace-pre-line leading-relaxed">{f.value}</p>
                                 </div>
                               ))}
                             </div>
@@ -467,13 +467,13 @@ const AdminConsultations = () => {
                         )}
 
                         {answerItems.length > 0 && (
-                          <div>
-                            <p className="text-[10px] font-semibold tracking-wider uppercase text-white/30 mb-2">Consultation Answers</p>
-                            <div className="flex flex-col gap-2">
+                          <div className="nexty-inset rounded-xl p-4">
+                            <p className="text-[10px] font-semibold tracking-wider uppercase text-white/35 mb-3">Consultation Answers</p>
+                            <div className="flex flex-col divide-y divide-white/[0.06]">
                               {answerItems.map((i: any) => (
-                                <div key={i.key}>
-                                  <p className="text-[10px] text-white/30 mb-0.5">{i.label}</p>
-                                  <p className="text-xs text-white/70 whitespace-pre-line">{formatAnswer(i)}</p>
+                                <div key={i.key} className="py-3 first:pt-0 last:pb-0">
+                                  <p className="text-[12px] text-white/45 mb-1 leading-snug">{i.label}</p>
+                                  <p className="text-sm text-white/85 whitespace-pre-line leading-relaxed font-medium">{formatAnswer(i)}</p>
                                 </div>
                               ))}
                             </div>
@@ -481,26 +481,26 @@ const AdminConsultations = () => {
                         )}
 
                         {c.additional_notes && (
-                          <div>
-                            <p className="text-[10px] font-semibold tracking-wider uppercase text-white/30 mb-1">Additional Notes</p>
-                            <p className="text-xs text-white/70 whitespace-pre-line leading-relaxed">{c.additional_notes}</p>
+                          <div className="nexty-inset rounded-xl p-4">
+                            <p className="text-[10px] font-semibold tracking-wider uppercase text-white/35 mb-2">Additional Notes</p>
+                            <p className="text-sm text-white/80 whitespace-pre-line leading-relaxed">{c.additional_notes}</p>
                           </div>
                         )}
                       </>
                     )}
 
                     {!hasConsultationData && (
-                      <p className="text-xs text-white/25 italic">No consultation form on file yet.</p>
+                      <p className="text-sm text-white/30 italic">No consultation form on file yet.</p>
                     )}
 
                     {changes.length > 0 && (
-                      <div>
-                        <p className="text-[10px] font-semibold tracking-wider uppercase text-white/30 mb-2">Changes Reported at Later Visits</p>
-                        <div className="flex flex-col gap-2">
+                      <div className="nexty-inset rounded-xl p-4">
+                        <p className="text-[10px] font-semibold tracking-wider uppercase text-white/35 mb-3">Changes Reported at Later Visits</p>
+                        <div className="flex flex-col divide-y divide-white/[0.06]">
                           {changes.map((e: any, idx: number) => (
-                            <div key={`${e.booking_id ?? idx}-${idx}`}>
-                              <p className="text-[10px] text-white/30 mb-0.5">{e.date ?? ""}</p>
-                              <p className="text-xs text-white/70 whitespace-pre-line">{e.note}</p>
+                            <div key={`${e.booking_id ?? idx}-${idx}`} className="py-2.5 first:pt-0 last:pb-0">
+                              <p className="text-[11px] text-white/35 mb-1">{e.date ?? ""}</p>
+                              <p className="text-sm text-white/80 whitespace-pre-line leading-relaxed">{e.note}</p>
                             </div>
                           ))}
                         </div>
