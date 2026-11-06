@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
+import { buildTenantProfile, listNames, saSeasonalEvents, type ProfileBooking } from "@/lib/nextyTenantProfile";
 
 export type InsightPriority = "critical" | "important" | "info";
 
@@ -61,12 +62,23 @@ function formatRpm(value: number): string {
   return `R${Number(value).toFixed(2)}`;
 }
 
+const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
 /** Returns the name of the day before the given day name */
 function dayBefore(dayName: string): string {
-  const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-  const idx = days.findIndex(d => d.toLowerCase() === dayName.trim().toLowerCase());
+  const idx = DAY_NAMES.findIndex(d => d.toLowerCase() === dayName.trim().toLowerCase());
   if (idx === -1) return dayName.trim();
-  return days[(idx + 6) % 7];
+  return DAY_NAMES[(idx + 6) % 7];
+}
+
+function hourLabel(hour: number): string {
+  if (hour === 0) return "12am";
+  if (hour < 12) return `${hour}am`;
+  return hour === 12 ? "12pm" : `${hour - 12}pm`;
+}
+
+function plural(count: number, word: string): string {
+  return `${count} ${word}${count === 1 ? "" : "s"}`;
 }
 
 export function useNextyInsights() {
@@ -132,12 +144,90 @@ export function useNextyInsights() {
         .in("role", ["owner", "admin", "staff"]);
       const isSolo = !staffRows || staffRows.length <= 1;
 
+      // -- Tenant profile ------------------------------------------------------
+      // The rules decide *whether* a card fires; the profile makes the card speak
+      // about this business: its open days, its own services and pairings, and
+      // the actual clients to contact.
+      const today = new Date();
+      const yearAgo = new Date(today.getTime() - 365 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      const [profileBookingsRes, availabilityRes, servicesRes, overdueLoyaltyRes, channelRes] = await Promise.all([
+        supabase
+          .from("bookings")
+          .select("id, booking_date, status, total_amount, canonical_client_id, client_id, client_name, guest_name, client_email, guest_email, client_phone, guest_phone, booking_items(service_name, price)")
+          .eq("tenant_id", tenantId)
+          .gte("booking_date", yearAgo)
+          .limit(5000),
+        supabase
+          .from("staff_availability")
+          .select("day_of_week, day_enabled, is_available")
+          .eq("tenant_id", tenantId)
+          .is("specific_date", null),
+        supabase
+          .from("services")
+          .select("name, is_addon, category")
+          .eq("tenant_id", tenantId),
+        supabase
+          .from("loyalty_tracker")
+          .select("client_name")
+          .eq("tenant_id", tenantId)
+          .is("merged_into_id", null)
+          .in("status", ["OVERDUE", "TIME TO BOOK"])
+          .order("next_due_date", { ascending: true })
+          .limit(10),
+        supabase.rpc("get_channel_roi", { p_tenant_id: tenantId }),
+      ]);
+      const profileBookings = (profileBookingsRes.data ?? []) as unknown as ProfileBooking[];
+      const profile = buildTenantProfile({
+        bookings: profileBookings,
+        availability: availabilityRes.data ?? [],
+        services: servicesRes.data ?? [],
+        overdueLoyaltyNames: (overdueLoyaltyRes.data ?? []).map((r) => r.client_name ?? ""),
+        today,
+      });
+      const channelData = channelRes.data as unknown as ChannelRoiRow[] | null;
+
+      const NON_ACQUISITION_CHANNELS = new Set(["Returning Client", "Unknown"]);
+      const topChannel = (channelData ?? [])
+        .filter((r) => !NON_ACQUISITION_CHANNELS.has(r.channel) && Number(r.booking_count) > 0)
+        .sort((a, b) => Number(b.booking_count) - Number(a.booking_count))[0]?.channel ?? null;
+
+      const pairText = profile.topPair ? `${profile.topPair.a} + ${profile.topPair.b}` : null;
+      const featureText = pairText
+        ? `${pairText}, the pairing your clients already book together most (${plural(profile.topPair!.count, "booking")})`
+        : profile.premiumService
+          ? `${profile.premiumService.name}, your highest-value standalone service (about ${formatRand(Math.round(profile.premiumService.avgPrice))} a booking)`
+          : null;
+
+      // Who to message: clients the loyalty tracker says are due, otherwise
+      // clients who booked once and have not been back.
+      const contactTarget = profile.overdueLoyaltyNames.length > 0
+        ? {
+            text: `${listNames(profile.overdueLoyaltyNames)} ${profile.overdueLoyaltyNames.length === 1 ? "is" : "are"} due or overdue on your Loyalty Tracker`,
+            names: listNames(profile.overdueLoyaltyNames),
+            view: "Loyalty",
+            label: "View Loyalty Tracker",
+          }
+        : profile.lapsedFirstTimers.length > 0
+          ? {
+              text: `${listNames(profile.lapsedFirstTimers.map((c) => c.name))} booked once and ${profile.lapsedFirstTimers.length === 1 ? "has" : "have"} not been back`,
+              names: listNames(profile.lapsedFirstTimers.map((c) => c.name)),
+              view: "Client Management",
+              label: "View Clients",
+            }
+          : null;
+
       // -- 1. Revenue Per Minute Audit ----------------------------------------
       // Fires when top service earns more than 2x per minute vs bottom service.
-      const { data: rpm } = await supabase.rpc<RevenuePerMinuteRow>("get_revenue_per_minute", {
+      // Only services this tenant's clients book on their own (with 3+ bookings)
+      // are compared, so per-nail art, finishes and other add-ons never become
+      // the "slowest earner".
+      const { data: rpmRaw } = await supabase.rpc("get_revenue_per_minute", {
         p_tenant_id: tenantId,
       });
-      if (rpm && rpm.length > 1) {
+      const rpm = ((rpmRaw ?? []) as unknown as RevenuePerMinuteRow[]).filter((r) =>
+        profile.standaloneServices.has(r.service_name.trim()) && Number(r.booking_count) >= 3,
+      );
+      if (rpm.length > 1) {
         const top       = rpm[0];
         const bottom    = rpm[rpm.length - 1];
         const topRpm    = Number(top.revenue_per_minute);
@@ -147,6 +237,16 @@ export function useNextyInsights() {
           const multiplier  = (topRpm / bottomRpm).toFixed(1);
           const topCount    = Number(top.booking_count);
           const bottomCount = Number(bottom.booking_count);
+          const anchor = profile.topService
+            ? rpm.find((r) => r.service_name.trim() === profile.topService!.name)
+            : undefined;
+          const anchorLine = anchor && anchor !== top && anchor !== bottom
+            ? `For context, ${anchor.service_name}, your most-booked service (${plural(profile.topService!.count, "booking")}), earns ${formatRpm(Number(anchor.revenue_per_minute))} per minute. `
+            : "";
+          const partner = profile.bestPartner.get(top.service_name.trim());
+          const partnerLine = partner && partner.count >= 2
+            ? `Clients who book "${top.service_name}" most often add "${partner.name}", so feature them together. `
+            : "";
           push({
             id: "rpm_gap",
             type: "margin",
@@ -156,9 +256,11 @@ export function useNextyInsights() {
               `"${top.service_name}" earns ${formatRpm(topRpm)} per minute. ` +
               `"${bottom.service_name}" earns ${formatRpm(bottomRpm)} per minute. ` +
               `That is a ${multiplier}x gap for the same amount of ${isMobile ? "travel and appointment" : "chair"} time. ` +
-              `"${top.service_name}" has ${topCount} booking${topCount === 1 ? "" : "s"} vs ${bottomCount} for "${bottom.service_name}". ` +
-              `To recover this: go to Services and move "${top.service_name}" to position 1 on your booking page. ` +
-              `Clients book what they see first. This takes under 30 seconds and requires no price changes.`,
+              `"${top.service_name}" has ${plural(topCount, "booking")} vs ${bottomCount} for "${bottom.service_name}". ` +
+              anchorLine +
+              `To recover this: go to Services and move "${top.service_name}" near the top of your booking page. ` +
+              `Clients book what they see first. This takes under 30 seconds and requires no price changes. ` +
+              partnerLine,
             actionLabel: "Reorder Services",
             actionView: "Services",
           });
@@ -168,13 +270,24 @@ export function useNextyInsights() {
       // -- 2. Quiet Day Audit ------------------------------------------------
       // Fires when the quietest day is below 75% of the busiest day.
       // RPC returns rows ordered quietest first.
-      const { data: quietDays } = await supabase.rpc<QuietDayRow>("get_quiet_day_analysis", {
+      // Days the business is closed are excluded: a closed day is not a demand gap.
+      const { data: quietDaysRaw } = await supabase.rpc("get_quiet_day_analysis", {
         p_tenant_id: tenantId,
       });
-      if (quietDays && quietDays.length > 0) {
+      const quietDays = ((quietDaysRaw ?? []) as unknown as QuietDayRow[]).filter((d) =>
+        !profile.openDays || profile.openDays.has(Number(d.day_of_week)),
+      );
+      const { data: peakData } = await supabase.rpc("get_peak_time_analysis", {
+        p_tenant_id: tenantId,
+      });
+      const peakHour = peakData?.[0] && Number(peakData[0].total_analysed) >= 10
+        ? Number(peakData[0].peak_hour)
+        : null;
+      if (quietDays.length > 1) {
         const slowest = quietDays[0];
         const busiest = quietDays[quietDays.length - 1];
-        const pct     = Math.round(Number(slowest.capacity_percentage));
+        // Relative to the busiest *open* day, not the RPC's all-days maximum.
+        const pct     = Math.round((Number(slowest.booking_count) / Math.max(Number(busiest.booking_count), 1)) * 100);
 
         if (pct < 75) {
           const slowAvg   = Number(slowest.avg_daily_bookings);
@@ -184,26 +297,35 @@ export function useNextyInsights() {
           const fastName  = busiest.day_name.trim();
           const prevDay   = dayBefore(slowName);
 
+          const whoStep = contactTarget
+            ? `Start with the people most likely to say yes: ${contactTarget.text}. `
+            : "";
           const recoveryStep = isMobile
-            ? `The evening before a ${slowName}, open your Loyalty Tracker, identify 3 to 5 clients in the area you will be travelling to and send them a personal WhatsApp. ` +
-              `You already have their numbers. A direct message from a known contact converts far better than any broadcast.`
-            : `The evening of ${prevDay}, send a personal WhatsApp to loyalty clients who are overdue for a visit. ` +
-              `Open the Loyalty Tracker, filter by "Time to Book" or "Overdue" and message them directly. ` +
-              `A personal message from you converts at a much higher rate than a broadcast.`;
+            ? `The evening before a ${slowName}, send a personal WhatsApp offering ${slowName} ${apptWord}s in the area you will be travelling to. ` +
+              whoStep +
+              `A direct message from a known contact converts far better than any broadcast. `
+            : `The evening of ${prevDay}, send a personal WhatsApp offering ${slowName} ${apptWord}s. ` +
+              whoStep +
+              `A personal message from you converts at a much higher rate than a broadcast. `;
+          const contentStep = topChannel && featureText
+            ? `If you post on ${topChannel}, your biggest source of new clients, post a ${slowName} offer featuring ${featureText}` +
+              `${peakHour !== null ? `, and lead with ${slowName} slots around ${hourLabel(peakHour)}, when your clients most like to book` : ""}.`
+            : "";
           void isSolo; // isSolo available for future staff-specific branching
 
           push({
             id: "quiet_day",
             type: "capacity",
             priority: pct < 50 ? "important" : "info",
-            title: "Demand Gap",
+            title: `${slowName} Is Your Quietest Open Day`,
             message:
               `${slowName} averages ${slowAvg.toFixed(1)} booking${slowAvg === 1 ? "" : "s"} per week ` +
               `vs ${fastAvg.toFixed(1)} on ${fastName}. ` +
               `That is ${weeklyGap} fewer paid ${apptWord}s every ${slowName}. ` +
-              recoveryStep,
-            actionLabel: "View Loyalty Tracker",
-            actionView: "Loyalty",
+              recoveryStep +
+              contentStep,
+            actionLabel: contactTarget?.label ?? "View Schedule",
+            actionView: contactTarget?.view ?? "Availability",
           });
         }
       }
@@ -230,8 +352,10 @@ export function useNextyInsights() {
             recoveryStep =
               `Your ${noShowDpct}% deposit is protecting part of each ${apptWord}. ` +
               `The ${formatRand(Math.round(lost))} lost is the unpaid balance on those ${count} ${apptWord}${count === 1 ? "" : "s"} after deposits were applied. ` +
-              `To reduce this further: go to Bookings, find confirmed ${apptWord}s for the next 7 days ` +
-              `and send a personal reminder WhatsApp the day before each one. ` +
+              (profile.upcomingNext7Days > 0
+                ? `To reduce this further: you have ${plural(profile.upcomingNext7Days, `confirmed ${apptWord}`)} in the next 7 days. ` +
+                  `Send each client a personal reminder WhatsApp the day before. `
+                : `To reduce this further: send every client a personal reminder WhatsApp the day before their ${apptWord}. `) +
               `${isMobile ? "For a mobile service, a reminder also confirms the address and saves wasted travel." : "A personal reminder from a known number reduces no-shows by 40 to 60%."}`;
           } else {
             // No deposit configured. Full amount is at risk.
@@ -296,9 +420,17 @@ export function useNextyInsights() {
 
       // -- 5. Rebooking Rate Audit -------------------------------------------
       // Fires when first-time rebooking rate < 55% with at least 3 qualifying clients.
+      // When this fires, Rule 9 (new client conversion) is skipped: both measure
+      // whether first-time clients come back, over different windows, and showing
+      // both produced two cards with conflicting percentages.
+      let firstVisitRetentionCovered = false;
       const { data: rebookData } = await supabase.rpc("get_rebooking_rate_analysis", {
         p_tenant_id: tenantId,
       });
+      const lapsedNames = profile.lapsedFirstTimers.map((c) => c.name);
+      const lapsedLine = lapsedNames.length > 0
+        ? `Start with ${listNames(lapsedNames)}: ${lapsedNames.length === 1 ? "they booked once and have" : "each booked once and has"} not been back. `
+        : "";
       if (rebookData && rebookData[0] && Number(rebookData[0].total_first_time_clients) >= 3) {
         const r           = rebookData[0];
         const rate        = Number(r.rebooking_rate_pct);
@@ -306,16 +438,22 @@ export function useNextyInsights() {
         const rebooked    = Number(r.rebooked_within_window);
         const windowWeeks = Math.round(Number(r.window_days) / 7);
         const notReturned = total - rebooked;
+        const avgDays     = Number(r.avg_days_to_rebook);
+        const timingLine  = rebooked > 0 && avgDays > 0
+          ? `The clients who do come back return after about ${avgDays} days, so ask before they leave or within 48 hours, well before that gap opens. `
+          : "";
 
         if (rate < 55) {
+          firstVisitRetentionCovered = true;
           const recoveryStep = isMobile
             ? `Within 48 hours of completing a first ${apptWord}, send a personal WhatsApp from your own number. ` +
-              `You have their contact in Clients. A message like "Hi [name], great to meet you today. ` +
-              `Would you like to lock in your next session?" recovers approximately 1 in 3 first-time clients. ` +
-              `${notReturned} client${notReturned === 1 ? "" : "s"} from this period are still recoverable.`
+              `A message like "Hi [name], great to meet you today. Would you like to lock in your next session?" recovers approximately 1 in 3 first-time clients. ` +
+              timingLine +
+              lapsedLine
             : `Within 48 hours of a first visit, send a personal WhatsApp. ` +
-              `Go to Clients, filter by most recent first-timers and message the ${notReturned} who have not returned. ` +
-              `A direct message from you converts approximately 1 in 3 first-time clients back into repeat bookings.`;
+              `A direct message from you converts approximately 1 in 3 first-time clients back into repeat bookings. ` +
+              timingLine +
+              lapsedLine;
 
           push({
             id: "rebooking_rate",
@@ -328,7 +466,7 @@ export function useNextyInsights() {
               `${notReturned} client${notReturned === 1 ? "" : "s"} did not return after their first ${apptWord}. ` +
               recoveryStep,
             actionLabel: "Review Clients",
-            actionView: "ClientManagement",
+            actionView: "Client Management",
           });
         }
       }
@@ -353,11 +491,15 @@ export function useNextyInsights() {
 
         if (cancelLost > 0) {
           const avgLoss = Math.round(cancelLost / cancelCount);
+          const offerTo = contactTarget
+            ? `Right now, ${contactTarget.text}: they are your first call when a gap opens. `
+            : "";
           const recoveryStep = isMobile
-            ? `When a client cancels, send a personal WhatsApp within the hour offering the freed slot to someone on your list. ` +
-              `Open Loyalty Tracker, find a client who is overdue, and offer them the gap. ` +
-              `A same-day offer to a warm contact fills ${isMobile ? "travel windows" : "chair time"} that would otherwise be lost.`
-            : `When a slot opens from a cancellation, go to Clients, filter by overdue loyalty clients and offer them the gap directly. ` +
+            ? `When a client cancels, send a personal WhatsApp within the hour offering the freed slot to a warm contact. ` +
+              offerTo +
+              `A same-day offer to someone who already knows you fills travel windows that would otherwise be lost.`
+            : `When a slot opens from a cancellation, offer it directly to a client who is due for a visit. ` +
+              offerTo +
               `A personal message fills cancelled slots at a far higher rate than any automated broadcast.`;
 
           push({
@@ -379,48 +521,17 @@ export function useNextyInsights() {
         }
       }
 
-      // -- 7. Peak Time / Quiet Day Opportunity ---------------------------
-      // Fires when the quietest day has under 40% of peak day bookings.
-      const { data: peakData } = await supabase.rpc("get_peak_time_analysis", {
-        p_tenant_id: tenantId,
-      });
-      if (peakData && peakData[0]) {
-        const p = peakData[0];
-        const quietCount = Number(p.quietest_day_booking_count ?? 0);
-        const peakHour   = Number(p.peak_hour ?? 0);
-        const totalAnalysed = Number(p.total_analysed ?? 0);
-        const peakHourLabel = peakHour < 12
-          ? `${peakHour === 0 ? 12 : peakHour}am`
-          : `${peakHour === 12 ? 12 : peakHour - 12}pm`;
-
-        if (totalAnalysed >= 10 && quietCount < totalAnalysed * 0.1) {
-          push({
-            id: "quiet_day_promo",
-            type: "growth",
-            priority: "info",
-            title: "Fill Your Quietest Day",
-            message:
-              `${p.quietest_day} is your slowest day with only ${quietCount} booking${quietCount === 1 ? "" : "s"} in the last 90 days. ` +
-              `Your peak time is around ${peakHourLabel}. ` +
-              `A targeted offer on ${p.quietest_day} posted to your TikTok or Instagram story between 7pm and 9pm tends to fill same-week slots. ` +
-              `Quiet days cost the same in travel prep time as busy ones. Filling even 2 extra slots per ${p.quietest_day} adds meaningful monthly revenue.`,
-            actionLabel: "View Schedule",
-            actionView: "Availability",
-          });
-        }
-      }
+      // -- 7. [retired — absorbed into Rule 2: Quiet Day Audit] ---------------
+      // It used all-time data with no open-day check, so it could name a day the
+      // business is closed and disagree with Rule 2 about which day is quietest.
+      // Its peak-hour and channel-post advice now appears on the Rule 2 card.
 
       // -- 8. Channel Basket Audit --------------------------------------------
       // Generalized: evaluates EVERY acquisition channel returned by get_channel_roi,
       // not just TikTok. Excludes "Returning Client" and "Unknown" since these are not
       // marketable acquisition channels. Falls back to generic wording for any channel
       // that isn't TikTok or Referral, so new/unseen channel values are never invisible.
-      const NON_ACQUISITION_CHANNELS = new Set(["Returning Client", "Unknown"]);
       const CHANNEL_MIN_BOOKINGS = 5;
-
-      const { data: channelData } = await supabase.rpc<ChannelRoiRow>("get_channel_roi", {
-        p_tenant_id: tenantId,
-      });
 
       if (channelData && channelData.length > 0) {
         const overallAvg = computeOverallAvgBasket(channelData);
@@ -438,15 +549,23 @@ export function useNextyInsights() {
             const slug = channel.toLowerCase().replace(/[^a-z0-9]+/g, "_");
 
             if (avg < overallAvg * 0.85) {
+              const comboName = pairText ?? profile.premiumService?.name ?? null;
               const specificAdvice =
                 channel === "TikTok"
                   ? `This is common when social content focuses only on entry-level services. ` +
-                    `Adding one short-form video showing a premium or combo service could lift the basket size from that channel within 30 days.`
+                    (featureText
+                      ? `Adding one short-form video showing ${featureText} could lift the basket size from that channel within 30 days.`
+                      : `Adding one short-form video showing a premium or combo service could lift the basket size from that channel within 30 days.`)
                   : channel === "Referral"
                   ? `This usually means the referring client is recommending a specific entry-level service. ` +
-                    `Create a referral incentive that is tied to a combo or premium service specifically. ` +
-                    `A message like "refer a friend for a Hollywood + leg combo and both of you get 10% off" ` +
-                    `lifts the referred basket while still rewarding the existing client.`
+                    (comboName
+                      ? `Tie your referral reward to ${featureText}. ` +
+                        `A message like "refer a friend for a ${comboName} and you both get 10% off" ` +
+                        `lifts the referred basket while still rewarding the existing client.`
+                      : `Create a referral incentive that is tied to a combo or premium service specifically, ` +
+                        `which lifts the referred basket while still rewarding the existing client.`)
+                  : featureText
+                  ? `Lead with ${featureText} when you promote through ${channel}, rather than your entry-level services.`
                   : `Review what you're actually promoting through this channel — if it consistently highlights your cheapest service, that's likely why the basket size is lower here than elsewhere.`;
 
               push({
@@ -496,7 +615,7 @@ export function useNextyInsights() {
         const rate      = Number(c.conversion_rate_pct ?? 0);
         const missed    = newCount - converted;
 
-        if (newCount >= 5 && rate < 50) {
+        if (!firstVisitRetentionCovered && newCount >= 5 && rate < 50) {
           push({
             id: "new_client_conversion",
             type: "retention",
@@ -507,7 +626,7 @@ export function useNextyInsights() {
               `That is a ${rate.toFixed(0)}% conversion rate. ` +
               `The ${missed} who did not return likely had a great first experience but had no prompt to rebook. ` +
               `A personal WhatsApp within 48 hours of a first visit, asking if they would like to lock in the next session, recovers roughly 1 in 3 of those clients. ` +
-              `Go to Clients, sort by newest first-time visitors, and send a personal message to each one.`,
+              (lapsedLine || `Go to Clients, sort by newest first-time visitors, and send a personal message to each one.`),
             actionLabel: "View Clients",
             actionView: "Client Management",
           });
@@ -641,9 +760,10 @@ export function useNextyInsights() {
       }
 
       // -- 15. Basket Trend --------------------------------------------------
-      const { data: basketData } = await supabase.rpc<BasketTrendRow>("get_basket_trend", { p_tenant_id: tenantId });
+      const { data: basketRaw } = await supabase.rpc("get_basket_trend", { p_tenant_id: tenantId });
+      const basketData = basketRaw as unknown as BasketTrendRow[] | null;
       if (basketData && basketData.length >= 4) {
-        const weeks = basketData as BasketTrendRow[];
+        const weeks = basketData;
         const recent = weeks.slice(-4).map((w) => Number(w.avg_basket));
         const prior  = weeks.slice(0, weeks.length - 4).map((w) => Number(w.avg_basket));
 
@@ -663,13 +783,16 @@ export function useNextyInsights() {
                 message:
                   `Your average booking value has dropped ${Math.abs(Math.round(change))}% over the most recent 4 weeks ` +
                   `(from ${formatRand(Math.round(priorAvg))} to ${formatRand(Math.round(recentAvg))}). ` +
-                  `This typically happens when new clients book entry-level services or add-on suggestions are not being offered. ` +
-                  `For every booking that includes a combo service, the average ticket is materially higher. ` +
-                  `Go to Settings and review your suggested add-ons to ensure the most relevant pairings are configured.`,
-                actionLabel: "Open Settings",
-                actionView: "Business",
+                  `This typically happens when new clients book entry-level services or add-ons are not being offered. ` +
+                  (profile.topPair
+                    ? `Your clients' most common pairing is ${profile.topPair.a} with ${profile.topPair.b} (${plural(profile.topPair.count, "booking")}). ` +
+                      `When someone books one of them on its own, suggest the other when you confirm their ${apptWord}, and mention the pairing in both service descriptions.`
+                    : `For every booking that includes a combo service, the average ticket is materially higher. ` +
+                      `Suggest a relevant second service when you confirm each ${apptWord}.`),
+                actionLabel: "View Services",
+                actionView: "Services",
               });
-            } else if (change > 15 && recentAvg > 500) {
+            } else if (change > 15) {
               push({
                 id: "basket_trend_growing",
                 type: "growth",
@@ -679,7 +802,9 @@ export function useNextyInsights() {
                   `Your average booking value has increased ${Math.round(change)}% over the most recent 4 weeks ` +
                   `(from ${formatRand(Math.round(priorAvg))} to ${formatRand(Math.round(recentAvg))}). ` +
                   `This is a strong signal that upsell or combo bookings are working. ` +
-                  `Keep the momentum: promote your highest-value service combinations in your next content post.`,
+                  (featureText
+                    ? `Keep the momentum: feature ${featureText} in your next content post.`
+                    : `Keep the momentum: promote your highest-value service combinations in your next content post.`),
                 actionLabel: "View Services",
                 actionView: "Services",
               });
@@ -721,42 +846,53 @@ export function useNextyInsights() {
       // for every acquisition channel, including Referral.
 
       // -- 18. SA Seasonal Countdown -----------------------------------------
-      // Static SA dates. No RPC needed. Fires 21 days before key events.
-      const SA_SEASONAL: { name: string; date: string; type: "holiday" | "seasonal" }[] = [
-        { name: "Mother's Day",           date: "2026-05-11", type: "seasonal" },
-        { name: "Youth Day",               date: "2026-06-16", type: "holiday" },
-        { name: "Father's Day",           date: "2026-06-21", type: "seasonal" },
-        { name: "Women's Day",            date: "2026-08-09", type: "holiday" },
-        { name: "Heritage Day",            date: "2026-09-24", type: "holiday" },
-        { name: "Black Friday",            date: "2026-11-27", type: "seasonal" },
-        { name: "December peak season",    date: "2026-12-01", type: "seasonal" },
-        { name: "Day of Reconciliation",   date: "2026-12-16", type: "holiday" },
-        { name: "Christmas",               date: "2026-12-25", type: "holiday" },
-      ];
-      const today = new Date();
-      const upcomingEvent = SA_SEASONAL.find(e => {
-        const d     = new Date(e.date);
-        const diff  = Math.floor((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      // SA dates computed for the current year. Fires 21 days before key events.
+      const todayKey = today.toISOString().slice(0, 10);
+      const daysUntil = (dateKey: string) => Math.round((Date.parse(dateKey) - Date.parse(todayKey)) / (1000 * 60 * 60 * 24));
+      const upcomingEvent = saSeasonalEvents(today.getFullYear()).find(e => {
+        const diff = daysUntil(e.date);
         return diff >= 0 && diff <= 21;
       });
       if (upcomingEvent) {
-        const eventDate = new Date(upcomingEvent.date);
-        const daysLeft  = Math.floor((eventDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+        const eventDate = new Date(`${upcomingEvent.date}T12:00:00`);
+        const daysLeft  = daysUntil(upcomingEvent.date);
         const isHoliday = upcomingEvent.type === "holiday";
+        const weekday   = DAY_NAMES[eventDate.getDay()];
+        const weekBeforeKey = new Date(eventDate.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+        const alreadyBooked = profileBookings.filter((b) =>
+          b.booking_date !== null
+          && b.booking_date >= weekBeforeKey
+          && b.booking_date <= upcomingEvent.date
+          && !["cancelled", "no_show"].includes(String(b.status ?? "").toLowerCase()),
+        ).length;
+        const bookedLine = alreadyBooked === 0
+          ? `You have no ${apptWord}s booked in the week leading up to it yet. `
+          : `You have ${plural(alreadyBooked, apptWord)} booked in the week leading up to it so far. `;
+        const openLine = !profile.openDays
+          ? `Decide now whether to block the day or promote availability. `
+          : profile.openDays.has(eventDate.getDay())
+            ? `You are normally open on ${weekday}s, so decide now whether to work the holiday or block it. `
+            : `You are normally closed on ${weekday}s, so promote the days either side of it instead. `;
+        const featureLine = featureText
+          ? `Feature ${featureText} so the message points to something specific. `
+          : "";
         push({
           id: `seasonal_${upcomingEvent.date}`,
           type: "growth",
           priority: daysLeft <= 7 ? "important" : "info",
-          title: `${upcomingEvent.name} Is ${daysLeft} Day${daysLeft === 1 ? "" : "s"} Away`,
+          title: `${upcomingEvent.name} Is ${plural(daysLeft, "Day")} Away`,
           message: isHoliday
             ? `${upcomingEvent.name} falls on ${eventDate.toLocaleDateString("en-ZA", { weekday: "long", day: "numeric", month: "long" })}. ` +
-              `This is a South African public holiday. Decide now whether to block the day or promote availability. ` +
+              `This is a South African public holiday. ` +
+              openLine +
+              bookedLine +
               `Clients who see your content in the days leading up to a public holiday often book the slot before it or after it, not on the day itself. ` +
               `Post your availability decision on your story today to capture that window.`
             : `${upcomingEvent.name} is ${daysLeft} days away and is one of the highest-demand periods in the SA beauty calendar. ` +
+              bookedLine +
               `If your slots are not already filling, a single story or WhatsApp broadcast to your client list today ` +
               `referencing ${upcomingEvent.name} by name will convert faster than any other content you post this week. ` +
-              `Clients respond to date-specific prompts because they create natural urgency.`,
+              featureLine,
           actionLabel: "View Schedule",
           actionView: "Availability",
         });
@@ -770,12 +906,8 @@ export function useNextyInsights() {
       const ctxMap = Object.fromEntries((ctxFull ?? []).map((r: any) => [r.key, r.value]));
       const hasGmb = ctxMap.gmb_connected === "true" && ctxMap.google_review_url;
       if (hasGmb) {
-        const { data: recentBks } = await supabase
-          .from("bookings").select("id")
-          .eq("tenant_id", tenantId)
-          .not("status", "in", "(cancelled,pending)")
-          .gte("booking_date", new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10));
-        const recentCount = recentBks?.length ?? 0;
+        // Past visits only: future confirmed bookings have nothing to review yet.
+        const recentCount = profile.visitsLast30Days;
         if (recentCount >= 8) {
           push({
             id: "google_review_velocity",
@@ -783,7 +915,7 @@ export function useNextyInsights() {
             priority: "info",
             title: "Prompt Clients for Google Reviews",
             message:
-              `You have had ${recentCount} completed bookings in the last 30 days. ` +
+              `You have seen ${plural(recentCount, "client visit")} in the last 30 days. ` +
               `In the South African market, Google reviews are the primary trust signal for a service that new clients cannot preview before paying a deposit. ` +
               `After every completed session, send a personal WhatsApp with your Google review link. ` +
               `A message from you directly converts at a significantly higher rate than an automated link in a confirmation email. ` +
@@ -801,9 +933,10 @@ export function useNextyInsights() {
       const ATTACH_MIN_BOOKINGS = 10;
       const ATTACH_RATE_THRESHOLD = 40; // percent
 
-      const { data: attachRows } = await supabase.rpc<AttachRateRow>("get_attach_rate", {
+      const { data: attachRaw } = await supabase.rpc("get_attach_rate", {
         p_tenant_id: tenantId,
       });
+      const attachRows = attachRaw as unknown as AttachRateRow[] | null;
 
       if (attachRows && attachRows.length > 0) {
         const a = attachRows[0];
@@ -815,6 +948,14 @@ export function useNextyInsights() {
         if (totalBookings >= ATTACH_MIN_BOOKINGS) {
           if (attachRatePct < ATTACH_RATE_THRESHOLD) {
             const singleServiceCount = totalBookings - multiServiceBookings;
+            const mostSolo = [...profile.soloCounts.entries()].sort((a, b) => b[1] - a[1])[0];
+            const soloPartner = mostSolo ? profile.bestPartner.get(mostSolo[0]) : undefined;
+            const specificStep = mostSolo && soloPartner
+              ? `${mostSolo[0]} is the service most often booked on its own (${plural(mostSolo[1], "time")}). ` +
+                `When clients do add to it, they most often choose ${soloPartner.name}, so offer that when you confirm each ${mostSolo[0]} ${apptWord}.`
+              : mostSolo
+                ? `${mostSolo[0]} is the service most often booked on its own (${plural(mostSolo[1], "time")}), so it is the best place to start offering a second service.`
+                : `Offer a relevant second service when you confirm each ${apptWord}.`;
             push({
               id: "single_service_attach_rate",
               type: "growth",
@@ -823,8 +964,8 @@ export function useNextyInsights() {
               message:
                 `Only ${attachRatePct}% of your bookings include a second service, averaging ${avgServicesPerBooking} services per visit. ` +
                 `${singleServiceCount} of your last ${totalBookings} bookings were single-service. ` +
-                `These clients already booked and are already in the chair — adding a relevant combo or add-on at checkout earns extra revenue without booking a single new client or using any extra calendar time. ` +
-                `Check whether your top service has a suggested add-on configured at checkout.`,
+                `These clients have already booked ${isMobile ? "and you are already travelling to them" : "and are already in the chair"}, so adding a relevant service earns extra revenue without finding a new client. ` +
+                specificStep,
               actionLabel: "View Services",
               actionView: "Services",
             });
@@ -836,7 +977,9 @@ export function useNextyInsights() {
               title: "Strong Multi-Service Attach Rate",
               message:
                 `${attachRatePct}% of your bookings include more than one service, averaging ${avgServicesPerBooking} services per visit. ` +
-                `Your combo/add-on positioning is working well — keep featuring these pairings prominently at checkout to maintain it as you grow.`,
+                (profile.topPair
+                  ? `${profile.topPair.a} with ${profile.topPair.b} is your most common pairing (${plural(profile.topPair.count, "booking")}). Keep featuring it to maintain this as you grow.`
+                  : `Your combo/add-on positioning is working well. Keep featuring these pairings to maintain it as you grow.`),
               actionLabel: "View Services",
               actionView: "Services",
             });
