@@ -23,6 +23,7 @@ import DashboardStockAlerts from "@/components/admin/DashboardStockAlerts";
 import AdminPayshapQueue from "@/components/admin/AdminPayshapQueue";
 import { TrialCountdownNudge } from "@/components/admin/TrialCountdownNudge";
 import { ADMIN_METRIC_DEFINITIONS, ADMIN_METRIC_INFO, type AdminMetricDefinition, type AdminMetricInfoLine } from "@/components/admin/metricDefinitions";
+import { FirstBookingCelebration } from "@/components/admin/FirstBookingCelebration";
 type MetricEntry = AdminMetricDefinition;
 type InfoLine = AdminMetricInfoLine;
 
@@ -498,6 +499,7 @@ export const AdminDashboardView = ({
       {/* PayShap verification queue — gated by flags.payshap_payments */}
       {!demo && flags.payshap_payments && <AdminPayshapQueue />}
       {!demo && <TrialCountdownNudge />}
+      {!demo && <FirstBookingCelebration />}
 
       {visibility.hero && (
         <motion.section {...fadeUp} transition={{ duration: 0.35 }}>
