@@ -1,10 +1,9 @@
 import { X } from "lucide-react";
-import { useRef, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { AnimatePresence, motion } from "framer-motion";
 import { AdminIconButton } from "@/components/admin/AdminSharedUI";
 import { useAdminViewport } from "@/hooks/use-admin-viewport";
-import { adminTransition, adminFadeVariants, adminSheetVariants, useAdminReducedMotion } from "@/components/admin/adminMotion";
+import { adminTransition, adminFadeVariants, useAdminReducedMotion } from "@/components/admin/adminMotion";
 
 export interface AdminMetricExplanationLine {
   term: string;
@@ -34,6 +33,12 @@ export interface AdminMetricExplanationProps {
 // cause of the clipping/non-centering/jank reported), this builds directly
 // on Radix's unstyled primitives with the same spring motion used
 // everywhere else in the admin, via forceMount + AnimatePresence.
+//
+// The card is always centered via `fixed inset-0 m-auto`, at every
+// breakpoint including compact — a bottom-sheet variant was tried for
+// compact but it read as "stuck at the bottom" compared to the centered
+// look on bigger screens, so one layout is used everywhere and only the
+// side margins/width scale down for narrower viewports.
 export function AdminMetricExplanation({
   open,
   onOpenChange,
@@ -52,8 +57,8 @@ export function AdminMetricExplanation({
   const isCompact = viewport === "compact";
   const isTablet = viewport === "tablet";
   const reduceMotion = useAdminReducedMotion();
-  const swipeStartY = useRef<number | null>(null);
-  const [dragY, setDragY] = useState(0);
+  const widthClass = isCompact ? "w-[calc(100%-1.5rem)] max-w-sm" : isTablet ? "w-[calc(100%-3rem)] max-w-md" : "w-[calc(100%-4rem)] max-w-lg";
+  const marginClass = isCompact ? "max-h-[calc(100dvh-2rem)]" : "max-h-[calc(100dvh-4rem)]";
 
   return (
     <DialogPrimitive.Root open={open} onOpenChange={onOpenChange}>
@@ -70,71 +75,23 @@ export function AdminMetricExplanation({
               />
             </DialogPrimitive.Overlay>
 
-            {isCompact ? (
-              <DialogPrimitive.Content asChild forceMount aria-describedby={undefined}>
-                <motion.div
-                  className="admin-dialog-surface fixed inset-x-0 bottom-0 z-50 flex max-h-[85dvh] flex-col overflow-y-auto overflow-x-hidden rounded-t-3xl nexty-glass-strong text-white"
-                  variants={adminSheetVariants(reduceMotion)}
-                  initial="hidden"
-                  animate="visible"
-                  exit="exit"
-                  transition={adminTransition(reduceMotion)}
-                  style={{ transform: dragY ? `translateY(${dragY}px)` : undefined }}
-                >
-                  <div
-                    className="flex justify-center pt-3 pb-1 touch-none shrink-0"
-                    aria-hidden="true"
-                    onPointerDown={(event) => {
-                      swipeStartY.current = event.clientY;
-                      event.currentTarget.setPointerCapture(event.pointerId);
-                    }}
-                    onPointerMove={(event) => {
-                      if (swipeStartY.current === null) return;
-                      setDragY(Math.max(0, event.clientY - swipeStartY.current));
-                    }}
-                    onPointerUp={(event) => {
-                      if (swipeStartY.current !== null && event.clientY - swipeStartY.current > 64) {
-                        onOpenChange(false);
-                      }
-                      swipeStartY.current = null;
-                      setDragY(0);
-                    }}
-                    onPointerCancel={() => {
-                      swipeStartY.current = null;
-                      setDragY(0);
-                    }}
-                  >
-                    <span className="h-1.5 w-10 rounded-full bg-white/25" />
-                  </div>
-
-                  <MetricExplanationBody
-                    title={title} description={description} label={label} value={value}
-                    valueClassName={valueClassName} example={example} calculationNote={calculationNote}
-                    benchmark={benchmark} extraLines={extraLines} extraLinesTitle={extraLinesTitle}
-                    onClose={() => onOpenChange(false)}
-                  />
-                  <div className="h-[env(safe-area-inset-bottom,0px)] shrink-0" />
-                </motion.div>
-              </DialogPrimitive.Content>
-            ) : (
-              <DialogPrimitive.Content asChild forceMount aria-describedby={undefined}>
-                <motion.div
-                  className={`admin-dialog-surface fixed inset-0 z-50 m-auto flex h-fit max-h-[calc(100dvh-4rem)] flex-col overflow-y-auto overflow-x-hidden rounded-2xl nexty-glass-strong text-white ${isTablet ? "w-[calc(100%-3rem)] max-w-md" : "w-[calc(100%-4rem)] max-w-lg"}`}
-                  variants={adminFadeVariants(reduceMotion)}
-                  initial="hidden"
-                  animate="visible"
-                  exit="exit"
-                  transition={adminTransition(reduceMotion)}
-                >
-                  <MetricExplanationBody
-                    title={title} description={description} label={label} value={value}
-                    valueClassName={valueClassName} example={example} calculationNote={calculationNote}
-                    benchmark={benchmark} extraLines={extraLines} extraLinesTitle={extraLinesTitle}
-                    onClose={() => onOpenChange(false)}
-                  />
-                </motion.div>
-              </DialogPrimitive.Content>
-            )}
+            <DialogPrimitive.Content asChild forceMount aria-describedby={undefined}>
+              <motion.div
+                className={`admin-dialog-surface fixed inset-0 z-50 m-auto flex h-fit flex-col overflow-y-auto overflow-x-hidden rounded-2xl nexty-glass-strong text-white ${widthClass} ${marginClass}`}
+                variants={adminFadeVariants(reduceMotion)}
+                initial="hidden"
+                animate="visible"
+                exit="exit"
+                transition={adminTransition(reduceMotion)}
+              >
+                <MetricExplanationBody
+                  title={title} description={description} label={label} value={value}
+                  valueClassName={valueClassName} example={example} calculationNote={calculationNote}
+                  benchmark={benchmark} extraLines={extraLines} extraLinesTitle={extraLinesTitle}
+                  onClose={() => onOpenChange(false)}
+                />
+              </motion.div>
+            </DialogPrimitive.Content>
           </DialogPrimitive.Portal>
         )}
       </AnimatePresence>
@@ -191,12 +148,12 @@ function MetricExplanationBody({
       )}
 
       {extraLines && extraLines.length > 0 && (
-        <div className="mx-5 mb-5 flex flex-col gap-2">
+        <div className="mx-5 mb-5 flex flex-col gap-3">
           <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/35">{extraLinesTitle}</p>
           {extraLines.map((line, index) => (
-            <div key={`${line.term}-${index}`} className="flex items-center justify-between gap-3">
-              <span className="min-w-0 flex-1 truncate text-[12px] text-white/65">{line.term}</span>
-              <span className="shrink-0 text-[12px] font-semibold text-white/90">{line.def}</span>
+            <div key={`${line.term}-${index}`} className="min-w-0">
+              <p className="text-[12px] font-semibold text-white/90">{line.term}</p>
+              <p className="mt-0.5 text-[12px] leading-relaxed text-white/60 break-words">{line.def}</p>
             </div>
           ))}
         </div>
