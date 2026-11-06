@@ -1,7 +1,7 @@
 {
   ".claude/settings.json": {
-    "mtime": 1794001760.0081227,
-    "seen": 1794001767.0151744,
+    "mtime": 1794002958.7350519,
+    "seen": 1794002967.4517288,
     "ast_hash": "0a0ef578e59e2bb38c69f1dcb49a0e1a",
     "semantic_hash": "0a0ef578e59e2bb38c69f1dcb49a0e1a",
     "ast_empty": true
@@ -218,9 +218,9 @@
     "semantic_hash": ""
   },
   "src/components/admin/AdminMetricExplanation.tsx": {
-    "mtime": 1793981641.7128391,
-    "seen": 1793981645.523944,
-    "ast_hash": "05b2523f9b0f91b62882d47963af0f9a",
+    "mtime": 1794002958.7881842,
+    "seen": 1794002967.45184,
+    "ast_hash": "aeeb8919e49dd626cafa772d7439a2be",
     "semantic_hash": ""
   },
   "src/components/admin/AdminMobileNav.tsx": {
@@ -2314,14 +2314,14 @@
     "semantic_hash": "3280df2695a76ed77887e7c98bc744d8"
   },
   ".claude/CLAUDE.md": {
-    "mtime": 1794001760.0049973,
-    "seen": 1794001767.0159216,
+    "mtime": 1794002958.7281842,
+    "seen": 1794002967.4522915,
     "ast_hash": "9b31786b637be3c13978bec4c2330752",
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1794001760.0609972,
-    "seen": 1794001767.0159235,
+    "mtime": 1794002958.7401028,
+    "seen": 1794002967.4522932,
     "ast_hash": "67d88e9d0760c3ba54c75dfd9551c1c5",
     "semantic_hash": ""
   },
