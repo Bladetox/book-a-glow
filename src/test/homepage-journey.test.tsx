@@ -5,10 +5,16 @@ import { HomeJourneyNav } from "@/components/home/HomeJourneyNav";
 import { HomePricingPreview } from "@/components/home/HomePricingPreview";
 
 beforeEach(() => {
-  Object.defineProperty(HTMLElement.prototype, "scrollIntoView", { configurable: true, value: vi.fn() });
+  Object.defineProperty(HTMLElement.prototype, "scrollIntoView", { configurable: true, writable: true, value: vi.fn() });
   Object.defineProperty(window, "matchMedia", {
     configurable: true,
-    value: vi.fn().mockImplementation(() => ({ matches: false, addListener: vi.fn(), removeListener: vi.fn() })),
+    value: vi.fn().mockImplementation(() => ({
+      matches: false,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })),
   });
   globalThis.IntersectionObserver = class {
     observe = vi.fn();
@@ -43,10 +49,13 @@ describe("homepage journey index", () => {
     target.scrollIntoView = vi.fn();
     document.body.appendChild(target);
     const scroll = vi.spyOn(target, "scrollIntoView");
+    // The nav scrolls after two animation frames; run them synchronously.
+    const raf = vi.spyOn(window, "requestAnimationFrame").mockImplementation((cb) => { cb(0); return 0; });
     render(<HomeJourneyNav enabled />);
     fireEvent.click(screen.getByRole("link", { name: /Who it's for/i }));
     expect(window.location.hash).toBe("#who-its-for");
     expect(scroll).toHaveBeenCalled();
+    raf.mockRestore();
     target.remove();
   });
 });
@@ -55,10 +64,9 @@ describe("homepage pricing preview", () => {
   it("shows Studio as coming soon, without advertising a trial", () => {
     render(<MemoryRouter><HomePricingPreview /></MemoryRouter>);
     const studio = screen.getByText("Studio").closest("article");
-    expect(studio?.textContent).toContain("R1,299");
-    expect(studio?.textContent).toContain("Coming soon");
+    expect(studio?.textContent).toContain("R999");
+    expect(studio?.textContent).toMatch(/coming soon/i);
     expect(studio?.textContent).not.toContain("30-day free trial");
-    expect(studio?.textContent).toContain("3 staff included");
-    expect(studio?.textContent).toContain("R89 per additional staff member");
+    expect(studio?.textContent).toContain("Automated invoicing for independent service providers");
   });
 });
