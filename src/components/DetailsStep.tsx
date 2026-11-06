@@ -17,6 +17,7 @@ interface DetailsStepProps {
   onUpdate: (updates: Partial<BookingState>) => void;
   onBlockedChange?: (blocked: boolean) => void;
   showRequiredErrors?: boolean;
+  onConsultationQuestionsReady?: (ready: boolean) => void;
 }
 
 const phoneCodes = [
@@ -254,7 +255,13 @@ const ConsultationQRenderer = ({
 
 // ── Main component ────────────────────────────────────────────────────────────
 
-const DetailsStep = ({ booking, onUpdate, onBlockedChange, showRequiredErrors = false }: DetailsStepProps) => {
+const DetailsStep = ({
+  booking,
+  onUpdate,
+  onBlockedChange,
+  showRequiredErrors = false,
+  onConsultationQuestionsReady,
+}: DetailsStepProps) => {
   const config = usePublicBusinessConfig();
   const { tenantId } = usePublicTenant();
   const [touched, setTouched] = useState<Record<string, boolean>>({});
@@ -370,6 +377,7 @@ const DetailsStep = ({ booking, onUpdate, onBlockedChange, showRequiredErrors = 
 useEffect(() => {
   if (!tenantId) return;
   let cancelled = false;
+  onConsultationQuestionsReady?.(false);
 
   const parseQuestionOptions = (value: unknown): string[] => {
     if (Array.isArray(value)) {
@@ -489,7 +497,10 @@ useEffect(() => {
         }
       }
     } finally {
-      if (!cancelled) setConsultationLoading(false);
+      if (!cancelled) {
+        setConsultationLoading(false);
+        onConsultationQuestionsReady?.(true);
+      }
     }
   };
 
@@ -497,7 +508,7 @@ useEffect(() => {
   return () => {
     cancelled = true;
   };
-}, [tenantId]);
+}, [tenantId, onConsultationQuestionsReady]);
 
   const handleConsultationAnswer = useCallback(
     (key: string, value: import("@/data/bookingData").ConsultationAnswerValue) => {
