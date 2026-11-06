@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { saLog } from "@/lib/saAudit";
 import {
   Settings2, KeyRound, Bell, Shield, Save, CheckCircle2,
   Loader2, ToggleLeft, ToggleRight, Globe, AlertTriangle,
@@ -74,13 +75,7 @@ export default function SASettings() {
 
   const saveNotif = () => {
     // Persist to sa_audit_logs as a config record
-    supabase.from("sa_audit_logs").insert({
-      action:    "config_update",
-      entity:    "superadmin_notif_prefs",
-      entity_id: "superadmin",
-      label:     "Notification preferences updated",
-      meta:      notif,
-    }).then(() => {
+    saLog("config_update", "superadmin_notif_prefs", "superadmin", "Notification preferences updated", notif).then(() => {
       setNotifStatus("saved");
       setTimeout(() => setNotifStatus("idle"), 2500);
     });
@@ -99,13 +94,7 @@ export default function SASettings() {
 
   const saveConfig = async () => {
     setConfigStatus("saving");
-    await supabase.from("sa_audit_logs").insert({
-      action:    "config_update",
-      entity:    "platform_config",
-      entity_id: "platform",
-      label:     "Platform config updated",
-      meta:      config,
-    });
+    await saLog("config_update", "platform_config", "platform", "Platform config updated", config);
     setConfigStatus("saved");
     setTimeout(() => setConfigStatus("idle"), 2500);
   };

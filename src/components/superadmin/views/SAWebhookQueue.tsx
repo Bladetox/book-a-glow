@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { saLog } from "@/lib/saAudit";
 import { Radio, RefreshCw, Loader2, CheckCircle2, XCircle, Clock, AlertTriangle, RotateCcw } from "lucide-react";
 
 interface WebhookEvent {
@@ -49,13 +50,7 @@ export default function SAWebhookQueue() {
       .update({ status: "pending", error_message: null, processed_at: null })
       .eq("id", e.id);
     // Log action to audit log
-    await supabase.from("sa_audit_logs").insert({
-      action: "webhook.retry",
-      entity: "webhook_events",
-      entity_id: e.id,
-      label: e.event_type ?? "unknown",
-      meta: { previous_status: e.status },
-    });
+    await saLog("webhook.retry", "webhook_events", e.id, e.event_type ?? "unknown", { previous_status: e.status });
     setRetrying(null);
     load();
   };

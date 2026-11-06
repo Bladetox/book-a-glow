@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { saLog } from "@/lib/saAudit";
 import {
   Search, Loader2, Wrench, AlertTriangle, Info, XCircle,
   CheckCircle2, Copy, CalendarDays, ChevronDown, ChevronUp,
@@ -234,15 +235,7 @@ export default function SATroubleshoot() {
 
       } else if (action === "note") {
         if (!note.trim()) return;
-        // sa_audit_logs columns: action, entity, entity_id, label, meta, actor_id, actor_email
-        const { error } = await supabase.from("sa_audit_logs").insert({
-          action: "support_note",
-          entity: "tenant",
-          entity_id: selected.id,
-          label: selected.name ?? selected.id,
-          meta: { note: note.trim() },
-        });
-        if (error) { log(`❌ Note failed: ${error.message}`, false); return; }
+        await saLog("support_note", "tenant", selected.id, selected.name ?? selected.id, { note: note.trim() });
         log(`📝 Note saved: ${note}`);
         setNote("");
       }
