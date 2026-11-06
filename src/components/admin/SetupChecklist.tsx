@@ -194,17 +194,17 @@ export function SetupChecklist({ onNavigate }: Props) {
       />
 
       <div
-        className="mb-6 rounded-xl border border-amber-200 bg-amber-50 dark:border-amber-900/40 dark:bg-amber-950/20 shadow-sm"
+        className="nexty-tint-warning mb-6 rounded-xl"
         role="region"
         aria-label="Setup checklist"
       >
         {/* ── Header ── */}
         <div className="flex items-start justify-between gap-4 px-5 pt-5 pb-3">
           <div className="flex-1 min-w-0">
-            <h2 className="text-sm font-semibold text-amber-900 dark:text-amber-300">
+            <h2 className="text-sm font-semibold text-amber-300">
               {allDone ? '🎉 Setup complete!' : 'Finish setting up your account'}
             </h2>
-            <p className="mt-0.5 text-xs text-amber-700 dark:text-amber-400">
+            <p className="mt-0.5 text-xs text-amber-400/80">
               {allDone
                 ? "You're all set. Your booking page is live."
                 : `${completedCount} of ${total} steps complete`}
@@ -212,7 +212,7 @@ export function SetupChecklist({ onNavigate }: Props) {
           </div>
 
           {/* Progress pill */}
-          <span className="shrink-0 rounded-full bg-amber-100 dark:bg-amber-900/40 px-2.5 py-0.5 text-xs font-medium text-amber-800 dark:text-amber-300">
+          <span className="shrink-0 rounded-full bg-amber-400/20 px-2.5 py-0.5 text-xs font-medium text-amber-300">
             {progressPct}%
           </span>
 
@@ -220,20 +220,20 @@ export function SetupChecklist({ onNavigate }: Props) {
           <button
             onClick={checklist.dismiss}
             aria-label="Dismiss setup checklist"
-            className="shrink-0 rounded-md p-1 text-amber-600 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
+            className="shrink-0 rounded-md p-1 text-amber-400/70 hover:bg-amber-400/15 hover:text-amber-300 transition-colors"
           >
             <X size={16} />
           </button>
         </div>
 
         {/* ── Progress bar ── */}
-        <div className="mx-5 mb-4 h-1.5 overflow-hidden rounded-full bg-amber-200 dark:bg-amber-900/40">
+        <div className="mx-5 mb-4 h-1.5 overflow-hidden rounded-full bg-amber-400/15">
           <div
             className={[
               'h-full rounded-full transition-all duration-500',
               allDone
-                ? 'bg-green-500 dark:bg-green-400'
-                : 'bg-amber-500 dark:bg-amber-400',
+                ? 'bg-green-400'
+                : 'bg-amber-400',
             ].join(' ')}
             style={{ width: `${progressPct}%` }}
             role="progressbar"
@@ -244,7 +244,7 @@ export function SetupChecklist({ onNavigate }: Props) {
         </div>
 
         {/* ── Gate items ── */}
-        <ul className="divide-y divide-amber-200/60 dark:divide-amber-900/30 pb-2">
+        <ul className="divide-y divide-amber-900/30 pb-2">
           {/* Gates 1, 2, 3 — rendered from GATE_ITEMS[0..2] */}
           {GATE_ITEMS.slice(0, 3).map((item) => {
             const done = checklist.gates[item.key];
@@ -335,7 +335,7 @@ function GateRow({
         ) : (
           <Circle
             size={18}
-            className="text-amber-400 dark:text-amber-600"
+            className="text-amber-600"
             aria-label="Incomplete"
           />
         )}
@@ -347,15 +347,15 @@ function GateRow({
           className={[
             'text-sm font-medium',
             done
-              ? 'line-through text-amber-700/60 dark:text-amber-500/60'
-              : 'text-amber-900 dark:text-amber-200',
+              ? 'line-through text-amber-500/60'
+              : 'text-amber-200',
           ].join(' ')}
         >
           {label}
         </p>
 
         {!done && (
-          <p className="mt-0.5 text-xs text-amber-700/80 dark:text-amber-400">
+          <p className="mt-0.5 text-xs text-amber-400">
             {hint}
           </p>
         )}
@@ -363,13 +363,13 @@ function GateRow({
         {/* Booking-link share actions */}
         {!done && bookingUrl && (
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <code className="rounded bg-amber-100 dark:bg-amber-900/40 px-2 py-0.5 text-[11px] text-amber-800 dark:text-amber-300 truncate max-w-[200px]">
+            <code className="rounded bg-amber-900/40 px-2 py-0.5 text-[11px] text-amber-300 truncate max-w-[200px]">
               {bookingUrl}
             </code>
             {onCopyLink && (
               <button
                 onClick={onCopyLink}
-                className="text-xs font-medium text-amber-700 dark:text-amber-400 hover:text-amber-900 dark:hover:text-amber-200 underline underline-offset-2 transition-colors"
+                className="text-xs font-medium text-amber-400 hover:text-amber-200 underline underline-offset-2 transition-colors"
               >
                 Copy link
               </button>
@@ -377,7 +377,7 @@ function GateRow({
             {onWhatsApp && (
               <button
                 onClick={onWhatsApp}
-                className="inline-flex items-center gap-1 text-xs font-medium text-green-700 dark:text-green-400 hover:text-green-900 dark:hover:text-green-200 underline underline-offset-2 transition-colors"
+                className="inline-flex items-center gap-1 text-xs font-medium text-green-400 hover:text-green-200 underline underline-offset-2 transition-colors"
               >
                 <ExternalLink size={11} />
                 Share on WhatsApp
@@ -390,7 +390,7 @@ function GateRow({
         {!done && action && actionLabel && onNavigate && (
           <button
             onClick={() => onNavigate(action)}
-            className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-amber-700 dark:text-amber-400 hover:text-amber-900 dark:hover:text-amber-200 underline underline-offset-2 transition-colors"
+            className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-amber-400 hover:text-amber-200 underline underline-offset-2 transition-colors"
           >
             <ExternalLink size={11} />
             {actionLabel}

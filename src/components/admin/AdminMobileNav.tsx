@@ -60,7 +60,7 @@ const AdminMobileNav = ({ activeView, onSelect, pendingCount = 0 }: AdminMobileN
             {isActive && (
               <motion.div
                 layoutId="mobile-nav-active"
-                className="absolute inset-x-2 inset-y-1.5 rounded-xl bg-white/[0.07]"
+                className="absolute inset-x-2 inset-y-1.5 rounded-xl bg-[#D99B43]/[0.14] border border-[#D99B43]/20"
                 transition={{ type: "spring", stiffness: 380, damping: 32 }}
               />
             )}

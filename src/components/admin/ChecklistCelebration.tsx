@@ -98,7 +98,7 @@ export function ChecklistCelebration({ open, onClose }: Props) {
       />
 
       {/* Card */}
-      <div className="relative w-full max-w-sm overflow-hidden rounded-2xl border border-amber-200 bg-white shadow-2xl animate-in zoom-in-95 duration-300 dark:border-amber-800/50 dark:bg-zinc-900">
+      <div className="nexty-glass-strong relative w-full max-w-sm overflow-hidden rounded-2xl animate-in zoom-in-95 duration-300">
         {/* Top band */}
         <div className="h-1.5 w-full bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500" />
 
@@ -106,7 +106,7 @@ export function ChecklistCelebration({ open, onClose }: Props) {
         <button
           onClick={onClose}
           aria-label="Close celebration"
-          className="absolute right-4 top-4 rounded-md p-1 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+          className="absolute right-4 top-4 rounded-md p-1 text-white/40 transition-colors hover:bg-white/[0.08] hover:text-white/70"
         >
           <X size={16} />
         </button>
@@ -114,17 +114,17 @@ export function ChecklistCelebration({ open, onClose }: Props) {
         {/* Content */}
         <div className="flex flex-col gap-4 p-6 pt-7">
           <div>
-            <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+            <h2 className="text-lg font-bold text-[#F1F0EC]">
               You&apos;re all set up! 🎉
             </h2>
-            <p className="mt-1.5 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
+            <p className="mt-1.5 text-sm leading-relaxed text-white/55">
               Every step is complete. Your booking page is live and ready to
               take appointments.
             </p>
           </div>
 
-          <div className="w-full rounded-xl border border-amber-200/60 bg-amber-50 px-4 py-3 dark:border-amber-800/30 dark:bg-amber-950/30">
-            <p className="text-xs font-medium text-amber-700 dark:text-amber-400">
+          <div className="nexty-tint-warning w-full rounded-xl px-4 py-3">
+            <p className="text-xs font-medium text-amber-300">
               Share your booking link and get your first appointment today.
             </p>
           </div>

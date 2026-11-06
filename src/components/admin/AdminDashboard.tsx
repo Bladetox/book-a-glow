@@ -148,7 +148,7 @@ const ClientMiniCard = ({
     type="button"
     layoutId={id}
     onClick={() => onExpand({ id, label, value, valueColor, title, explain, benchmark, calculationNote })}
-    className="w-full min-h-28 text-left rounded-xl border border-white/[0.10] bg-white/[0.02] cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+    className="w-full min-h-28 text-left rounded-xl nexty-card cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
     whileTap={{ scale: 0.97 }}
     transition={{ type: "spring", stiffness: 340, damping: 30 }}
     aria-label={`Learn more about ${label}`}
@@ -205,7 +205,7 @@ const AppointmentsList = ({
       {appointments.map((a) => (
         <div
           key={a.id}
-          className="rounded-lg border border-white/[0.10] bg-white/[0.02] p-3 flex items-center gap-3 cursor-pointer hover:bg-white/[0.04] transition-colors"
+          className="rounded-lg nexty-inset p-3 flex items-center gap-3 cursor-pointer hover:bg-white/[0.04] transition-colors"
           onClick={() => onSelect?.(a.client)}
         >
           <div className="flex flex-col items-center shrink-0 w-12">
@@ -327,7 +327,7 @@ export const AdminDashboardView = ({
     return (
       <div className="flex flex-col gap-4">
         {[...Array(3)].map((_, i) => (
-          <div key={i} className="rounded-2xl border border-white/[0.10] bg-white/[0.02] p-5 animate-pulse">
+          <div key={i} className="rounded-2xl nexty-card p-5 animate-pulse">
             <div className="h-3 w-24 rounded bg-white/[0.06] mb-3" />
             <div className="h-8 w-32 rounded bg-white/[0.06]" />
           </div>
@@ -453,7 +453,7 @@ export const AdminDashboardView = ({
             exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden"
           >
-            <div className="rounded-xl border border-white/[0.10] bg-white/[0.02] p-4">
+            <div className="rounded-xl nexty-inset p-4">
               <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/30 mb-3">Show / Hide Sections</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {ALL_SECTIONS.map((key) => (
@@ -482,7 +482,7 @@ export const AdminDashboardView = ({
         <motion.section {...fadeUp} transition={{ duration: 0.35 }}>
           <button
             onClick={() => onNavigate?.("Recommendations")}
-            className="w-full flex items-center justify-between gap-3 rounded-2xl border border-white/[0.07] bg-white/[0.02] px-4 py-3.5 hover:bg-white/[0.05] hover:border-white/[0.12] transition-all group"
+            className="w-full flex items-center justify-between gap-3 rounded-2xl nexty-card px-4 py-3.5 hover:border-[#D99B43]/30 transition-all group"
           >
             <div className="flex items-center gap-3 min-w-0">
               <AdminNextyOrb size="small" />
@@ -503,7 +503,7 @@ export const AdminDashboardView = ({
 
       {visibility.hero && (
         <motion.section {...fadeUp} transition={{ duration: 0.35 }}>
-          <div className="rounded-2xl border border-white/[0.10] bg-white/[0.02] p-5 flex flex-col gap-4">
+          <div className="rounded-2xl nexty-card p-5 flex flex-col gap-4">
             {!demo && <SetupChecklist onNavigate={onNavigate} />}
 
             {/* ── Month revenue header ── */}
@@ -612,7 +612,7 @@ export const AdminDashboardView = ({
                   className={`flex flex-col gap-0.5 px-3 py-2.5 rounded-xl border transition-colors ${
                     item.urgent
                       ? "border-amber-500/30 bg-amber-500/[0.04]"
-                      : "border-white/[0.05] bg-white/[0.02]"
+                      : "nexty-inset"
                   }`}
                 >
                   <span className="text-[9px] tracking-[0.1em] uppercase text-white/25">{item.label}</span>
@@ -628,7 +628,7 @@ export const AdminDashboardView = ({
 
       {visibility.todayAppointments && (
         <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.16 }}>
-          <div className="rounded-2xl border border-white/[0.10] bg-white/[0.02] p-5">
+          <div className="rounded-2xl nexty-card p-5">
             <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/55 mb-1">Today's Schedule</p>
             <p className="text-xs text-white/30 mb-4">Appointments and payment status for today.</p>
             {(data.todayAppointments ?? []).length === 0 ? (
@@ -729,7 +729,7 @@ export const AdminDashboardView = ({
                   transition={{ type: "spring", stiffness: 400, damping: 32, restSpeed: 0.5, restDelta: 0.5 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => { setAlertModalType("overdue_loyalty"); setAlertModalOpen(true); }}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.10] bg-white/[0.02] p-3.5 hover:bg-white/[0.05] transition-colors text-left"
+                  className="flex items-center justify-between gap-3 rounded-xl nexty-inset p-3.5 hover:bg-white/[0.05] transition-colors text-left"
                 >
                   <div className="flex items-center gap-3">
                     <div className="p-1.5 rounded-lg bg-amber-500/10">
@@ -747,7 +747,7 @@ export const AdminDashboardView = ({
                   transition={{ type: "spring", stiffness: 400, damping: 32, restSpeed: 0.5, restDelta: 0.5 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={() => { setAlertModalType("inactive_90_days"); setAlertModalOpen(true); }}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-white/[0.10] bg-white/[0.02] p-3.5 hover:bg-white/[0.05] transition-colors text-left"
+                  className="flex items-center justify-between gap-3 rounded-xl nexty-inset p-3.5 hover:bg-white/[0.05] transition-colors text-left"
                 >
                   <div className="flex items-center gap-3">
                     <div className="p-1.5 rounded-lg bg-blue-500/10">
@@ -774,7 +774,7 @@ export const AdminDashboardView = ({
 
       {visibility.heatmap && (
         <motion.section {...fadeUp} transition={{ duration: 0.35, delay: 0.14 }}>
-          <div className="rounded-2xl border border-white/[0.10] bg-white/[0.02] p-5">
+          <div className="rounded-2xl nexty-card p-5">
             <div className="flex items-center justify-between mb-4">
               <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/25">Booking Heatmap</p>
               <button
@@ -810,7 +810,7 @@ export const AdminDashboardView = ({
               calculationNote: METRIC_COPY.leadSource.calculationNote,
               extraLines: leadSourceExtraLines,
             })}
-            className="w-full text-left rounded-xl border border-white/[0.10] bg-white/[0.02] cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+            className="w-full text-left rounded-xl nexty-card cursor-pointer select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
             whileTap={{ scale: 0.97 }}
             transition={{ type: "spring", stiffness: 340, damping: 30 }}
             aria-label="Learn more about Top Acquisition Channel"

@@ -157,14 +157,14 @@ const RevenueTrendCard = ({ revenueTrend, periodRevenue: _periodRevenue, lastPer
   }, [maxVal]);
 
   if (loading) return (
-    <div className="rounded-xl border border-white/[0.06] bg-white/[0.03] p-5">
+    <div className="rounded-xl nexty-card p-5">
       <Skeleton />
     </div>
   );
 
   return (
     <div
-      className="rounded-xl border border-white/[0.08] bg-white/[0.025] p-4 sm:p-5 flex flex-col gap-3 overflow-hidden"
+      className="rounded-xl nexty-card p-4 sm:p-5 flex flex-col gap-3 overflow-hidden"
       onTouchStart={() => setTappedIdx(null)}
     >
       <AdminMetricExplanation open={showInfo} onOpenChange={setShowInfo} title="Collections Trend" description="This chart shows completed payment receipts over time. It tracks money received, not the number or value of appointments booked." extraLines={ADMIN_METRIC_INFO.collectionsTrend} extraLinesTitle="How to read it" />
@@ -204,7 +204,7 @@ const RevenueTrendCard = ({ revenueTrend, periodRevenue: _periodRevenue, lastPer
         </div>
 
         {bestDay && bestDay.value > 0 && (
-          <div className="shrink-0 rounded-lg border border-white/[0.06] bg-white/[0.03] px-3 py-2 text-right">
+          <div className="shrink-0 rounded-lg nexty-inset px-3 py-2 text-right">
             <p className="text-[9px] tracking-[0.1em] uppercase text-white/20">Best Day</p>
             <p className="text-sm font-bold text-emerald-400/90 tabular-nums">
               R {Number(bestDay.value).toLocaleString("en-ZA", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}

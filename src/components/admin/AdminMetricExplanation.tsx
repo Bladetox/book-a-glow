@@ -108,14 +108,14 @@ export function AdminMetricExplanation({
         </DialogHeader>
 
         {example && (
-          <div className="mx-5 mb-3 rounded-lg border border-white/[0.08] bg-white/[0.035] px-3 py-3">
+          <div className="mx-5 mb-3 rounded-lg nexty-card px-3 py-3">
             <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/35">Example</p>
             <p className="text-[13px] leading-relaxed text-white/70">{example}</p>
           </div>
         )}
 
         {calculationNote && (
-          <div className="mx-5 mb-3 rounded-lg border border-white/[0.08] bg-white/[0.025] px-3 py-3">
+          <div className="mx-5 mb-3 rounded-lg nexty-card px-3 py-3">
             <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-white/35">How it is calculated</p>
             <p className="text-[12px] leading-relaxed text-white/55">{calculationNote}</p>
           </div>

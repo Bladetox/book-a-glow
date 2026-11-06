@@ -164,14 +164,14 @@ export const AdminSidebarView = ({
         onClick={() => { handleSelect(view); onClose?.(); }}
         className={`relative flex items-center gap-3 pl-10 pr-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 text-left w-full overflow-hidden ${
           isActive
-            ? "bg-white/[0.08] text-white"
+            ? "bg-[#D99B43]/[0.14] text-[#F5CD8B] border border-[#D99B43]/20"
             : "text-white/35 hover:text-white/65 hover:bg-white/[0.03]"
         }`}
       >
         {isActive && (
           <motion.div
             layoutId="sidebar-active"
-            className="absolute inset-0 rounded-xl bg-white/[0.06]"
+            className="absolute inset-0 rounded-xl bg-[#D99B43]/[0.12] border border-[#D99B43]/20"
             transition={{ type: "spring", stiffness: 380, damping: 32 }}
           />
         )}
@@ -214,10 +214,10 @@ export const AdminSidebarView = ({
         className={`relative flex min-h-11 w-full items-center gap-3 rounded-xl text-left text-sm font-medium transition-all duration-200 overflow-hidden ${
           railCollapsed ? "justify-center px-0 py-2.5" : "px-4 py-2.5"
         } ${
-          isActive ? "bg-white/[0.08] text-white" : "text-white/40 hover:text-white/70 hover:bg-white/[0.03]"
+          isActive ? "bg-[#D99B43]/[0.14] text-[#F5CD8B] border border-[#D99B43]/20" : "text-white/40 hover:text-white/70 hover:bg-white/[0.03]"
         }`}
       >
-        {isActive && <motion.div layoutId="sidebar-active" className="absolute inset-0 rounded-xl bg-white/[0.06]" transition={{ type: "spring", stiffness: 380, damping: 32 }} />}
+        {isActive && <motion.div layoutId="sidebar-active" className="absolute inset-0 rounded-xl bg-[#D99B43]/[0.12] border border-[#D99B43]/20" transition={{ type: "spring", stiffness: 380, damping: 32 }} />}
         <div className="relative z-10 w-4 h-4 shrink-0"><Icon className="w-4 h-4" /></div>
         {!railCollapsed && <span className="relative z-10 truncate">{item.label}</span>}
       </button>
@@ -227,7 +227,7 @@ export const AdminSidebarView = ({
     return (
       <Tooltip key={item.view}>
         <TooltipTrigger asChild>{button}</TooltipTrigger>
-        <TooltipContent side="right" className="border-white/10 bg-zinc-900 text-white">{item.label}</TooltipContent>
+        <TooltipContent side="right" className="nexty-glass-strong text-white">{item.label}</TooltipContent>
       </Tooltip>
     );
   };
@@ -256,7 +256,7 @@ export const AdminSidebarView = ({
               <div className="w-4 h-4 shrink-0"><GroupIcon className="w-4 h-4" /></div>
             </button>
           </PopoverTrigger>
-          <PopoverContent side="right" align="start" sideOffset={10} className="z-[70] w-60 border-white/[0.10] bg-[#111111] p-2 text-white shadow-2xl">
+          <PopoverContent side="right" align="start" sideOffset={10} className="nexty-glass-strong z-[70] w-60 p-2 text-white">
             <p className="px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-white/35">{item.label}</p>
             <div className="flex flex-col gap-1">
               {visibleChildren.map((view) => {
@@ -271,7 +271,7 @@ export const AdminSidebarView = ({
                     onClick={() => { handleSelect(view); onClose?.(); setOpenRailGroup(null); }}
                     aria-current={active ? "page" : undefined}
                     className={`flex min-h-11 w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
-                      active ? "bg-white/[0.09] text-white" : "text-white/65 hover:bg-white/[0.05] hover:text-white"
+                      active ? "bg-[#D99B43]/[0.14] text-[#F5CD8B]" : "text-white/65 hover:bg-white/[0.05] hover:text-white"
                     }`}
                   >
                     <Icon className="h-4 w-4 shrink-0" />
@@ -337,7 +337,7 @@ export const AdminSidebarView = ({
       <motion.aside
         animate={{ x: xPos, width: railCollapsed ? 76 : 256 }}
         transition={{ type: "spring", stiffness: 300, damping: 35 }}
-        className={`${isCompact ? "fixed z-50" : "relative z-auto"} flex flex-col h-dvh bg-black border-r border-white/[0.06] overflow-y-auto overflow-x-hidden shrink-0`}
+        className={`${isCompact ? "fixed z-50" : "relative z-auto"} nexty-glass-strong flex flex-col h-dvh !rounded-none !border-y-0 !border-l-0 overflow-y-auto overflow-x-hidden shrink-0`}
       >
         {/* Brand header */}
         <div className={`flex items-center gap-3 py-5 border-b border-white/[0.05] ${railCollapsed ? "justify-center px-2" : "px-4"}`}>

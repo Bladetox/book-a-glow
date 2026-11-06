@@ -1,5 +1,6 @@
 import { useState, useEffect, lazy, Suspense, Component } from "react";
 import { MotionConfig } from "framer-motion";
+import "@/styles/admin-glass.css";
 import type { ReactNode } from "react";
 import { Menu, Loader2, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";

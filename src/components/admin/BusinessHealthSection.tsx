@@ -310,7 +310,7 @@ export default function BusinessHealthSection({
       </div>
 
       {/* ── Law of Common Region: Efficiency sub-group ──────────────────── */}
-      <div className="rounded-xl border border-white/[0.04] bg-white/[0.015] p-3 mb-3">
+      <div className="rounded-xl nexty-card p-3 mb-3">
         <p className="text-[9px] tracking-widest uppercase text-white/20 mb-2.5 font-semibold">
           Efficiency
         </p>
@@ -339,7 +339,7 @@ export default function BusinessHealthSection({
       </div>
 
       {/* ── Law of Common Region: Loyalty sub-group ─────────────────────── */}
-      <div className="rounded-xl border border-white/[0.04] bg-white/[0.015] p-3">
+      <div className="rounded-xl nexty-card p-3">
         <p className="text-[9px] tracking-widest uppercase text-white/20 mb-2.5 font-semibold">
           Loyalty
         </p>
