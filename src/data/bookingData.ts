@@ -22,6 +22,8 @@ export type ConsultationQuestionSnapshot = {
   key: string;
   label: string;
   type: string;
+  required?: boolean;
+  section?: string | null;
 };
 
 export type BookingState = {
@@ -47,6 +49,7 @@ export type BookingState = {
   consultationAnswers: Record<string, ConsultationAnswerValue>;
   consultationAnswerDetails: Record<string, string>; // extra detail for yes_no "Yes" answers
   consultationQuestions: ConsultationQuestionSnapshot[]; // questions shown, set by DetailsStep
+  consentConfirmed?: boolean;
 };
 
 export const initialBookingState: BookingState = {
@@ -69,6 +72,7 @@ export const initialBookingState: BookingState = {
   consultationAnswers: {},
   consultationAnswerDetails: {},
   consultationQuestions: [],
+  consentConfirmed: false,
 };
 
 export const safetyQuestions = [
