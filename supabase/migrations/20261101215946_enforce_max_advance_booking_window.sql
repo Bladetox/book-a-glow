@@ -1,124 +1,20 @@
--- Enforce max_advance_days consistently in month/day availability and write paths.
--- app_settings.max_advance_days is the admin UI override; tenants.max_advance_days
--- is the fallback for tenants without an app_settings override.
--- The boundary is inclusive: today + N days remains bookable.
--- Booking creation delegates to check_availability, preserving anonymous guest booking.
-CREATE OR REPLACE FUNCTION public.check_availability(p_staff_id uuid, p_date date, p_start_time time without time zone, p_duration_minutes integer)
- RETURNS TABLE(is_available boolean, required_slots integer, message text)
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
-DECLARE
-  v_slots_needed integer;
-  v_end_time time;
-  v_day_of_week integer;
-  v_has_override boolean;
-  v_slot_exists boolean;
-  v_tenant_id text;
-  v_gap integer := 0;
-  v_lead_time_minutes integer := 0;
-  v_max_advance_days integer := 90;
-  v_today date;
-BEGIN
-  v_slots_needed := CEIL(p_duration_minutes / 30.0);
-  v_end_time := p_start_time + (p_duration_minutes * INTERVAL '1 minute');
-  v_day_of_week := EXTRACT(DOW FROM p_date);
-  v_today := (CURRENT_TIMESTAMP AT TIME ZONE 'Africa/Johannesburg')::date;
+-- Applied to production as version 20261101215946; SQL exported from supabase_migrations.schema_migrations.
+-- Enforce max_advance_days consistently in calendar display, slot lookup,
+-- booking creation validation, and rescheduling.
+-- app_settings.max_advance_days is the admin UI's live setting; tenants.max_advance_days
+-- remains the fallback for tenants that have not saved an app_settings override.
+-- The boundary is inclusive: today + N days is bookable.
 
-  SELECT p.tenant_id INTO v_tenant_id
-  FROM public.profiles p
-  WHERE p.id = p_staff_id;
-
-  IF v_tenant_id IS NULL THEN
-    RETURN QUERY SELECT false, v_slots_needed, 'Invalid staff member'::text;
-    RETURN;
-  END IF;
-
-  SELECT COALESCE(t.max_advance_days, 90)
-  INTO v_max_advance_days
-  FROM public.tenants t
-  WHERE t.id = v_tenant_id;
-
-  SELECT COALESCE(NULLIF(s.value, '')::integer, v_max_advance_days)
-  INTO v_max_advance_days
-  FROM public.app_settings s
-  WHERE s.tenant_id = v_tenant_id AND s.key = 'max_advance_days'
-  LIMIT 1;
-  v_max_advance_days := COALESCE(v_max_advance_days, 90);
-
-  IF p_date > v_today + v_max_advance_days THEN
-    RETURN QUERY SELECT false, v_slots_needed, 'Booking date is beyond the maximum advance booking window'::text;
-    RETURN;
-  END IF;
-
-  SELECT COALESCE(NULLIF(s.value, '')::integer, 0)
-  INTO v_lead_time_minutes
-  FROM public.app_settings s
-  WHERE s.tenant_id = v_tenant_id AND s.key = 'lead_time_minutes'
-  LIMIT 1;
-  v_lead_time_minutes := COALESCE(v_lead_time_minutes, 0);
-
-  SELECT COALESCE(NULLIF(s.value, '')::integer, 0)
-  INTO v_gap
-  FROM public.app_settings s
-  WHERE s.tenant_id = v_tenant_id AND s.key = 'min_notice_minutes'
-  LIMIT 1;
-  v_gap := COALESCE(v_gap, 0);
-
-  IF (p_date + p_start_time)::timestamp <
-     ((CURRENT_TIMESTAMP AT TIME ZONE 'Africa/Johannesburg')
-       + make_interval(mins => v_lead_time_minutes))::timestamp THEN
-    RETURN QUERY SELECT false, v_slots_needed, 'Time slot is not available'::text;
-    RETURN;
-  END IF;
-
-  SELECT EXISTS (
-    SELECT 1 FROM public.staff_availability
-    WHERE staff_id = p_staff_id AND specific_date = p_date
-  ) INTO v_has_override;
-
-  SELECT EXISTS (
-    SELECT 1 FROM public.staff_availability sa
-    WHERE sa.staff_id = p_staff_id
-      AND sa.day_of_week = v_day_of_week
-      AND sa.is_available = true
-      AND sa.day_enabled = true
-      AND sa.slot_start_time = p_start_time
-      AND (
-        (v_has_override = true AND sa.specific_date = p_date)
-        OR (v_has_override = false AND sa.specific_date IS NULL)
-      )
-  ) INTO v_slot_exists;
-
-  IF NOT v_slot_exists THEN
-    RETURN QUERY SELECT false, v_slots_needed, 'Start time not in available schedule'::text;
-    RETURN;
-  END IF;
-
-  IF EXISTS (
-    SELECT 1 FROM public.bookings b
-    WHERE b.staff_id = p_staff_id
-      AND b.booking_date = p_date
-      AND b.status NOT IN ('cancelled', 'no_show')
-      AND (b.start_time - (v_gap * INTERVAL '1 minute'),
-           b.end_time + (v_gap * INTERVAL '1 minute'))
-          OVERLAPS (p_start_time, v_end_time)
-  ) THEN
-    RETURN QUERY SELECT false, v_slots_needed, 'Time slot already booked'::text;
-    RETURN;
-  END IF;
-
-  RETURN QUERY SELECT true, v_slots_needed, 'Available'::text;
-END;
-$function$
-
-
-CREATE OR REPLACE FUNCTION public.get_available_slots(p_staff_id uuid, p_date date, p_duration_minutes integer DEFAULT 30, p_session_token text DEFAULT NULL::text)
- RETURNS TABLE(slot_start time without time zone, slot_end time without time zone, is_available boolean)
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'public'
+CREATE OR REPLACE FUNCTION public.get_available_slots(
+  p_staff_id uuid,
+  p_date date,
+  p_duration_minutes integer DEFAULT 30,
+  p_session_token text DEFAULT NULL::text
+)
+RETURNS TABLE(slot_start time without time zone, slot_end time without time zone, is_available boolean)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
 AS $function$
 DECLARE
   v_tenant_id text;
@@ -217,14 +113,18 @@ BEGIN
     )
   ORDER BY sa.slot_start_time;
 END;
-$function$
+$function$;
 
-
-CREATE OR REPLACE FUNCTION public.get_month_availability(p_staff_id uuid, p_year integer, p_month integer, p_duration_minutes integer DEFAULT 30)
- RETURNS TABLE(date_str text, available_slots text[])
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'public'
+CREATE OR REPLACE FUNCTION public.get_month_availability(
+  p_staff_id uuid,
+  p_year integer,
+  p_month integer,
+  p_duration_minutes integer DEFAULT 30
+)
+RETURNS TABLE(date_str text, available_slots text[])
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
 AS $function$
 DECLARE
   v_today date;
@@ -350,14 +250,132 @@ BEGIN
   FROM available_by_date abd
   WHERE COALESCE(array_length(abd.slots, 1), 0) > 0;
 END;
-$function$
+$function$;
 
+CREATE OR REPLACE FUNCTION public.check_availability(
+  p_staff_id uuid,
+  p_date date,
+  p_start_time time without time zone,
+  p_duration_minutes integer
+)
+RETURNS TABLE(is_available boolean, required_slots integer, message text)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $function$
+DECLARE
+  v_slots_needed integer;
+  v_end_time time;
+  v_day_of_week integer;
+  v_has_override boolean;
+  v_slot_exists boolean;
+  v_tenant_id text;
+  v_gap integer := 0;
+  v_lead_time_minutes integer := 0;
+  v_max_advance_days integer := 90;
+  v_today date;
+BEGIN
+  v_slots_needed := CEIL(p_duration_minutes / 30.0);
+  v_end_time := p_start_time + (p_duration_minutes * INTERVAL '1 minute');
+  v_day_of_week := EXTRACT(DOW FROM p_date);
+  v_today := (CURRENT_TIMESTAMP AT TIME ZONE 'Africa/Johannesburg')::date;
 
-CREATE OR REPLACE FUNCTION public.reschedule_booking(p_booking_id uuid, p_new_date date, p_new_start_time time without time zone)
- RETURNS TABLE(success boolean, message text, booking_id uuid)
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'public'
+  SELECT p.tenant_id INTO v_tenant_id
+  FROM public.profiles p
+  WHERE p.id = p_staff_id;
+
+  IF v_tenant_id IS NULL THEN
+    RETURN QUERY SELECT false, v_slots_needed, 'Invalid staff member'::text;
+    RETURN;
+  END IF;
+
+  SELECT COALESCE(t.max_advance_days, 90)
+  INTO v_max_advance_days
+  FROM public.tenants t
+  WHERE t.id = v_tenant_id;
+
+  SELECT COALESCE(NULLIF(s.value, '')::integer, v_max_advance_days)
+  INTO v_max_advance_days
+  FROM public.app_settings s
+  WHERE s.tenant_id = v_tenant_id AND s.key = 'max_advance_days'
+  LIMIT 1;
+  v_max_advance_days := COALESCE(v_max_advance_days, 90);
+
+  IF p_date > v_today + v_max_advance_days THEN
+    RETURN QUERY SELECT false, v_slots_needed, 'Booking date is beyond the maximum advance booking window'::text;
+    RETURN;
+  END IF;
+
+  SELECT COALESCE(NULLIF(s.value, '')::integer, 0)
+  INTO v_lead_time_minutes
+  FROM public.app_settings s
+  WHERE s.tenant_id = v_tenant_id AND s.key = 'lead_time_minutes'
+  LIMIT 1;
+  v_lead_time_minutes := COALESCE(v_lead_time_minutes, 0);
+
+  SELECT COALESCE(NULLIF(s.value, '')::integer, 0)
+  INTO v_gap
+  FROM public.app_settings s
+  WHERE s.tenant_id = v_tenant_id AND s.key = 'min_notice_minutes'
+  LIMIT 1;
+  v_gap := COALESCE(v_gap, 0);
+
+  IF (p_date + p_start_time)::timestamp <
+     ((CURRENT_TIMESTAMP AT TIME ZONE 'Africa/Johannesburg')
+       + make_interval(mins => v_lead_time_minutes))::timestamp THEN
+    RETURN QUERY SELECT false, v_slots_needed, 'Time slot is not available'::text;
+    RETURN;
+  END IF;
+
+  SELECT EXISTS (
+    SELECT 1 FROM public.staff_availability
+    WHERE staff_id = p_staff_id AND specific_date = p_date
+  ) INTO v_has_override;
+
+  SELECT EXISTS (
+    SELECT 1 FROM public.staff_availability sa
+    WHERE sa.staff_id = p_staff_id
+      AND sa.day_of_week = v_day_of_week
+      AND sa.is_available = true
+      AND sa.day_enabled = true
+      AND sa.slot_start_time = p_start_time
+      AND (
+        (v_has_override = true AND sa.specific_date = p_date)
+        OR (v_has_override = false AND sa.specific_date IS NULL)
+      )
+  ) INTO v_slot_exists;
+
+  IF NOT v_slot_exists THEN
+    RETURN QUERY SELECT false, v_slots_needed, 'Start time not in available schedule'::text;
+    RETURN;
+  END IF;
+
+  IF EXISTS (
+    SELECT 1 FROM public.bookings b
+    WHERE b.staff_id = p_staff_id
+      AND b.booking_date = p_date
+      AND b.status NOT IN ('cancelled', 'no_show')
+      AND (b.start_time - (v_gap * INTERVAL '1 minute'),
+           b.end_time + (v_gap * INTERVAL '1 minute'))
+          OVERLAPS (p_start_time, v_end_time)
+  ) THEN
+    RETURN QUERY SELECT false, v_slots_needed, 'Time slot already booked'::text;
+    RETURN;
+  END IF;
+
+  RETURN QUERY SELECT true, v_slots_needed, 'Available'::text;
+END;
+$function$;
+
+CREATE OR REPLACE FUNCTION public.reschedule_booking(
+  p_booking_id uuid,
+  p_new_date date,
+  p_new_start_time time without time zone
+)
+RETURNS TABLE(success boolean, message text, booking_id uuid)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
 AS $function$
 DECLARE
   v_booking bookings%ROWTYPE;
@@ -426,10 +444,4 @@ BEGIN
 
   RETURN QUERY SELECT true, 'Rescheduled successfully'::text, p_booking_id;
 END;
-$function$
-
-
--- Preserve the existing public RPC access model.
-GRANT EXECUTE ON FUNCTION public.get_available_slots(uuid,date,integer,text) TO anon, authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.get_month_availability(uuid,integer,integer,integer) TO anon, authenticated, service_role;
-GRANT EXECUTE ON FUNCTION public.check_availability(uuid,date,time without time zone,integer) TO anon, authenticated, service_role;
+$function$;

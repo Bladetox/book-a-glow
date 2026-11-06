@@ -6,23 +6,18 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const GOOGLE_CLIENT_ID = Deno.env.get("GOOGLE_CLIENT_ID")!;
 const GOOGLE_CLIENT_SECRET = Deno.env.get("GOOGLE_CLIENT_SECRET")!;
 
+const ROOT_DOMAIN = Deno.env.get("ROOT_DOMAIN") ?? "nextslot.co.za";
+
 const REDIRECT_URI = `${SUPABASE_URL}/functions/v1/google-calendar-callback`;
 
-// Allowed origins for the post-OAuth returnUrl to prevent open redirects
-const ALLOWED_RETURN_ORIGINS = [
-  "https://nextslot.co.za",
-  "https://www.nextslot.co.za",
-  "https://book-a-glow.vercel.app",
-  "https://phenomebeauty.nextslot.co.za",
-];
-
+// The returnUrl arrives in the unsigned OAuth state, so only redirect to our
+// own domains to prevent this endpoint being used as an open redirect.
 function isSafeReturnUrl(url: string): boolean {
   if (!url) return false;
   try {
     const parsed = new URL(url);
-    return ALLOWED_RETURN_ORIGINS.some(
-      (origin) => parsed.origin === new URL(origin).origin
-    ) || parsed.hostname.endsWith(".nextslot.co.za");
+    if (parsed.protocol !== "https:") return false;
+    return parsed.hostname === ROOT_DOMAIN || parsed.hostname.endsWith(`.${ROOT_DOMAIN}`);
   } catch {
     return false;
   }
@@ -43,16 +38,18 @@ serve(async (req: Request) => {
   try {
     const parsed = JSON.parse(atob(stateRaw ?? ""));
     tenantId = parsed.tenantId ?? "";
-    // Validate returnUrl against allowed origins to prevent open redirect
-    const rawReturn = parsed.returnUrl ?? "";
-    returnUrl = isSafeReturnUrl(rawReturn) ? rawReturn : "";
+    returnUrl = isSafeReturnUrl(parsed.returnUrl ?? "") ? parsed.returnUrl : "";
   } catch {
-    return redirect("https://phenomebeauty.nextslot.co.za/admin?gcal=error");
+    // state unparseable — redirect to generic error
+    return redirect(`https://${ROOT_DOMAIN}/admin?gcal=error`);
   }
 
+  // Build fail URL: derive from returnUrl if present, else generic
   const failUrl = returnUrl
-    ? returnUrl.replace("gcal=connected", "gcal=error")
-    : "https://phenomebeauty.nextslot.co.za/admin?gcal=error";
+    ? returnUrl.includes("gcal=")
+      ? returnUrl.replace(/gcal=[^&]*/, "gcal=error")
+      : `${returnUrl}${returnUrl.includes("?") ? "&" : "?"}gcal=error`
+    : `https://${tenantId ? `${tenantId}.${ROOT_DOMAIN}` : ROOT_DOMAIN}/admin?gcal=error`;
 
   if (error || !code || !tenantId) {
     return redirect(failUrl);
@@ -96,7 +93,14 @@ serve(async (req: Request) => {
       if (dbErr) console.error("DB upsert error:", dbErr);
     }
 
-    return redirect(returnUrl || "https://phenomebeauty.nextslot.co.za/admin?gcal=connected");
+    // Success: redirect back to wherever the tenant admin initiated the flow
+    const successUrl = returnUrl
+      ? returnUrl.includes("gcal=")
+        ? returnUrl.replace(/gcal=[^&]*/, "gcal=connected")
+        : `${returnUrl}${returnUrl.includes("?") ? "&" : "?"}gcal=connected`
+      : `https://${tenantId}.${ROOT_DOMAIN}/admin?gcal=connected`;
+
+    return redirect(successUrl);
 
   } catch (err) {
     console.error("Callback error:", err);

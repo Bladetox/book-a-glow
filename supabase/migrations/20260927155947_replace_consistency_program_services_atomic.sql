@@ -1,11 +1,13 @@
--- Match the RPC already deployed to the live Supabase project.
--- A later migration restricts EXECUTE before application code uses this function.
-CREATE OR REPLACE FUNCTION public.replace_consistency_program_services(p_program_id uuid, p_rows jsonb)
- RETURNS void
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO ''
-AS $function$
+-- Applied to production as version 20260927155947; SQL exported from supabase_migrations.schema_migrations.
+create function public.replace_consistency_program_services(
+  p_program_id uuid,
+  p_rows jsonb
+)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
 declare
   v_tenant_id text;
   v_bad_count integer;
@@ -104,4 +106,9 @@ begin
     from jsonb_array_elements(p_rows) as elem;
   end if;
 end;
-$function$;
+$$;
+
+revoke all on function public.replace_consistency_program_services(uuid, jsonb)
+  from public;
+grant execute on function public.replace_consistency_program_services(uuid, jsonb)
+  to authenticated;

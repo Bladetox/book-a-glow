@@ -5,15 +5,6 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 // yoco-webhook  v6
 // Handles Yoco payment.succeeded / payment.failed for NextSlot platform invoices.
 //
-// NOTE: despite the name, this is NOT the per-tenant booking-payment webhook.
-// It only ever touches platform_invoices / platform_payments (NextSlot's own
-// SaaS billing against tenants). The function that handles a tenant's client
-// booking deposit/balance/full payments is booking-payment-webhook — see
-// supabase/functions/booking-payment-webhook/index.ts. The repo previously
-// had a different, never-deployed booking-payment implementation living
-// under this slug's folder, which caused real confusion — pulled the actual
-// deployed source here instead so the two stop diverging.
-//
 // FIX v6: Correct HMAC verification matching Yoco's actual webhook format:
 //   Headers: webhook-id, webhook-timestamp, webhook-signature
 //   Signed payload: "<webhook-id>.<webhook-timestamp>.<rawBody>"

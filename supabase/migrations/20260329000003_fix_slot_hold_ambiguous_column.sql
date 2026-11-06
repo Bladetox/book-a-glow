@@ -1,3 +1,0 @@
--- Superseded by 20260329000001_slot_holds_rpcs.sql (updated in place)
--- This file is intentionally left as a no-op marker.
--- The acquire_slot_hold function was fixed directly via SQL Editor on 2026-03-29.

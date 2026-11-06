@@ -18,14 +18,14 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    // Resolve tenant_id from Origin/Referer subdomain only — never from request body
-    // to prevent cross-tenant API key enumeration.
+    // Resolve tenant_id from the Origin/Referer subdomain only — never from the
+    // request body, which would let any caller spend another tenant's API key.
     let tenantId: string | null = null;
     const reqOrigin = req.headers.get('Origin') ?? req.headers.get('Referer') ?? '';
     const sub = reqOrigin.match(/https?:\/\/([^.]+)\.nextslot\.co\.za/);
     if (sub) tenantId = sub[1];
 
-    // Fetch API key from DB (preferred) then fall back to Supabase secret
+    // Fetch API key — app_settings first, then Vault if sentinel, then env fallback
     let apiKey: string | null = null;
     if (tenantId) {
       const { data } = await supabase
@@ -34,7 +34,23 @@ Deno.serve(async (req) => {
         .eq('tenant_id', tenantId)
         .eq('key', 'google_maps_api_key')
         .maybeSingle();
-      apiKey = data?.value ?? null;
+
+      const rawValue = data?.value ?? null;
+
+      if (rawValue && rawValue !== 'vault:configured') {
+        // Plain value stored directly
+        apiKey = rawValue;
+      } else if (rawValue === 'vault:configured') {
+        // Key has been migrated to Vault — resolve from decrypted_secrets view
+        const { data: vaultData, error: vaultErr } = await supabase
+          .from('vault.decrypted_secrets')
+          .select('decrypted_secret')
+          .eq('name', `${tenantId}:google_maps_api_key`)
+          .maybeSingle();
+        if (!vaultErr && vaultData?.decrypted_secret) {
+          apiKey = vaultData.decrypted_secret;
+        }
+      }
     }
     if (!apiKey) apiKey = Deno.env.get('GOOGLE_PLACES_API_KEY') ?? null;
 
