@@ -414,7 +414,7 @@ export const ConsultationFormBuilder = () => {
         </div>
 
         {previewOpen && (
-          <div className="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-4 flex flex-col gap-2">
+          <div className="rounded-2xl nexty-card p-4 flex flex-col gap-2">
             <p className="text-[10px] font-bold text-white/25 uppercase tracking-widest mb-1">
               Standard {businessType ? BUSINESS_TYPE_LABELS[businessType] : 'General'} questions (fallback)
             </p>
@@ -451,7 +451,7 @@ export const ConsultationFormBuilder = () => {
         {questions.map((q, idx) => (
           <div
             key={q.localKey}
-            className="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-4 flex flex-col gap-3"
+            className="rounded-2xl nexty-card p-4 flex flex-col gap-3"
           >
             <div className="flex items-center gap-2">
               <GripVertical className="w-3.5 h-3.5 text-white/15 shrink-0" />

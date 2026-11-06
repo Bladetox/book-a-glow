@@ -157,7 +157,7 @@ const AdminClientManagement = () => {
       />
 
       {/* Tab bar */}
-      <div className="flex items-center gap-1 p-1 rounded-2xl bg-white/[0.04] border border-white/[0.06] overflow-x-auto scrollbar-hide" role="group" aria-label="Client management sections">
+      <div className="flex items-center gap-1 p-1 rounded-2xl nexty-card overflow-x-auto scrollbar-hide" role="group" aria-label="Client management sections">
         {TABS.map(tab => (
           <button
             key={tab}

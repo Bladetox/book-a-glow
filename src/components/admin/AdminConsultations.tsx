@@ -272,7 +272,7 @@ const AdminConsultations = () => {
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-8 text-center"
+          className="rounded-2xl nexty-card p-8 text-center"
         >
           <p className="text-sm text-white/30">
             {search ? "No consultations match your search." : "No consultation forms yet."}
@@ -331,7 +331,7 @@ const AdminConsultations = () => {
                 key={c.id}
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="rounded-xl border border-white/[0.06] bg-white/[0.03] overflow-hidden"
+                className="rounded-xl nexty-card overflow-hidden"
               >
                 {/* ── row header ── */}
                 <div

@@ -160,7 +160,7 @@ function NextyLoyaltyPanel({ onNavigate }: { onNavigate?: (view: string) => void
   const badge = insights.length > 0 ? insights.length : null;
 
   return (
-    <div className="bg-white/[0.03] border border-white/[0.06] rounded-3xl overflow-hidden">
+    <div className="nexty-card rounded-3xl overflow-hidden">
       <button
         onClick={() => setOpen(s => !s)}
         className="flex items-center gap-2.5 w-full px-4 py-3 hover:bg-white/[0.04] transition-colors"
@@ -217,7 +217,7 @@ function NextyLoyaltyPanel({ onNavigate }: { onNavigate?: (view: string) => void
                     initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={adminTransition(reduceMotion, 0.18)}
-                    className="bg-white/[0.03] border border-white/[0.05] rounded-2xl overflow-hidden"
+                    className="nexty-card rounded-2xl overflow-hidden"
                   >
                     <div className="flex items-start gap-2.5 p-3 pb-2">
                       <div
@@ -257,7 +257,7 @@ function NextyLoyaltyPanel({ onNavigate }: { onNavigate?: (view: string) => void
                       {ins.actionLabel && ins.actionView && onNavigate && (
                         <button
                           onClick={() => { persistAction(ins.id); onNavigate(ins.actionView!); }}
-                          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/[0.05] border border-white/[0.08] text-xs font-medium text-white/70 hover:text-white/90 hover:bg-white/[0.08] transition-colors"
+                          className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg nexty-card text-xs font-medium text-white/70 hover:text-white/90 hover:bg-white/[0.08] transition-colors"
                         >
                           {ins.actionLabel}
                           <ArrowRight className="w-2.5 h-2.5 opacity-50" />
@@ -425,7 +425,7 @@ function CandidatesBar({
   const total = nexty.length + criteria.length;
 
   return (
-    <div className="bg-white/[0.03] border border-white/[0.06] rounded-3xl p-4 space-y-3">
+    <div className="nexty-card rounded-3xl p-4 space-y-3">
       <div className="flex items-center gap-2">
         <UserPlus className="w-3.5 h-3.5 text-white/50" />
         <span className="text-xs font-semibold text-white/60">
@@ -449,7 +449,7 @@ function CandidatesBar({
               className={`flex items-center gap-1.5 px-3 py-2 shrink-0 rounded-xl text-xs font-medium transition-all
                 ${isCriteria
                   ? "bg-violet-500/[0.08] hover:bg-violet-500/[0.14] border border-violet-500/20 text-violet-300/80"
-                  : "bg-white/[0.05] hover:bg-white/[0.09] border border-white/[0.08] text-white/70"
+                  : "bg-white/[0.05] hover:nexty-card text-white/70"
                 }`}
             >
               <UserPlus className={`w-3 h-3 shrink-0 ${isCriteria ? "text-violet-400/60" : "text-white/40"}`} />
@@ -945,7 +945,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => { if (reminderWeeks > 1) { setReminderWeeks(w => w - 1); markDirty(); } }}
-                        className="w-11 h-11 min-w-11 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white/50 hover:bg-white/[0.08] hover:text-white/90 transition-all flex items-center justify-center text-lg font-bold shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70"
+                        className="w-11 h-11 min-w-11 rounded-xl nexty-card text-white/50 hover:bg-white/[0.08] hover:text-white/90 transition-all flex items-center justify-center text-lg font-bold shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70"
                         aria-label="Decrease reminder weeks"
                       >−</button>
                       <input
@@ -956,7 +956,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                       />
                       <button
                         onClick={() => { if (reminderWeeks < 52) { setReminderWeeks(w => w + 1); markDirty(); } }}
-                        className="w-11 h-11 min-w-11 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white/50 hover:bg-white/[0.08] hover:text-white/90 transition-all flex items-center justify-center text-lg font-bold shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70"
+                        className="w-11 h-11 min-w-11 rounded-xl nexty-card text-white/50 hover:bg-white/[0.08] hover:text-white/90 transition-all flex items-center justify-center text-lg font-bold shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70"
                         aria-label="Increase reminder weeks"
                       >+</button>
                     </div>
@@ -1025,7 +1025,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => { if (minBookings > 1) { setMinBookings(b => b - 1); markDirty(); } }}
-                        className="w-11 h-11 min-w-11 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white/50 hover:bg-white/[0.08] hover:text-white/90 transition-all flex items-center justify-center text-lg font-bold shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70"
+                        className="w-11 h-11 min-w-11 rounded-xl nexty-card text-white/50 hover:bg-white/[0.08] hover:text-white/90 transition-all flex items-center justify-center text-lg font-bold shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70"
                         aria-label="Decrease min bookings"
                       >−</button>
                       <input
@@ -1036,7 +1036,7 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
                       />
                       <button
                         onClick={() => { if (minBookings < 20) { setMinBookings(b => b + 1); markDirty(); } }}
-                        className="w-11 h-11 min-w-11 rounded-xl bg-white/[0.04] border border-white/[0.08] text-white/50 hover:bg-white/[0.08] hover:text-white/90 transition-all flex items-center justify-center text-lg font-bold shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70"
+                        className="w-11 h-11 min-w-11 rounded-xl nexty-card text-white/50 hover:bg-white/[0.08] hover:text-white/90 transition-all flex items-center justify-center text-lg font-bold shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400/70"
                         aria-label="Increase min bookings"
                       >+</button>
                     </div>
