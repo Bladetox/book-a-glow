@@ -1,15 +1,16 @@
-import { BookingState, safetyQuestions } from "@/data/bookingData";
+import { BookingState } from "@/data/bookingData";
 import {
   BusinessType,
   ConsultationQuestionDefinition,
   defaultConsultationQuestions,
 } from "@/data/defaultConsultationQuestions";
 import { motion, AnimatePresence } from "framer-motion";
-import { useRef, useState, useCallback, useEffect } from "react";
-import { User, Phone, Mail, MapPin, ShieldCheck, Star, Sparkles, X } from "lucide-react";
+import { useRef, useState, useCallback, useEffect, useMemo } from "react";
+import { User, Phone, Mail, MapPin, Star, Sparkles, X, Check } from "lucide-react";
 import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
 import { usePublicTenant } from "@/contexts/PublicTenantContext";
 import { supabase } from "@/integrations/supabase/client";
+import { isAnswered } from "@/lib/consultationSections";
 
 interface DetailsStepProps {
   booking: BookingState;
@@ -46,6 +47,7 @@ interface ConsultationQRendererProps {
   onAnswer: (key: string, value: import("@/data/bookingData").ConsultationAnswerValue) => void;
   onDetail: (key: string, value: string) => void;
   inputClass: string;
+  showError?: boolean;
 }
 
 const ConsultationQRenderer = ({
@@ -56,8 +58,20 @@ const ConsultationQRenderer = ({
   onAnswer,
   onDetail,
   inputClass,
+  showError = false,
 }: ConsultationQRendererProps) => {
   const answer = answers[q.key];
+
+  // A radio/checkbox question without options cannot be answered as configured.
+  // Render a text input instead so a misconfigured form cannot block the client.
+  const effectiveType =
+    (q.type === "radio" || q.type === "checkbox") &&
+    (!q.options || q.options.length === 0)
+      ? "text"
+      : q.type;
+
+  const answered = isAnswered(answer);
+  const groupErrorClass = showError ? "ring-1 ring-destructive/40 rounded-2xl p-2 -m-2" : "";
 
   return (
     <motion.div
@@ -65,117 +79,174 @@ const ConsultationQRenderer = ({
       initial={{ opacity: 0, x: -10 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ delay: idx * 0.04 }}
-      className="flex flex-col gap-2"
+      className={`grid grid-cols-[24px_1fr] gap-3 ${groupErrorClass}`}
     >
-      <p className="text-sm text-foreground">
-        {idx + 1}. {q.label}
-        {q.required && <span className="text-destructive ml-0.5">*</span>}
-      </p>
+      <span className="pt-[3px] text-xs font-semibold tabular-nums">
+        {answered ? (
+          <Check className="w-3.5 h-3.5 text-primary" aria-label="answered" />
+        ) : (
+          <span className="text-primary/70">{String(idx + 1).padStart(2, "0")}</span>
+        )}
+      </span>
 
-      {q.type === "yes_no" && (
-        <>
-          <div className="flex gap-2">
-            {([false, true] as const).map((val) => (
-              <motion.button
-                key={String(val)}
-                whileTap={{ scale: 0.9 }}
-                onClick={() => onAnswer(q.key, val)}
-                className={`px-5 py-3 rounded-xl text-xs font-medium transition-all duration-200 min-w-[64px]
-                  ${answer === val
-                    ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
-                    : "bg-muted/60 text-muted-foreground hover:text-foreground"
-                  }`}
-              >
-                {val ? "Yes" : "No"}
-              </motion.button>
-            ))}
-          </div>
-          <AnimatePresence>
-            {answer === true && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.2 }}
-                className="overflow-hidden mt-1"
-              >
-                <textarea
-                  className={`${inputClass} min-h-[50px] text-xs py-2`}
-                  placeholder="Please provide details..."
-                  value={details[q.key] ?? ""}
-                  onChange={(e) => onDetail(q.key, e.target.value)}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </>
-      )}
-
-      {q.type === "text" && (
-        <input
-          type="text"
-          className={`${inputClass} text-sm`}
-          placeholder="Your answer..."
-          value={(answer as string) ?? ""}
-          onChange={(e) => onAnswer(q.key, e.target.value)}
-        />
-      )}
-
-      {q.type === "textarea" && (
-        <textarea
-          className={`${inputClass} min-h-[60px] text-sm`}
-          placeholder="Your answer..."
-          value={(answer as string) ?? ""}
-          onChange={(e) => onAnswer(q.key, e.target.value)}
-        />
-      )}
-
-      {q.type === "radio" && q.options && (
-        <div className="flex flex-wrap gap-2">
-          {q.options.map((opt) => (
-            <motion.button
-              key={opt}
-              whileTap={{ scale: 0.92 }}
-              onClick={() => onAnswer(q.key, opt)}
-              className={`px-4 py-2 rounded-xl text-xs font-medium transition-all duration-200
-                ${answer === opt
-                  ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
-                  : "bg-muted/60 text-muted-foreground hover:text-foreground"
-                }`}
+      <div className="flex flex-col gap-2.5">
+        {effectiveType === "yes_no" && (
+          <fieldset className="flex flex-col gap-2.5">
+            <legend className="text-[15px] leading-snug text-foreground">
+              {q.label}
+              {q.required && <span className="text-destructive ml-1">*</span>}
+            </legend>
+            <div
+              role="radiogroup"
+              aria-required={q.required || undefined}
+              className="grid grid-cols-2 gap-2"
             >
-              {opt}
-            </motion.button>
-          ))}
-        </div>
-      )}
+              {([false, true] as const).map((val) => {
+                const selected = answer === val;
+                return (
+                  <button
+                    key={String(val)}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    onClick={() => onAnswer(q.key, val)}
+                    className={`min-h-[48px] rounded-xl border text-sm font-medium flex items-center justify-center gap-2 transition-all
+                      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40
+                      ${selected
+                        ? "border-primary/60 bg-primary/10 text-foreground"
+                        : "border-border/50 bg-muted/20 text-muted-foreground hover:border-border hover:text-foreground"
+                      }`}
+                  >
+                    {selected && <Check className="w-4 h-4 text-primary" />}
+                    {val ? "Yes" : "No"}
+                  </button>
+                );
+              })}
+            </div>
+            <AnimatePresence>
+              {answer === true && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden flex flex-col gap-1.5 mt-1"
+                >
+                  <label
+                    htmlFor={`detail-${q.key}`}
+                    className="text-[11px] font-medium text-muted-foreground"
+                  >
+                    Please provide details
+                  </label>
+                  <textarea
+                    id={`detail-${q.key}`}
+                    className={`${inputClass} min-h-[56px] text-sm`}
+                    placeholder="e.g. details, dates, severity…"
+                    value={details[q.key] ?? ""}
+                    onChange={(e) => onDetail(q.key, e.target.value)}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </fieldset>
+        )}
 
-      {q.type === "checkbox" && q.options && (
-        <div className="flex flex-wrap gap-2">
-          {q.options.map((opt) => {
-            const selected = Array.isArray(answer) && (answer as string[]).includes(opt);
-            return (
-              <motion.button
-                key={opt}
-                whileTap={{ scale: 0.92 }}
-                onClick={() => {
-                  const prev = Array.isArray(answer) ? (answer as string[]) : [];
-                  onAnswer(
-                    q.key,
-                    selected ? prev.filter((v) => v !== opt) : [...prev, opt]
-                  );
-                }}
-                className={`px-4 py-2 rounded-xl text-xs font-medium transition-all duration-200
-                  ${selected
-                    ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
-                    : "bg-muted/60 text-muted-foreground hover:text-foreground"
-                  }`}
-              >
-                {opt}
-              </motion.button>
-            );
-          })}
-        </div>
-      )}
+        {effectiveType === "text" && (
+          <>
+            <label
+              htmlFor={`q-${q.key}`}
+              className="text-[15px] leading-snug text-foreground"
+            >
+              {q.label}
+              {q.required && <span className="text-destructive ml-1">*</span>}
+            </label>
+            <input
+              id={`q-${q.key}`}
+              type="text"
+              className={`${inputClass} text-sm`}
+              placeholder="Your answer…"
+              value={(answer as string) ?? ""}
+              onChange={(e) => onAnswer(q.key, e.target.value)}
+              aria-required={q.required || undefined}
+            />
+          </>
+        )}
+
+        {effectiveType === "textarea" && (
+          <>
+            <label
+              htmlFor={`q-${q.key}`}
+              className="text-[15px] leading-snug text-foreground"
+            >
+              {q.label}
+              {q.required && <span className="text-destructive ml-1">*</span>}
+            </label>
+            <textarea
+              id={`q-${q.key}`}
+              className={`${inputClass} min-h-[60px] text-sm`}
+              placeholder="Your answer…"
+              value={(answer as string) ?? ""}
+              onChange={(e) => onAnswer(q.key, e.target.value)}
+              aria-required={q.required || undefined}
+            />
+          </>
+        )}
+
+        {(effectiveType === "radio" || effectiveType === "checkbox") && (
+          <fieldset className="flex flex-col gap-2">
+            <legend className="text-[15px] leading-snug text-foreground">
+              {q.label}
+              {q.required && <span className="text-destructive ml-1">*</span>}
+            </legend>
+            <div
+              role={effectiveType === "radio" ? "radiogroup" : "group"}
+              aria-required={q.required || undefined}
+              className="flex flex-col gap-2"
+            >
+              {(q.options ?? []).map((opt) => {
+                const selected =
+                  effectiveType === "radio"
+                    ? answer === opt
+                    : Array.isArray(answer) && (answer as string[]).includes(opt);
+
+                return (
+                  <button
+                    key={opt}
+                    type="button"
+                    role={effectiveType === "radio" ? "radio" : "checkbox"}
+                    aria-checked={selected}
+                    onClick={() => {
+                      if (effectiveType === "radio") {
+                        onAnswer(q.key, opt);
+                      } else {
+                        const prev = Array.isArray(answer) ? (answer as string[]) : [];
+                        onAnswer(
+                          q.key,
+                          selected ? prev.filter((v) => v !== opt) : [...prev, opt],
+                        );
+                      }
+                    }}
+                    className={`min-h-[48px] w-full flex items-center justify-between gap-3 rounded-xl border px-4 text-left text-sm transition-colors
+                      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40
+                      ${selected
+                        ? "border-primary/60 bg-primary/10 text-foreground"
+                        : "border-border/50 bg-muted/20 text-muted-foreground hover:border-border"
+                      }`}
+                  >
+                    <span>{opt}</span>
+                    <span
+                      className={`shrink-0 w-4 h-4 border transition-colors
+                        ${effectiveType === "radio" ? "rounded-full" : "rounded-[4px]"}
+                        ${selected ? "border-primary bg-primary" : "border-muted-foreground/40"}`}
+                      aria-hidden="true"
+                    />
+                  </button>
+                );
+              })}
+            </div>
+          </fieldset>
+        )}
+      </div>
     </motion.div>
   );
 };
