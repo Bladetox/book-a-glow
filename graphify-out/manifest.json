@@ -1,7 +1,7 @@
 {
   ".claude/settings.json": {
-    "mtime": 1794003575.6657789,
-    "seen": 1794003580.9809904,
+    "mtime": 1794004431.562458,
+    "seen": 1794004437.303716,
     "ast_hash": "0a0ef578e59e2bb38c69f1dcb49a0e1a",
     "semantic_hash": "0a0ef578e59e2bb38c69f1dcb49a0e1a",
     "ast_empty": true
@@ -182,15 +182,15 @@
     "semantic_hash": ""
   },
   "src/components/admin/AdminConsultations.tsx": {
-    "mtime": 1794001760.1209972,
-    "seen": 1794001767.0152478,
-    "ast_hash": "186f230c0e6be7428781a6925bcf8210",
+    "mtime": 1794004431.6224582,
+    "seen": 1794004437.3037903,
+    "ast_hash": "b42374b213b85a149601aca955e4a461",
     "semantic_hash": ""
   },
   "src/components/admin/AdminDashboard.tsx": {
-    "mtime": 1794001760.1209972,
-    "seen": 1794001767.0152493,
-    "ast_hash": "ac0b30535aaea5bd1bc82179d8d56a35",
+    "mtime": 1794004431.6224582,
+    "seen": 1794004437.3037922,
+    "ast_hash": "f21a82bbcbdaf578358a9ec180a9e0f6",
     "semantic_hash": ""
   },
   "src/components/admin/AdminHelp.tsx": {
@@ -218,9 +218,9 @@
     "semantic_hash": ""
   },
   "src/components/admin/AdminMetricExplanation.tsx": {
-    "mtime": 1794003575.7425523,
-    "seen": 1794003580.9810758,
-    "ast_hash": "46844f8207c7dd2162cf9b865f00c30d",
+    "mtime": 1794004431.6247683,
+    "seen": 1794004437.3037994,
+    "ast_hash": "561ae8986a936b1436f4adea4c412f5b",
     "semantic_hash": ""
   },
   "src/components/admin/AdminMobileNav.tsx": {
@@ -302,9 +302,9 @@
     "semantic_hash": ""
   },
   "src/components/admin/BusinessHealthSection.tsx": {
-    "mtime": 1793981641.7128391,
-    "seen": 1793981645.523964,
-    "ast_hash": "243060b76a1338f21523ac7c2e240bd2",
+    "mtime": 1794004431.6249437,
+    "seen": 1794004437.3038182,
+    "ast_hash": "ea44945edd8042a0d64595ee07367f04",
     "semantic_hash": ""
   },
   "src/components/admin/CancelSubscriptionFlow.tsx": {
@@ -2314,14 +2314,14 @@
     "semantic_hash": "3280df2695a76ed77887e7c98bc744d8"
   },
   ".claude/CLAUDE.md": {
-    "mtime": 1794003575.6625524,
-    "seen": 1794003580.9813898,
+    "mtime": 1794004431.562458,
+    "seen": 1794004437.304314,
     "ast_hash": "9b31786b637be3c13978bec4c2330752",
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1794003575.670998,
-    "seen": 1794003580.981391,
+    "mtime": 1794004431.5664582,
+    "seen": 1794004437.304315,
     "ast_hash": "67d88e9d0760c3ba54c75dfd9551c1c5",
     "semantic_hash": ""
   },
@@ -2575,6 +2575,12 @@
     "mtime": 1793973968.631909,
     "seen": 1793973975.6592376,
     "ast_hash": "08d79d66bf45d5fd446dbabbd7b1b870",
+    "semantic_hash": ""
+  },
+  "src/components/admin/leadSourceConfig.tsx": {
+    "mtime": 1794004431.6249437,
+    "seen": 1794004437.303852,
+    "ast_hash": "187583ebe175f6840d70f8ab1a7a4f84",
     "semantic_hash": ""
   },
   "package-lock.json": {
