@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { useTenant } from "@/contexts/TenantContext";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowRight, TrendingUp, AlertTriangle, UserCheck,
-  Clock, RotateCcw, Package, PlusCircle,
+  Clock, RotateCcw, Package, PlusCircle, Info,
 } from "lucide-react";
 import { useNextyInsights, NextyInsight } from "@/hooks/useNextyInsights";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,7 +27,7 @@ function getFilterKey(insight: NextyInsight): InsightFilterKey | null {
 }
 
 function InsightIcon({ type, priority }: { type: string; priority: string }) {
-  const cls = "w-4 h-4";
+  const cls = "w-[17px] h-[17px]";
   if (priority === "critical") return <AlertTriangle className={cls} />;
   if (type === "margin")       return <TrendingUp    className={cls} />;
   if (type === "retention")    return <UserCheck     className={cls} />;
@@ -36,13 +36,16 @@ function InsightIcon({ type, priority }: { type: string; priority: string }) {
   return <PlusCircle className={cls} />;
 }
 
+// Priority identity is semantic (red/amber/blue) and stays separate from the
+// Nexty gold brand accent — gold never stands in for severity.
 const PRIORITY_STYLES: Record<string, { label: string; dot: string; iconBg: string; iconColor: string }> = {
-  critical:  { label: "Critical",  dot: "#ff5757", iconBg: "rgba(255,87,87,0.08)",   iconColor: "#ff5757" },
-  important: { label: "Important", dot: "#f59e0b", iconBg: "rgba(245,158,11,0.08)", iconColor: "#f59e0b" },
-  info:      { label: "Info",      dot: "#60a5fa", iconBg: "rgba(96,165,250,0.08)",  iconColor: "#60a5fa" },
+  critical:  { label: "Critical",  dot: "#ff6b6b", iconBg: "rgba(255,107,107,0.12)", iconColor: "#ff8a8a" },
+  important: { label: "Important", dot: "#f5a524", iconBg: "rgba(245,165,36,0.12)",  iconColor: "#f5b84f" },
+  info:      { label: "Info",      dot: "#60a5fa", iconBg: "rgba(96,165,250,0.12)",  iconColor: "#7db6fb" },
 };
 
 const MAX_CARDS = 4;
+const PREVIEW_LIMIT = 160;
 
 // -- Main Component -----------------------------------------------------------
 export default function AdminRecommendations({ onNavigate }: { onNavigate: (view: string) => void }) {
@@ -50,7 +53,6 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
   const { tenantId } = useTenant();
   const reduceMotion = useAdminReducedMotion();
   const [activeFilter, setActiveFilter] = useState("all");
-  const [showCards,    setShowCards]    = useState(false);
   const [isRescanning, setIsRescanning] = useState(false);
   const [dismissed,    setDismissed]    = useState<Set<string>>(new Set());
   const [expanded,     setExpanded]     = useState<Set<string>>(new Set());
@@ -68,28 +70,18 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
       expires_at:  expires,
     }, { onConflict: "tenant_id,insight_id,action_type" });
   };
-  const scrollRef = useRef<HTMLDivElement>(null);
 
-
-  useEffect(() => {
-    if (isLoading) return;
-    const t = setTimeout(() => {
-      setShowCards(true);
-    }, reduceMotion ? 0 : 1600);
-    return () => clearTimeout(t);
-  }, [isLoading, reduceMotion]);
-
+  // Cards render as soon as the underlying request state says they're ready —
+  // no artificial hold-back. The loading surface stays up for exactly as long
+  // as isLoading/refetch says it should.
+  const busy = isLoading || isRescanning;
 
   const handleRescan = async () => {
     setIsRescanning(true);
-    setShowCards(false);
     setDismissed(new Set()); // DB expires_at handles server-side suppression
     setExpanded(new Set());
     await refetch();
-    setTimeout(() => {
-      setIsRescanning(false);
-      setShowCards(true);
-    }, reduceMotion ? 0 : 1800);
+    setIsRescanning(false);
   };
 
   const allInsights = (insights ?? []).filter(i => !dismissed.has(i.id));
@@ -108,362 +100,299 @@ export default function AdminRecommendations({ onNavigate }: { onNavigate: (view
 
   const limited = filtered.slice(0, MAX_CARDS);
 
-  // -- Style tokens -----------------------------------------------------------
-  const S = {
-    surface:  "#111110",
-    surface2: "#161614",
-    surface3: "#1c1b19",
-    border:   "rgba(255,255,255,0.06)",
-    border2:  "rgba(255,255,255,0.10)",
-    text:     "#e8e8e6",
-    muted:    "rgba(232,232,230,0.5)",
-    faint:    "rgba(232,232,230,0.28)",
-    gold:     "#fdab43",
-    goldDim:  "#d19900",
-  };
-
   return (
-    // Outer wrapper: fills the admin content area, no fixed height, no card border
-    <div style={{
-      display: "flex",
-      flexDirection: "column",
-      flex: 1,
-      minHeight: 0,
-      width: "100%",
-      maxWidth: 860,
-      margin: "0 auto",
-      background: "#0a0a0a",
-    }}>
-
-      {/* -- Header -- */}
-      <div style={{
-        padding: "16px 16px 12px",
-        borderBottom: `1px solid ${S.border}`,
-        background: "rgba(255,255,255,0.015)",
-        display: "flex", alignItems: "center", gap: 12, flexShrink: 0,
-      }}>
-        <AdminNextyOrb size="medium" />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 14, fontWeight: 600, color: S.text, letterSpacing: "-0.01em" }}>Nexty AI</div>
-          <div style={{ fontSize: 10, color: S.faint, textTransform: "uppercase", letterSpacing: "0.12em", marginTop: 1 }}>
+    <div className="w-full max-w-[1120px] mx-auto flex flex-col gap-4 sm:gap-5">
+      {/* -- Header: Nexty identity -- */}
+      <div className="nexty-glass-strong relative overflow-hidden rounded-2xl p-4 sm:p-5 flex items-center gap-3 sm:gap-4">
+        <div className="nexty-ambient" aria-hidden="true" />
+        <div className="relative shrink-0">
+          <AdminNextyOrb size="medium" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-[15px] sm:text-[17px] font-semibold text-[#F1F0EC] tracking-tight leading-tight">
+            Nexty AI
+          </div>
+          <div className="text-[10px] sm:text-[11px] text-white/[0.44] uppercase tracking-[0.14em] mt-0.5">
             Business Growth Advisor
           </div>
         </div>
         <button
           onClick={handleRescan}
+          disabled={isRescanning}
           aria-label="Re-scan business data"
-          style={{
-            display: "flex", alignItems: "center", gap: 6,
-            padding: "0 12px", minHeight: 44, background: S.surface2,
-            border: `1px solid ${S.border2}`, borderRadius: 6,
-            fontSize: 12, fontWeight: 500, color: S.muted, cursor: "pointer",
-            flexShrink: 0,
-          }}
+          className="nexty-pill shrink-0 inline-flex items-center gap-1.5 min-h-11 px-3 rounded-[13px] text-xs sm:text-[13px] font-medium text-white/[0.66] disabled:opacity-60 disabled:cursor-not-allowed focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-300/70 focus-visible:outline-offset-2 transition-colors"
         >
           <RotateCcw
             size={13}
-            style={{
-              opacity: 0.5,
-              animation: isRescanning && !reduceMotion ? "nexty-spin 1s linear infinite" : "none",
-            }}
+            className={isRescanning && !reduceMotion ? "animate-spin opacity-70" : "opacity-50"}
           />
-          Re-scan
-          <style>{`@keyframes nexty-spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}.nexty-filter-scroll::-webkit-scrollbar{display:none}`}</style>
+          <span>Re-scan</span>
         </button>
       </div>
 
-      {/* Financial context note */}
-      <div style={{
-        margin: "12px 16px 0",
-        padding: "11px 13px",
-        background: "rgba(255,255,255,0.025)",
-        border: `1px solid ${S.border}`,
-        borderRadius: 10,
-        color: S.muted,
-        fontSize: 11,
-        lineHeight: 1.55,
-      }}>
-        Financial figures are shown in context. Historical losses and potential future value are kept separate, and neither is a guaranteed result.
+      {/* -- Financial context disclosure -- */}
+      <div className="nexty-glass rounded-[14px] px-3.5 py-3 flex items-start gap-2.5">
+        <Info size={13} className="text-white/30 shrink-0 mt-0.5" aria-hidden="true" />
+        <p className="text-[11px] sm:text-xs text-white/[0.55] leading-[1.6]">
+          Financial figures are shown in context. Historical losses and potential future value are kept separate,
+          and neither is a guaranteed result.
+        </p>
       </div>
 
-      {/* -- Filter Tabs -- */}
-      <div
-        className="nexty-filter-scroll"
-        style={{
-          display: "flex", gap: 6, padding: "12px 16px 4px",
-          overflowX: "auto", flexShrink: 0,
-          scrollbarWidth: "none",
-          WebkitOverflowScrolling: "touch",
-          scrollSnapType: "x proximity",
-        }}
-      >
-        {FILTERS.map(f => (
-          <button
-            key={f.key}
-            onClick={() => setActiveFilter(f.key)}
-            style={{
-              display: "flex", alignItems: "center", gap: 5,
-              padding: "0 12px", minHeight: 44, borderRadius: 8, fontSize: 12, fontWeight: 500,
-              scrollSnapAlign: "start",
-              color: activeFilter === f.key ? S.text : S.muted,
-              background: activeFilter === f.key ? S.surface2 : "transparent",
-              border: `1px solid ${activeFilter === f.key ? S.border2 : "transparent"}`,
-              whiteSpace: "nowrap", cursor: "pointer",
-            }}
-          >
-            {f.label}
-            <span style={{
-              fontSize: 10, padding: "1px 5px", borderRadius: 3,
-              background: activeFilter === f.key ? "rgba(253,171,67,0.15)" : "rgba(255,255,255,0.07)",
-              color: activeFilter === f.key ? S.goldDim : S.faint,
-            }}>
-              {f.count}
-            </span>
-          </button>
-        ))}
-      </div>
-
-      {/* -- Scroll Area -- */}
-      <div
-        ref={scrollRef}
-        className="nexty-insight-list"
-        style={{
-          flex: 1,
-          overflowY: "auto",
-          padding: "14px 16px 32px",
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 340px), 1fr))",
-          alignContent: "start",
-          gap: 14,
-          WebkitOverflowScrolling: "touch",
-        }}
-      >
-        {/* Welcome message */}
-        <motion.div
-          className="nexty-insight-intro"
-          initial={reduceMotion ? false : { opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={reduceMotion ? { duration: 0 } : { duration: 0.2 }}
-          style={{
-            background: S.surface, border: `1px solid ${S.border}`,
-            borderRadius: 14, padding: "13px 16px",
-            fontSize: 13, color: S.muted, lineHeight: 1.65,
-          }}
-        >
-          Nexty highlights patterns in your recorded business activity and suggests practical next steps.
-          Review the evidence, then choose the action that makes sense for your business.
-        </motion.div>
-
-        {/* Typing dots */}
-        <AnimatePresence>
-          {(!showCards || isRescanning) && (
-            <motion.div
-              key="typing"
-              className="nexty-insight-loading"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              style={{
-                display: "flex", alignItems: "center", gap: 5,
-                padding: "13px 14px", background: S.surface,
-                border: `1px solid ${S.border}`, borderRadius: 14, width: "fit-content",
-              }}
-            >
-              {[0, 150, 300].map(delay => (
-                <span
-                  key={delay}
-                  style={{
-                    width: 6, height: 6, borderRadius: "50%",
-                    background: "rgba(255,255,255,0.18)",
-                    display: "inline-block",
-                    animation: reduceMotion ? "none" : "nexty-bounce 1.2s ease-in-out infinite",
-                    animationDelay: `${delay}ms`,
-                  }}
-                />
-              ))}
-              <style>{`@keyframes nexty-bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-5px)}}@media(prefers-reduced-motion:reduce){.nexty-insight-loading span{animation:none!important}}`}</style>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Insight Cards */}
-        <AnimatePresence>
-          {showCards && !isRescanning && limited.map((ins, idx) => {
-            const p = PRIORITY_STYLES[ins.priority] ?? PRIORITY_STYLES.info;
-            const isExpanded = expanded.has(ins.id);
-            const previewLimit = 160;
-            const isLong = ins.message.length > previewLimit;
-            const bodyText = isExpanded || !isLong
-              ? ins.message
-              : `${ins.message.slice(0, previewLimit)}…`;
-
+      {/* -- Filter tabs -- */}
+      <div className="nexty-glass rounded-2xl p-1.5">
+        <div className="flex gap-1.5 overflow-x-auto scrollbar-hide snap-x snap-proximity" role="group" aria-label="Filter recommendations">
+          {FILTERS.map(f => {
+            const isActive = activeFilter === f.key;
             return (
-              <motion.div
-                key={ins.id}
-                initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.98 }}
-                transition={reduceMotion ? { duration: 0 } : { delay: idx * 0.06, duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
-                style={{
-                  background: S.surface, borderRadius: 14,
-                  border: `1px solid ${S.border}`, overflow: "hidden",
-                  width: "100%",
-                }}
+              <button
+                key={f.key}
+                onClick={() => setActiveFilter(f.key)}
+                aria-pressed={isActive}
+                className={`nexty-filter-pill snap-start shrink-0 inline-flex items-center gap-1.5 min-h-11 px-3.5 rounded-[11px] text-[12px] sm:text-[13px] font-medium whitespace-nowrap transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-300/70 focus-visible:outline-offset-2 ${
+                  isActive ? "nexty-filter-pill--active text-[#F1F0EC]" : "text-white/60 hover:text-white/80"
+                }`}
               >
-                {/* Card Top */}
-                <div style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "14px 14px 10px" }}>
-                  <div style={{
-                    width: 32, height: 32, borderRadius: 8,
-                    background: p.iconBg, color: p.iconColor,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    flexShrink: 0, marginTop: 1,
-                  }}>
-                    <InsightIcon type={ins.type} priority={ins.priority} />
-                  </div>
-
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{
-                      display: "flex", alignItems: "flex-start",
-                      justifyContent: "space-between", gap: 6, flexWrap: "wrap",
-                      marginBottom: 4,
-                    }}>
-                      <div style={{
-                        display: "inline-flex", alignItems: "center", gap: 4,
-                        fontSize: 10, fontWeight: 600, textTransform: "uppercase",
-                        letterSpacing: "0.1em", color: p.dot,
-                      }}>
-                        <span style={{ width: 5, height: 5, borderRadius: "50%", background: p.dot, flexShrink: 0 }} />
-                        {p.label}
-                      </div>
-                      <NextyFinancialValue insight={ins} />
-                    </div>
-                    <div style={{
-                      fontSize: 13, fontWeight: 600, color: S.text,
-                      letterSpacing: "-0.01em", lineHeight: 1.3,
-                      wordBreak: "break-word",
-                    }}>
-                      {ins.title}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Evidence from recorded business activity */}
-                <div style={{
-                  padding: "0 14px 12px",
-                  fontSize: 13, color: S.muted, lineHeight: 1.65,
-                  wordBreak: "break-word",
-                }}>
-                  <div style={{
-                    marginBottom: 5, fontSize: 9, fontWeight: 700,
-                    color: S.faint, textTransform: "uppercase", letterSpacing: "0.12em",
-                  }}>
-                    Business signal
-                  </div>
-                  {bodyText}
-                </div>
-
-                <NextyOutcomeNote />
-
-                {/* Card Footer */}
-                <div style={{
-                  borderTop: `1px solid ${S.border}`, padding: "4px 14px",
-                  display: "flex", alignItems: "center", flexWrap: "wrap",
-                  justifyContent: ins.actionLabel ? "space-between" : "flex-end",
-                  gap: 4,
-                }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    {ins.actionLabel && (
-                      <span style={{
-                        width: "100%", padding: "7px 2px 2px",
-                        fontSize: 9, fontWeight: 700, color: S.faint,
-                        textTransform: "uppercase", letterSpacing: "0.12em",
-                      }}>
-                        Recommended next step
-                      </span>
-                    )}
-                    {ins.actionLabel && (
-                      <button
-                        onClick={() => { persistAction(ins.id, "actioned"); setDismissed(prev => new Set(prev).add(ins.id)); onNavigate(ins.actionView ?? "Dashboard"); }}
-                        style={{
-                          display: "inline-flex", alignItems: "center", gap: 6,
-                          padding: "0 12px", minHeight: 44,
-                          background: S.surface2,
-                          border: `1px solid ${S.border2}`, borderRadius: 6,
-                          fontSize: 12, fontWeight: 500, color: S.text, cursor: "pointer",
-                          outlineOffset: 3,
-                        }}
-                        className="focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-300/70"
-                      >
-                        {ins.actionLabel}
-                        <ArrowRight size={11} style={{ color: S.faint }} />
-                      </button>
-                    )}
-                    {ins.message.length > 160 && (
-                      <button
-                        onClick={() => {
-                          setExpanded(prev => {
-                            const next = new Set(prev);
-                            if (next.has(ins.id)) next.delete(ins.id); else next.add(ins.id);
-                            return next;
-                          });
-                        }}
-                        style={{
-                          fontSize: 11, color: S.faint,
-                          padding: "0 10px", minHeight: 44, minWidth: 44,
-                          borderRadius: 6, cursor: "pointer", background: "none",
-                          border: "none", display: "flex", alignItems: "center",
-                        }}
-                      >
-                        {isExpanded ? "Show less" : "More details"}
-                      </button>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => { setDismissed(prev => new Set(prev).add(ins.id)); persistAction(ins.id, "dismissed"); }}
-                    aria-label="Dismiss this insight"
-                    style={{
-                      fontSize: 11, color: S.faint,
-                      padding: "0 10px", minHeight: 44, minWidth: 44,
-                      borderRadius: 6, cursor: "pointer", background: "none",
-                      border: "none", display: "flex", alignItems: "center",
-                    }}
-                  >
-                    Dismiss
-                  </button>
-                </div>
-              </motion.div>
+                {f.label}
+                <span
+                  className={`text-[10px] px-1.5 py-[1px] rounded-[4px] tabular-nums ${
+                    isActive ? "bg-[#D99B43]/[0.22] text-[#F5CD8B]" : "bg-white/[0.07] text-white/40"
+                  }`}
+                >
+                  {f.count}
+                </span>
+              </button>
             );
           })}
-        </AnimatePresence>
+        </div>
+      </div>
 
-        {/* Empty state */}
-        {showCards && !isRescanning && limited.length === 0 && (
+      {/* -- Intro note -- */}
+      <motion.div
+        initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={reduceMotion ? { duration: 0 } : { duration: 0.2 }}
+        className="nexty-glass rounded-[16px] px-4 py-3.5 text-[13px] sm:text-sm text-white/[0.58] leading-[1.65]"
+      >
+        Nexty highlights patterns in your recorded business activity and suggests practical next steps.
+        Review the evidence, then choose the action that makes sense for your business.
+      </motion.div>
+
+      {/* -- Loading surface -- */}
+      <AnimatePresence>
+        {busy && (
           <motion.div
-            className="nexty-insight-empty"
-            initial={reduceMotion ? false : { opacity: 0 }}
+            key="nexty-loading"
+            initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={reduceMotion ? { duration: 0 } : { duration: 0.2 }}
-            style={{
-              display: "flex", flexDirection: "column", alignItems: "center",
-              justifyContent: "center", flex: 1, gap: 12,
-              color: S.faint, textAlign: "center", padding: "40px 24px",
-            }}
+            exit={{ opacity: 0 }}
+            transition={reduceMotion ? { duration: 0 } : { duration: 0.18 }}
+            role="status"
+            aria-live="polite"
+            className="nexty-glass rounded-[16px] px-4 py-3.5 flex items-center gap-3 w-fit"
           >
-            <TrendingUp size={32} style={{ opacity: 0.3 }} />
-            <div style={{ fontSize: 14, color: S.muted, fontWeight: 500 }}>No insights in this category</div>
-            <div style={{ fontSize: 12, color: S.faint, maxWidth: 260, lineHeight: 1.6 }}>
-              Keep taking bookings. Nexty will surface more opportunities as your data grows.
-            </div>
+            <span className="nexty-pulse-dot" aria-hidden="true" />
+            <span className="text-[13px] text-white/[0.55]">
+              {isRescanning ? "Refreshing recommendations…" : "Loading recommendations…"}
+            </span>
           </motion.div>
         )}
-      </div>
+      </AnimatePresence>
+
+      {/* -- Insight card grid -- */}
+      {!busy && (
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,360px),1fr))] gap-3.5">
+          <AnimatePresence>
+            {limited.map((ins, idx) => {
+              const p = PRIORITY_STYLES[ins.priority] ?? PRIORITY_STYLES.info;
+              const isExpanded = expanded.has(ins.id);
+              const isLong = ins.message.length > PREVIEW_LIMIT;
+              const bodyText = isExpanded || !isLong
+                ? ins.message
+                : `${ins.message.slice(0, PREVIEW_LIMIT)}…`;
+
+              return (
+                <motion.div
+                  key={ins.id}
+                  initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 7 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.985 }}
+                  transition={reduceMotion ? { duration: 0 } : { delay: Math.min(idx * 0.05, 0.15), duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+                  className="nexty-card rounded-[20px] overflow-hidden flex flex-col"
+                >
+                  {/* Card header */}
+                  <div className="flex items-start gap-3 p-4 pb-2.5">
+                    <div
+                      className="w-10 h-10 rounded-[12px] flex items-center justify-center shrink-0 mt-0.5"
+                      style={{ background: p.iconBg, color: p.iconColor }}
+                    >
+                      <InsightIcon type={ins.type} priority={ins.priority} />
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2 flex-wrap mb-1.5">
+                        <span
+                          className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.1em]"
+                          style={{ color: p.dot }}
+                        >
+                          <span className="w-[5px] h-[5px] rounded-full shrink-0" style={{ background: p.dot }} />
+                          {p.label}
+                        </span>
+                        <NextyFinancialValue insight={ins} />
+                      </div>
+                      <div className="text-[15px] sm:text-[16px] font-bold text-[#F1F0EC] tracking-[-0.01em] leading-[1.35] break-words">
+                        {ins.title}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Business signal */}
+                  <div className="px-4 pb-3 text-[13px] sm:text-[14px] text-white/[0.62] leading-[1.65] break-words">
+                    <div className="mb-1.5 text-[9px] sm:text-[10px] font-bold text-white/30 uppercase tracking-[0.12em]">
+                      Business signal
+                    </div>
+                    {bodyText}
+                  </div>
+
+                  <NextyOutcomeNote />
+
+                  {/* Card footer */}
+                  <div className="mt-auto border-t border-white/[0.08] px-4 py-3 flex flex-col gap-2.5">
+                    {ins.actionLabel && (
+                      <div className="flex flex-col gap-1.5">
+                        <span className="text-[9px] font-bold text-white/30 uppercase tracking-[0.12em]">
+                          Recommended next step
+                        </span>
+                        <button
+                          onClick={() => { persistAction(ins.id, "actioned"); setDismissed(prev => new Set(prev).add(ins.id)); onNavigate(ins.actionView ?? "Dashboard"); }}
+                          className="nexty-action-btn w-full sm:w-auto inline-flex items-center justify-center gap-2 min-h-11 px-4 rounded-[13px] text-[13px] font-semibold text-[#F1F0EC] focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-300/70 focus-visible:outline-offset-2 transition-colors"
+                        >
+                          {ins.actionLabel}
+                          <ArrowRight size={13} className="text-[#F5CD8B]" />
+                        </button>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between gap-2">
+                      {isLong ? (
+                        <button
+                          onClick={() => {
+                            setExpanded(prev => {
+                              const next = new Set(prev);
+                              if (next.has(ins.id)) next.delete(ins.id); else next.add(ins.id);
+                              return next;
+                            });
+                          }}
+                          aria-expanded={isExpanded}
+                          className="text-[11px] text-white/40 hover:text-white/60 min-h-11 px-2 rounded-[8px] inline-flex items-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-300/70 focus-visible:outline-offset-2 transition-colors"
+                        >
+                          {isExpanded ? "Show less" : "More details"}
+                        </button>
+                      ) : <span />}
+                      <button
+                        onClick={() => { setDismissed(prev => new Set(prev).add(ins.id)); persistAction(ins.id, "dismissed"); }}
+                        aria-label="Dismiss this insight"
+                        className="text-[11px] text-white/40 hover:text-white/60 min-h-11 px-2 rounded-[8px] inline-flex items-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-300/70 focus-visible:outline-offset-2 transition-colors"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+
+          {/* Empty state */}
+          {limited.length === 0 && (
+            <motion.div
+              initial={reduceMotion ? false : { opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={reduceMotion ? { duration: 0 } : { duration: 0.2 }}
+              className="nexty-glass relative overflow-hidden rounded-[20px] flex flex-col items-center justify-center text-center gap-3 py-12 px-6"
+              style={{ gridColumn: "1 / -1" }}
+            >
+              <div className="nexty-ambient nexty-ambient--center" aria-hidden="true" />
+              <TrendingUp size={30} className="text-white/25 relative" />
+              <div className="relative text-[14px] font-medium text-white/70">No insights in this category</div>
+              <div className="relative text-[12px] text-white/40 max-w-[280px] leading-[1.6]">
+                Keep taking bookings. Nexty will surface more opportunities as your data grows.
+              </div>
+            </motion.div>
+          )}
+        </div>
+      )}
+
       <style>{`
-        .nexty-insight-list{grid-template-columns:1fr}
-        @media(min-width:900px){.nexty-insight-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
-        .nexty-insight-intro,.nexty-insight-loading,.nexty-insight-empty{grid-column:1/-1}
-        .nexty-filter-scroll{scrollbar-width:none}
-        .nexty-filter-scroll::-webkit-scrollbar{display:none}
-        @media(prefers-reduced-motion:reduce){.nexty-insight-list *{scroll-behavior:auto!important}}
+        .nexty-glass {
+          background: linear-gradient(145deg, rgba(255,255,255,0.045), rgba(255,255,255,0.015));
+          border: 1px solid rgba(255,255,255,0.09);
+          backdrop-filter: blur(16px) saturate(125%);
+          -webkit-backdrop-filter: blur(16px) saturate(125%);
+          box-shadow: 0 16px 36px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.05);
+        }
+        .nexty-glass-strong {
+          background: linear-gradient(145deg, rgba(255,255,255,0.065), rgba(255,255,255,0.02));
+          border: 1px solid rgba(255,255,255,0.1);
+          backdrop-filter: blur(18px) saturate(130%);
+          -webkit-backdrop-filter: blur(18px) saturate(130%);
+          box-shadow: 0 16px 36px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.06);
+        }
+        .nexty-card {
+          background: linear-gradient(165deg, rgba(255,255,255,0.05), rgba(255,255,255,0.016));
+          border: 1px solid rgba(255,255,255,0.1);
+          backdrop-filter: blur(14px) saturate(120%);
+          -webkit-backdrop-filter: blur(14px) saturate(120%);
+          box-shadow: 0 16px 36px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.05);
+        }
+        @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+          .nexty-glass, .nexty-glass-strong, .nexty-card { background: #15140f; }
+        }
+        .nexty-pill {
+          background: rgba(255,255,255,0.055);
+          border: 1px solid rgba(255,255,255,0.1);
+        }
+        .nexty-pill:hover:not(:disabled) {
+          background: rgba(217,155,67,0.12);
+          border-color: rgba(217,155,67,0.28);
+          color: #F5CD8B;
+        }
+        .nexty-filter-pill--active {
+          background: rgba(217,155,67,0.14);
+          border: 1px solid rgba(245,205,139,0.26);
+        }
+        .nexty-action-btn {
+          background: rgba(255,255,255,0.055);
+          border: 1px solid rgba(217,155,67,0.22);
+        }
+        .nexty-action-btn:hover {
+          background: rgba(217,155,67,0.14);
+          border-color: rgba(217,155,67,0.36);
+        }
+        .nexty-ambient {
+          position: absolute;
+          top: 50%; left: 32px;
+          width: 160px; height: 160px;
+          transform: translateY(-50%);
+          background: radial-gradient(circle, rgba(245,205,139,0.16) 0%, rgba(217,155,67,0.05) 45%, transparent 72%);
+          pointer-events: none;
+        }
+        .nexty-ambient--center {
+          top: 50%; left: 50%;
+          transform: translate(-50%, -50%);
+        }
+        .nexty-pulse-dot {
+          width: 7px; height: 7px; border-radius: 50%;
+          background: #D99B43;
+          display: inline-block;
+          animation: nexty-pulse 1.4s ease-in-out infinite;
+        }
+        @keyframes nexty-pulse {
+          0%, 100% { opacity: 0.4; transform: scale(0.85); }
+          50% { opacity: 1; transform: scale(1.15); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .nexty-pulse-dot { animation: none; opacity: 0.8; }
+        }
       `}</style>
     </div>
   );
