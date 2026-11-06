@@ -108,7 +108,7 @@ const SettingsCard = ({
   return (
     // overflow-hidden REMOVED — it was causing Safari to clip the Collapsible
     // before the grid-rows transition could complete on mount
-    <div className={`flex flex-col rounded-3xl bg-gradient-to-br ${gradient} border border-white/[0.05]`}>
+    <div className="flex flex-col rounded-3xl nexty-card">
       <div
         className={`flex items-center gap-3 p-5 ${collapsible ? "cursor-pointer select-none" : ""}`}
         onClick={collapsible ? () => setOpen((v) => !v) : undefined}

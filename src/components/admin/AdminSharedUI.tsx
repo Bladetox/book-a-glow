@@ -17,11 +17,13 @@ export const SectionLabel = ({ label }: { label: string }) => (
 
 // ── AdminCard ─────────────────────────────────────────────────────────────────
 export const AdminCard = ({
-  title, icon: Icon, gradient = "from-white/[0.05] to-white/[0.02]",
+  title, icon: Icon,
   children, collapsible = false, defaultOpen = false, actions,
 }: {
   title: string;
   icon?: React.ElementType;
+  /** @deprecated every call site passed the same flat value; the card is
+   * now always rendered with the shared nexty-card glass treatment. */
   gradient?: string;
   children: React.ReactNode;
   collapsible?: boolean;
@@ -41,7 +43,7 @@ export const AdminCard = ({
   );
 
   return (
-    <div className={`flex flex-col rounded-3xl bg-gradient-to-br ${gradient} border border-white/[0.05] overflow-hidden`}>
+    <div className="flex flex-col rounded-3xl nexty-card overflow-hidden">
       <div className="flex items-center gap-3 p-4 sm:p-5">
         {collapsible ? (
           <button
