@@ -41,7 +41,7 @@ const SectionHeader = ({
       onClick={onClick}
       className="w-full flex items-center gap-3 p-4 text-left hover:bg-white/[0.02] transition-colors rounded-2xl"
     >
-      <div className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.06] shrink-0">
+      <div className="p-2 rounded-xl nexty-card shrink-0">
         <Icon className="w-4 h-4 text-white/40" />
       </div>
       <span className="text-sm font-bold text-white/80 flex-1">{title}</span>
@@ -78,7 +78,7 @@ const Callout = ({
 
 const Step = ({ n, children }: { n: number; children: React.ReactNode }) => (
   <div className="flex gap-3">
-    <div className="w-5 h-5 rounded-full bg-white/[0.06] border border-white/[0.1] flex items-center justify-center shrink-0 mt-0.5">
+    <div className="w-5 h-5 rounded-full nexty-card flex items-center justify-center shrink-0 mt-0.5">
       <span className="text-[10px] font-bold text-white/40">{n}</span>
     </div>
     <p className="text-[12px] text-white/50 leading-relaxed flex-1">{children}</p>
@@ -86,7 +86,7 @@ const Step = ({ n, children }: { n: number; children: React.ReactNode }) => (
 );
 
 const FieldRef = ({ children }: { children: React.ReactNode }) => (
-  <code className="px-1.5 py-0.5 rounded-md bg-white/[0.06] border border-white/[0.08] text-[11px] text-white/60 font-mono">
+  <code className="px-1.5 py-0.5 rounded-md nexty-card text-[11px] text-white/60 font-mono">
     {children}
   </code>
 );
@@ -147,7 +147,7 @@ const SmtpGuide = () => (
       If you missed the dialog, go back to App Passwords, delete the old entry, and create a new one.
     </Callout>
     <p className="text-[11px] text-white/40 font-semibold uppercase tracking-widest px-0.5 mt-1">What to enter in each field</p>
-    <div className="rounded-xl border border-white/[0.06] overflow-hidden">
+    <div className="rounded-xl nexty-card overflow-hidden">
       {[
         { field: "SMTP Host", value: "smtp.gmail.com" },
         { field: "Port", value: "587" },
@@ -215,7 +215,7 @@ const IntegrationsGuidePanel = ({ open, onClose }: GuidePanelProps) => {
                 type="button"
                 onClick={onClose}
                 aria-label="Close guide"
-                className="w-7 h-7 rounded-xl flex items-center justify-center bg-white/[0.04] border border-white/[0.06] text-white/30 hover:text-white/70 transition-colors"
+                className="w-7 h-7 rounded-xl flex items-center justify-center nexty-card text-white/30 hover:text-white/70 transition-colors"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -224,7 +224,7 @@ const IntegrationsGuidePanel = ({ open, onClose }: GuidePanelProps) => {
             {/* Scrollable content */}
             <div className="flex-1 overflow-y-auto px-3 py-4 flex flex-col gap-1">
               {sections.map(({ key, icon, title, badge, badgeColor, content }) => (
-                <div key={key} className="rounded-2xl border border-white/[0.05] overflow-hidden">
+                <div key={key} className="rounded-2xl nexty-card overflow-hidden">
                   <SectionHeader
                     icon={icon}
                     title={title}

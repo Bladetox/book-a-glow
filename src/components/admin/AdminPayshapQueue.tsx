@@ -138,7 +138,7 @@ const AdminPayshapQueue = () => {
               aria-modal="true"
               aria-labelledby="payshap-decline-title"
               aria-describedby="payshap-decline-description"
-              className="w-full max-w-md rounded-2xl border border-white/[0.10] bg-[#171717] p-5 shadow-2xl"
+              className="w-full max-w-md rounded-2xl nexty-glass-strong p-5"
               initial={{ opacity: 0, y: 12, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 8, scale: 0.98 }}
@@ -236,7 +236,7 @@ const AdminPayshapQueue = () => {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.97 }}
                     transition={{ duration: 0.2 }}
-                    className="rounded-xl border border-white/[0.07] bg-white/[0.03] p-3.5 flex flex-col gap-3"
+                    className="rounded-xl nexty-card p-3.5 flex flex-col gap-3"
                   >
                     {/* Booking summary */}
                     <div className="flex items-start justify-between gap-2">

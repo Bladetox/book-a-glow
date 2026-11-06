@@ -89,7 +89,7 @@ export function CancelSubscriptionFlow({ tenantId }: { tenantId: string }) {
       </p>
 
       {step === "idle" && (
-        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5 flex flex-col gap-3">
+        <div className="rounded-2xl nexty-card p-5 flex flex-col gap-3">
           <p className="text-xs text-white/40 leading-relaxed">
             Cancelling ends your NextSlot subscription and locks your account. You will be
             asked if you want to download your guest data first.
@@ -148,7 +148,7 @@ export function CancelSubscriptionFlow({ tenantId }: { tenantId: string }) {
             <button
               onClick={() => setStep("confirm")}
               disabled={exporting}
-              className="flex-1 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-xs font-semibold text-white/60 hover:bg-white/[0.08] transition-colors disabled:opacity-50"
+              className="flex-1 py-2.5 rounded-xl nexty-card text-xs font-semibold text-white/60 hover:bg-white/[0.08] transition-colors disabled:opacity-50"
             >
               {exported ? "Continue" : "No thanks, continue"}
             </button>
@@ -219,7 +219,7 @@ export function CancelSubscriptionFlow({ tenantId }: { tenantId: string }) {
             <button
               onClick={reset}
               disabled={cancelling}
-              className="flex-1 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-xs font-semibold text-white/60 hover:bg-white/[0.08] transition-colors disabled:opacity-50"
+              className="flex-1 py-2.5 rounded-xl nexty-card text-xs font-semibold text-white/60 hover:bg-white/[0.08] transition-colors disabled:opacity-50"
             >
               Keep my subscription
             </button>

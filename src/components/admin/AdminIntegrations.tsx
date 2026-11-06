@@ -111,7 +111,7 @@ const IntegrationCard = ({
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="rounded-3xl border border-white/[0.05] bg-gradient-to-br from-white/[0.05] to-white/[0.02] overflow-hidden"
+      className="rounded-3xl nexty-card overflow-hidden"
     >
       <button
         type="button"
@@ -120,7 +120,7 @@ const IntegrationCard = ({
         className="flex min-h-[64px] w-full items-center justify-between p-5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-amber-400/70"
       >
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.06] shrink-0">
+          <div className="p-2 rounded-xl nexty-card shrink-0">
             <Icon className="w-4 h-4 text-white/40" />
           </div>
           <div>
@@ -259,7 +259,7 @@ const GoogleCalendarCard = ({ connected, tenantId }: GoogleCalendarCardProps) =>
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="rounded-3xl border border-white/[0.05] bg-gradient-to-br from-white/[0.05] to-white/[0.02] overflow-hidden"
+      className="rounded-3xl nexty-card overflow-hidden"
     >
       <button
         type="button"
@@ -268,7 +268,7 @@ const GoogleCalendarCard = ({ connected, tenantId }: GoogleCalendarCardProps) =>
         className="flex min-h-[64px] w-full items-center justify-between p-5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-amber-400/70"
       >
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.06] shrink-0">
+          <div className="p-2 rounded-xl nexty-card shrink-0">
             <Calendar className="w-4 h-4 text-white/40" />
           </div>
           <div>
@@ -453,7 +453,7 @@ const PayfastCard = ({ settings, onSaved, payshapEnabled }: PayfastCardProps) =>
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`rounded-3xl border border-white/[0.05] bg-gradient-to-br from-white/[0.05] to-white/[0.02] overflow-hidden ${accentBorder}`}
+      className={`rounded-3xl nexty-card overflow-hidden ${accentBorder}`}
     >
       <button
         type="button"
@@ -462,7 +462,7 @@ const PayfastCard = ({ settings, onSaved, payshapEnabled }: PayfastCardProps) =>
         className="flex min-h-[64px] w-full items-center justify-between p-5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-amber-400/70"
       >
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.06] shrink-0">
+          <div className="p-2 rounded-xl nexty-card shrink-0">
             <CreditCard className="w-4 h-4 text-white/40" />
           </div>
           <div>
@@ -503,7 +503,7 @@ const PayfastCard = ({ settings, onSaved, payshapEnabled }: PayfastCardProps) =>
           >
             <div className="border-t border-white/[0.04]">
               {payshapEnabled && (
-                <div className="flex items-start gap-2.5 mx-5 mt-5 rounded-xl bg-white/[0.03] border border-white/[0.06] px-3.5 py-3">
+                <div className="flex items-start gap-2.5 mx-5 mt-5 rounded-xl nexty-card px-3.5 py-3">
                   <AlertCircle className="w-3.5 h-3.5 text-white/20 mt-0.5 shrink-0" />
                   <p className="text-[11px] text-white/25 leading-relaxed">
                     PayFast cannot be used alongside PayShap. Disable PayShap first to configure PayFast.
@@ -591,7 +591,7 @@ const PayfastCard = ({ settings, onSaved, payshapEnabled }: PayfastCardProps) =>
                       )}
                     </div>
 
-                    <div className="flex items-start gap-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] px-3.5 py-3 mb-5">
+                    <div className="flex items-start gap-2.5 rounded-xl nexty-card px-3.5 py-3 mb-5">
                       <AlertCircle className="w-3.5 h-3.5 text-white/20 mt-0.5 shrink-0" />
                       <p className="text-[11px] text-white/25 leading-relaxed">
                         PayFast redirects clients to their hosted checkout. After payment,
@@ -769,7 +769,7 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved, payshapEnabled }: YocoC
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`rounded-3xl border border-white/[0.05] bg-gradient-to-br from-white/[0.05] to-white/[0.02] overflow-hidden ${accentBorder}`}
+      className={`rounded-3xl nexty-card overflow-hidden ${accentBorder}`}
     >
       <button
         type="button"
@@ -778,7 +778,7 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved, payshapEnabled }: YocoC
         className="flex min-h-[64px] w-full items-center justify-between p-5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-amber-400/70"
       >
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.06] shrink-0">
+          <div className="p-2 rounded-xl nexty-card shrink-0">
             <CreditCard className="w-4 h-4 text-white/40" />
           </div>
           <div>
@@ -819,7 +819,7 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved, payshapEnabled }: YocoC
           >
             <div className="border-t border-white/[0.04]">
               {payshapEnabled && (
-                <div className="flex items-start gap-2.5 mx-5 mt-5 rounded-xl bg-white/[0.03] border border-white/[0.06] px-3.5 py-3 mb-5">
+                <div className="flex items-start gap-2.5 mx-5 mt-5 rounded-xl nexty-card px-3.5 py-3 mb-5">
                   <AlertCircle className="w-3.5 h-3.5 text-white/20 mt-0.5 shrink-0" />
                   <p className="text-[11px] text-white/25 leading-relaxed">
                     Yoco cannot be used alongside PayShap. Disable PayShap first to configure Yoco.
@@ -960,7 +960,7 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved, payshapEnabled }: YocoC
                                 />
                               )}
                             </div>
-                            <div className="flex items-start gap-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] px-3.5 py-3">
+                            <div className="flex items-start gap-2.5 rounded-xl nexty-card px-3.5 py-3">
                               <AlertCircle className="w-3.5 h-3.5 text-white/20 mt-0.5 shrink-0" />
                               <p className="text-[11px] text-white/25 leading-relaxed">
                                 Test mode uses Yoco's sandbox. Webhook auto-registration is not supported in test mode — payments are processed and confirmed via Yoco's test event simulator.
@@ -1074,7 +1074,7 @@ const PayshapCard = ({ settings, tenantId, onSaved }: PayshapCardProps) => {
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`rounded-3xl border border-white/[0.05] bg-gradient-to-br from-white/[0.05] to-white/[0.02] overflow-hidden ${accentBorder}`}
+      className={`rounded-3xl nexty-card overflow-hidden ${accentBorder}`}
     >
       <button
         type="button"
@@ -1083,7 +1083,7 @@ const PayshapCard = ({ settings, tenantId, onSaved }: PayshapCardProps) => {
         className="flex min-h-[64px] w-full items-center justify-between p-5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-amber-400/70"
       >
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.06] shrink-0">
+          <div className="p-2 rounded-xl nexty-card shrink-0">
             <Smartphone className="w-4 h-4 text-white/40" />
           </div>
           <div>
@@ -1132,7 +1132,7 @@ const PayshapCard = ({ settings, tenantId, onSaved }: PayshapCardProps) => {
                       <span className="text-xs text-white/20">Loading...</span>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-3 bg-white/[0.04] border border-white/[0.08] rounded-xl px-4 py-2.5">
+                    <div className="flex items-center gap-3 nexty-card rounded-xl px-4 py-2.5">
                       <Smartphone className="w-3.5 h-3.5 text-white/30 shrink-0" />
                       <span className="text-sm text-white/70 font-medium">
                         {tenantPhone || <span className="text-white/20 italic">No phone number on your profile</span>}
@@ -1145,7 +1145,7 @@ const PayshapCard = ({ settings, tenantId, onSaved }: PayshapCardProps) => {
                   </p>
                 </div>
 
-                <div className="flex items-start gap-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] px-3.5 py-3">
+                <div className="flex items-start gap-2.5 rounded-xl nexty-card px-3.5 py-3">
                   <AlertCircle className="w-3.5 h-3.5 text-white/20 mt-0.5 shrink-0" />
                   <p className="text-[11px] text-white/25 leading-relaxed">
                     When PayShap is enabled, your phone number appears on the booking payment step and clients pay you directly via their banking app, payment reflects in your account immediately. Once paid, open your banking app to verify the amount, return to your dashboard to confirm the booking. Your client will receive a confirmation email as soon as you confirm.
@@ -1227,7 +1227,7 @@ const AdminIntegrations = () => {
             <button
               type="button"
               onClick={() => setGuideOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/[0.06] border border-white/[0.08] text-xs font-bold text-white/60 hover:text-white/90 hover:bg-white/[0.1] transition-colors"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl nexty-card text-xs font-bold text-white/60 hover:text-white/90 hover:bg-white/[0.1] transition-colors"
             >
               <BookOpen className="w-3.5 h-3.5" />
               Setup Guide
@@ -1282,7 +1282,7 @@ const AdminIntegrations = () => {
               configured={mapsConfigured}
               readOnly
             >
-              <div className="flex items-start gap-3 rounded-xl bg-white/[0.03] border border-white/[0.06] px-4 py-3.5">
+              <div className="flex items-start gap-3 rounded-xl nexty-card px-4 py-3.5">
                 <Lock className="w-3.5 h-3.5 text-white/25 mt-0.5 shrink-0" />
                 <div>
                   <p className="text-[11px] font-semibold text-white/40">Managed by NextSlot</p>

@@ -271,7 +271,7 @@ const AdminTerms = () => {
               layout
               initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
-              className="group bg-gradient-to-br from-white/[0.04] to-white/[0.02] border border-white/[0.06] rounded-3xl p-5 hover:border-white/[0.1] transition-all"
+              className="group nexty-card rounded-3xl p-5 hover:border-white/[0.1] transition-all"
             >
               {editingId === s.id ? (
                 <div className="flex flex-col gap-4">

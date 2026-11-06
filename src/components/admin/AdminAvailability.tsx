@@ -339,11 +339,11 @@ const AdminAvailability = () => {
               return (
                 <div
                   key={day}
-                  className="rounded-3xl border border-white/[0.05] bg-gradient-to-br from-white/[0.04] to-white/[0.02] p-5"
+                  className="rounded-3xl nexty-card p-5"
                 >
                   <div className="mb-4 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="shrink-0 rounded-xl border border-white/[0.06] bg-white/[0.04] p-2">
+                      <div className="shrink-0 rounded-xl nexty-card p-2">
                         <Clock className="h-4 w-4 text-white/40" />
                       </div>
                       <span className="text-sm font-bold text-white/80">{day}</span>
@@ -401,10 +401,10 @@ const AdminAvailability = () => {
             className="flex flex-col gap-4"
           >
             <SectionLabel label="Monthly Calendar" />
-            <div className="rounded-3xl border border-white/[0.05] bg-gradient-to-br from-white/[0.04] to-white/[0.02] p-5">
+            <div className="rounded-3xl nexty-card p-5">
               <div className="mb-5 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="rounded-xl border border-white/[0.06] bg-white/[0.04] p-2">
+                  <div className="rounded-xl nexty-card p-2">
                     <Calendar className="h-4 w-4 text-white/40" />
                   </div>
                   <span className="text-sm font-bold text-white/80">
@@ -492,10 +492,10 @@ const AdminAvailability = () => {
                     exit={{ opacity: 0, height: 0 }}
                     className="overflow-hidden"
                   >
-                    <div className="flex flex-col gap-4 rounded-3xl border border-white/[0.05] bg-gradient-to-br from-white/[0.04] to-white/[0.02] p-5">
+                    <div className="flex flex-col gap-4 rounded-3xl nexty-card p-5">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2.5">
-                          <div className="rounded-xl border border-white/[0.06] bg-white/[0.04] p-2">
+                          <div className="rounded-xl nexty-card p-2">
                             <Calendar className="h-4 w-4 text-white/40" />
                           </div>
                           <div>
