@@ -15,6 +15,42 @@ export const SectionLabel = ({ label }: { label: string }) => (
   </p>
 );
 
+// ── AdminSwitch ───────────────────────────────────────────────────────────────
+// One visual and accessible standard for every binary on/off control in admin.
+export const AdminSwitch = ({
+  checked,
+  onChange,
+  label,
+  disabled = false,
+  dataDemoCustomizeControl,
+}: {
+  checked: boolean;
+  onChange: (checked: boolean) => void;
+  label: string;
+  disabled?: boolean;
+  dataDemoCustomizeControl?: string;
+}) => (
+  <button
+    type="button"
+    role="switch"
+    aria-label={label}
+    aria-checked={checked}
+    data-demo-customize-control={dataDemoCustomizeControl}
+    disabled={disabled}
+    onClick={() => onChange(!checked)}
+    className="inline-flex h-11 min-w-[56px] shrink-0 items-center justify-center rounded-full bg-transparent p-0 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#10B981] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b0b0b] disabled:cursor-not-allowed disabled:opacity-40"
+  >
+    <span
+      aria-hidden="true"
+      className={`relative inline-flex h-7 w-12 items-center rounded-full p-1 transition-colors duration-200 ${checked ? "bg-[#10B981]" : "bg-white/15"}`}
+    >
+      <span
+        className={`h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${checked ? "translate-x-5" : "translate-x-0"}`}
+      />
+    </span>
+  </button>
+);
+
 // ── AdminCard ─────────────────────────────────────────────────────────────────
 export const AdminCard = ({
   title, icon: Icon,

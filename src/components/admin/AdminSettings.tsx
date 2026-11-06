@@ -19,6 +19,7 @@ import { defaultReferralOptions } from "@/hooks/usePublicBusinessConfig";
 import { toast } from "sonner";
 import { ConsultationFormBuilder } from "./ConsultationFormBuilder";
 import { AdminBilling } from "./AdminBilling";
+import { AdminSwitch } from "./AdminSharedUI";
 
 const isAcquisitionChannel = (value: string) =>
   !["returning", "returning client", "existing", "existing client", "new", "new client"].includes(value.trim().toLowerCase());
@@ -625,22 +626,11 @@ const AdminSettings = () => {
                   Clients can pay this deposit or choose to pay the full amount upfront.
                 </span>
               </div>
-              <button
-                type="button"
-                role="switch"
-                aria-label="Require a deposit at booking"
-                aria-checked={draft.requires_deposit === "true"}
-                onClick={() => update("requires_deposit", draft.requires_deposit === "true" ? "false" : "true")}
-                className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/60 ${
-                  draft.requires_deposit === "true" ? "bg-emerald-500" : "bg-white/[0.08]"
-                }`}
-              >
-                <span
-                  className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ${
-                    draft.requires_deposit === "true" ? "translate-x-5" : "translate-x-0"
-                  }`}
-                />
-              </button>
+              <AdminSwitch
+                checked={draft.requires_deposit === "true"}
+                onChange={(checked) => update("requires_deposit", checked ? "true" : "false")}
+                label="Require a deposit at booking"
+              />
             </div>
             <PillPicker
               label="Lead Time"
@@ -817,18 +807,11 @@ const AdminSettings = () => {
                       <p className="text-sm font-medium text-white/70">{label}</p>
                       <p className="text-[11px] text-white/30 mt-0.5">{desc}</p>
                     </div>
-                    <button
-                      onClick={() => toggleNotifPref(key)}
-                      className={`relative inline-flex h-6 w-11 flex-shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none ${
-                        enabled ? "bg-emerald-500" : "bg-white/[0.08]"
-                      }`}
-                    >
-                      <span
-                        className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ${
-                          enabled ? "translate-x-5" : "translate-x-0"
-                        }`}
-                      />
-                    </button>
+                    <AdminSwitch
+                      checked={enabled}
+                      onChange={() => toggleNotifPref(key)}
+                      label={`${label} notifications`}
+                    />
                   </div>
                 );
               })}

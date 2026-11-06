@@ -14,6 +14,7 @@ import {
   SectionLabel,
   SaveButton,
   EmptyState,
+  AdminSwitch,
 } from "@/components/admin/AdminSharedUI";
 import {
   Plus, Pencil, Trash2, Check, Search, Loader2,
@@ -1197,24 +1198,14 @@ const AdminServices = () => {
               onChange={(e) => setEditing({ ...editing, description: e.target.value })}
             />
             <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 cursor-pointer group select-none">
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={editing.is_active}
-                  onClick={() => setEditing({ ...editing, is_active: !editing.is_active })}
-                  className={`relative inline-flex h-5 w-9 flex-shrink-0 items-center rounded-full transition-colors duration-200 focus:outline-none ${
-                    editing.is_active ? "bg-emerald-500" : "bg-white/15"
-                  }`}
-                >
-                  <span
-                    className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform duration-200 ${
-                      editing.is_active ? "translate-x-[18px]" : "translate-x-1"
-                    }`}
-                  />
-                </button>
-                <span className="text-xs text-white/40 group-hover:text-white/60 transition-colors">Active (visible to clients)</span>
-              </label>
+              <div className="flex items-center gap-3">
+                <AdminSwitch
+                  checked={editing.is_active}
+                  onChange={(checked) => setEditing({ ...editing, is_active: checked })}
+                  label="Active service, visible to clients"
+                />
+                <span className="text-xs text-white/40">Active (visible to clients)</span>
+              </div>
               <div className="flex items-center gap-2">
                 <SaveButton label="Cancel" variant="secondary" onClick={cancelEdit} />
                 <SaveButton

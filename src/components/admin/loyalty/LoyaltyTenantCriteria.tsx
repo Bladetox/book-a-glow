@@ -16,6 +16,7 @@ import { format, subDays, addDays, parseISO } from "date-fns";
 import { ChevronDown, ChevronUp, UserPlus, Settings2, Check } from "lucide-react";
 import type { EnrollCandidate, ServiceOption, TenantCriteriaSettings } from "./loyaltyTypes";
 import { normPhone, resolveKey } from "./loyaltyHelpers";
+import { AdminSwitch } from "../AdminSharedUI";
 
 interface Props {
   tenantId: string;
@@ -215,16 +216,14 @@ export function LoyaltyTenantCriteria({
         </div>
         <div className="flex items-center gap-2">
           {/* Enable toggle */}
-          <button
-            onClick={() => { onSettingsChange({ ...settings, enabled: !settings.enabled }); onMarkDirty(); }}
-            className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
-              settings.enabled ? "bg-violet-500/40" : "bg-white/[0.08]"
-            }`}
-          >
-            <span className={`inline-block h-3 w-3 rounded-full bg-white transition-transform ${
-              settings.enabled ? "translate-x-3.5" : "translate-x-0.5"
-            }`} />
-          </button>
+          <AdminSwitch
+            checked={settings.enabled}
+            onChange={(checked) => {
+              onSettingsChange({ ...settings, enabled: checked });
+              onMarkDirty();
+            }}
+            label="Enable loyalty criteria"
+          />
           <button
             onClick={() => setShowConfig(s => !s)}
             className="flex items-center gap-1 text-[10px] text-white/30 hover:text-white/60 transition-colors"
