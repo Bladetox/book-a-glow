@@ -340,7 +340,7 @@ export const defaultConsultationQuestions: Record<BusinessType, ConsultationQues
     },
     {
       key: 'additional_notes',
-      label: 'Is there anything else you would like your therapist to know?',
+      label: 'Is there anything else you would like your provider to know?',
       type: 'textarea',
     },
   ],
