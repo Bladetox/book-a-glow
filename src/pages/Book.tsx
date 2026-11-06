@@ -16,6 +16,7 @@ import { useTenantHead } from "@/hooks/useTenantHead";
 import { useBrandFont } from "@/hooks/useBrandFont";
 import { AnimatePresence, motion } from "framer-motion";
 import { useState, useCallback, useEffect } from "react";
+import { isAnswered } from "@/lib/consultationSections";
 
 const stepVariants = {
   enter: (direction: number) => ({
@@ -76,6 +77,15 @@ const Index = () => {
   const slotHold = useSlotHold();
   const [direction, setDirection] = useState(1);
   const [showSplash, setShowSplash] = useState(true);
+  const [showRequiredErrors, setShowRequiredErrors] = useState(false);
+  const [consultationQuestionsReady, setConsultationQuestionsReady] = useState(false);
+
+  const hasMissingRequiredQuestions =
+    booking.isExistingClient === false &&
+    booking.consultationQuestions.some(
+      (question) =>
+        question.required && !isAnswered(booking.consultationAnswers[question.key]),
+    );
 
   // Single source of truth: clear call-out state when tenant is in salon mode
   useEffect(() => {
@@ -101,6 +111,7 @@ const Index = () => {
       case 2: {
         const holdValid = !!slotHold.holdId && !slotHold.isHolding;
         if (!holdValid) return false;
+        if (booking.isExistingClient === false && !consultationQuestionsReady) return false;
 
         const contactValid =
           booking.fullName.trim().length >= 2 &&
@@ -116,13 +127,17 @@ const Index = () => {
       default:
         return true;
     }
-  }, [step, booking, config, slotHold.holdId, slotHold.isHolding]);
+  }, [step, booking, config, slotHold.holdId, slotHold.isHolding, consultationQuestionsReady]);
 
   const handleNext = useCallback(() => {
+    if (step === 2 && hasMissingRequiredQuestions) {
+      setShowRequiredErrors(true);
+      return;
+    }
     if (!canProceed()) return;
     setDirection(1);
     nextStep();
-  }, [canProceed, nextStep]);
+  }, [step, hasMissingRequiredQuestions, canProceed, nextStep]);
 
   const handlePrev = useCallback(() => {
     if (step === 0) return;
@@ -285,7 +300,12 @@ const Index = () => {
                   />
                 )}
                 {step === 2 && (
-                  <DetailsStep booking={booking} onUpdate={updateBooking} />
+                  <DetailsStep
+                    booking={booking}
+                    onUpdate={updateBooking}
+                    showRequiredErrors={showRequiredErrors}
+                    onConsultationQuestionsReady={setConsultationQuestionsReady}
+                  />
                 )}
                 {step === 3 && (
                   <ReviewStep
