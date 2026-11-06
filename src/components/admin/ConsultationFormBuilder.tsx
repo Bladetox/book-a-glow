@@ -42,6 +42,7 @@ interface DraftQuestion {
   required: boolean;
   enabled: boolean;
   sort_order: number;
+  section: string;
 }
 
 type ConsultationQuestionRow = {
@@ -56,6 +57,7 @@ type ConsultationQuestionRow = {
   options: unknown;
   required: boolean | null;
   enabled: boolean | null;
+  section: string | null;
   created_at?: string;
   updated_at?: string;
 };
@@ -98,6 +100,7 @@ function blankDraft(sortOrder: number): DraftQuestion {
     required: false,
     enabled: true,
     sort_order: sortOrder,
+    section: '',
   };
 }
 
@@ -173,6 +176,7 @@ export const ConsultationFormBuilder = () => {
           required: r.required ?? false,
           enabled: r.enabled ?? r.is_active ?? true,
           sort_order: r.sort_order ?? 0,
+          section: (r.section ?? '').trim(),
         };
       });
 
@@ -282,6 +286,7 @@ export const ConsultationFormBuilder = () => {
             type: normalizedType,
             options: normalizedOptions,
             sort_order: i,
+            section: q.section.trim(),
           };
         })
         .filter((q) => q.label.length > 0);
@@ -309,6 +314,7 @@ export const ConsultationFormBuilder = () => {
           required: q.required,
           enabled: q.enabled,
           sort_order: i,
+          section: q.section.trim() || null,
         }));
 
         const { error: insErr } = await supabase
@@ -357,6 +363,12 @@ export const ConsultationFormBuilder = () => {
           </div>
         }
       />
+
+      <p className="text-[11px] text-white/40 leading-relaxed">
+        Type the same section label on multiple questions to group them. If you don&apos;t
+        label anything, the form renders as one continuous list under the default
+        heading.
+      </p>
 
       {error && (
         <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-2.5">
@@ -485,6 +497,23 @@ export const ConsultationFormBuilder = () => {
               >
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
+            </div>
+
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-semibold tracking-[0.15em] uppercase text-white/25">
+                Section (optional)
+              </label>
+              <input
+                type="text"
+                value={q.section}
+                placeholder="e.g. Health history"
+                onChange={(e) => updateQuestion(q.localKey, { section: e.target.value })}
+                className="w-full px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/80 placeholder:text-white/20 focus:outline-none focus:border-white/20 transition-colors"
+              />
+              <p className="text-[10px] text-white/20 italic px-1">
+                Questions with the same section label are grouped together on the client form.
+                Leave blank to use the default section.
+              </p>
             </div>
 
             <div className="flex flex-col gap-1">
