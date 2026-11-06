@@ -22,7 +22,19 @@ export interface ConsultationQuestionDefinition {
   type: QuestionType;
   required?: boolean;
   options?: string[]; // for radio/checkbox
+  /** Admin-defined section label. */
+  section?: string | null;
 }
+
+export const DEFAULT_SECTION_LABEL = "Your consultation";
+
+export const QUESTION_TYPE_ORDER = [
+  "yes_no",
+  "text",
+  "textarea",
+  "radio",
+  "checkbox",
+] as const;
 
 export const defaultConsultationQuestions: Record<BusinessType, ConsultationQuestionDefinition[]> = {
   waxing: [
