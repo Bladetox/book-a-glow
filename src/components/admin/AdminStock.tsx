@@ -339,7 +339,7 @@ const AdminStock = () => {
             <div className="relative">
               <button
                 onClick={() => setShowUtilMenu(v => !v)}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-xs font-semibold text-white/50 hover:text-white/80 hover:bg-white/[0.07] transition-all"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl nexty-card text-xs font-semibold text-white/50 hover:text-white/80 hover:bg-white/[0.07] transition-all"
                 aria-label="More actions"
               >
                 <MoreHorizontal className="w-4 h-4" />
@@ -350,7 +350,7 @@ const AdminStock = () => {
                     initial={{ opacity: 0, scale: 0.95, y: -4 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: -4 }}
-                    className="absolute right-0 top-full mt-1 z-30 rounded-2xl border border-white/[0.08] bg-[#1a1a1a] p-1.5 flex flex-col gap-0.5 min-w-[140px] shadow-xl"
+                    className="absolute right-0 top-full mt-1 z-30 rounded-2xl nexty-glass-strong p-1.5 flex flex-col gap-0.5 min-w-[140px] shadow-xl"
                   >
                     <button
                       onClick={() => { setShowScan(true); setShowUtilMenu(false); }}
@@ -379,22 +379,22 @@ const AdminStock = () => {
       <section className="flex flex-col gap-3">
         <SectionLabel label="Inventory Overview" />
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="rounded-3xl border border-white/[0.05] bg-gradient-to-br from-white/[0.04] to-white/[0.02] p-4 flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.06]"><Package className="w-4 h-4 text-white/35" /></div>
+          <div className="rounded-3xl nexty-card p-4 flex items-center gap-3">
+            <div className="p-2 rounded-xl nexty-card"><Package className="w-4 h-4 text-white/35" /></div>
             <div>
               <p className="text-lg font-bold text-white/90">{items.length}</p>
               <p className="text-[10px] tracking-[0.12em] uppercase text-white/30">Total Products</p>
             </div>
           </div>
-          <div className="rounded-3xl border border-white/[0.05] bg-gradient-to-br from-white/[0.04] to-white/[0.02] p-4 flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.06]"><CircleDollarSign className="w-4 h-4 text-white/35" /></div>
+          <div className="rounded-3xl nexty-card p-4 flex items-center gap-3">
+            <div className="p-2 rounded-xl nexty-card"><CircleDollarSign className="w-4 h-4 text-white/35" /></div>
             <div>
               <p className="text-lg font-bold text-white/90">R {totalStockValue.toLocaleString("en-ZA", { maximumFractionDigits: 0 })}</p>
               <p className="text-[10px] tracking-[0.12em] uppercase text-white/30">Stock Value</p>
             </div>
           </div>
-          <div className="rounded-3xl border border-white/[0.05] bg-gradient-to-br from-white/[0.04] to-white/[0.02] p-4 flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.06]"><TrendingDown className="w-4 h-4 text-sky-400/60" /></div>
+          <div className="rounded-3xl nexty-card p-4 flex items-center gap-3">
+            <div className="p-2 rounded-xl nexty-card"><TrendingDown className="w-4 h-4 text-sky-400/60" /></div>
             <div>
               <p className="text-lg font-bold text-sky-400">R {totalCostUsed.toLocaleString("en-ZA", { maximumFractionDigits: 0 })}</p>
               <p className="text-[10px] tracking-[0.12em] uppercase text-white/30">Cost Used</p>
@@ -405,7 +405,7 @@ const AdminStock = () => {
               ? "border-amber-500/20 bg-amber-500/[0.06]"
               : "border-white/[0.05] bg-gradient-to-br from-white/[0.04] to-white/[0.02]"
           }`}>
-            <div className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.06]"><AlertTriangle className={`w-4 h-4 ${alertCount > 0 ? "text-amber-400" : "text-white/20"}`} /></div>
+            <div className="p-2 rounded-xl nexty-card"><AlertTriangle className={`w-4 h-4 ${alertCount > 0 ? "text-amber-400" : "text-white/20"}`} /></div>
             <div>
               <p className={`text-lg font-bold ${alertCount > 0 ? "text-amber-400" : "text-white/30"}`}>{alertCount}</p>
               <p className="text-[10px] tracking-[0.12em] uppercase text-white/30">Alerts</p>
@@ -481,7 +481,7 @@ const AdminStock = () => {
 
       <AnimatePresence>
         {csvRows && (
-          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="rounded-3xl border border-white/[0.08] bg-gradient-to-br from-white/[0.04] to-white/[0.02] p-4 flex flex-col gap-3 overflow-hidden">
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }} className="rounded-3xl nexty-card p-4 flex flex-col gap-3 overflow-hidden">
             <p className="text-xs font-semibold text-white/70">{csvRows.length} rows ready to import</p>
             <div className="max-h-40 overflow-y-auto flex flex-col gap-1">
               {csvRows.map((r, i) => (
@@ -622,7 +622,7 @@ const AdminStock = () => {
                 </div>
 
                 {/* Desktop table */}
-                <div className="hidden md:block rounded-3xl border border-white/[0.05] bg-gradient-to-br from-white/[0.04] to-white/[0.02] overflow-x-auto">
+                <div className="hidden md:block rounded-3xl nexty-card overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-white/[0.06]">
@@ -697,12 +697,12 @@ const AdminStock = () => {
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col gap-3">
             <p className="text-[10px] text-white/30 px-1">Usage since last restock — based on opening stock vs current on-hand per product.</p>
             {items.length === 0 ? (
-              <div className="rounded-3xl border border-white/[0.05] bg-gradient-to-br from-white/[0.04] to-white/[0.02] px-4 py-8 text-center text-xs text-white/30">No stock items yet.</div>
+              <div className="rounded-3xl nexty-card px-4 py-8 text-center text-xs text-white/30">No stock items yet.</div>
             ) : (
               consumptionByDay.map(group => (
                 <div key={group.label} className="flex flex-col gap-1.5">
                   <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/25 px-1">{group.label}</p>
-                  <div className="rounded-3xl border border-white/[0.05] bg-gradient-to-br from-white/[0.04] to-white/[0.02] overflow-x-auto">
+                  <div className="rounded-3xl nexty-card overflow-x-auto">
                     <table className="w-full text-sm min-w-[500px]">
                       <thead>
                         <tr className="border-b border-white/[0.06]">
@@ -733,7 +733,7 @@ const AdminStock = () => {
                 </div>
               ))
             )}
-            <div className="rounded-3xl border border-white/[0.05] bg-gradient-to-br from-white/[0.04] to-white/[0.02] overflow-x-auto">
+            <div className="rounded-3xl nexty-card overflow-x-auto">
               <table className="w-full text-sm min-w-[500px]">
                 <tfoot>
                   <tr className="border-t border-white/[0.08]">
@@ -750,7 +750,7 @@ const AdminStock = () => {
       <AnimatePresence>
         {showModal && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4" onClick={e => { if (e.target === e.currentTarget) closeModal(); }}>
-            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="rounded-3xl border border-white/[0.08] bg-[#1a1a1a] p-6 max-w-sm w-full flex flex-col gap-4">
+            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="rounded-3xl nexty-glass-strong p-6 max-w-sm w-full flex flex-col gap-4">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-bold text-white/80">{editingId ? "Edit Product" : "Add Product"}</p>
                 <button onClick={closeModal} className="text-white/30 hover:text-white/60 transition-colors"><X className="w-4 h-4" /></button>
@@ -775,7 +775,7 @@ const AdminStock = () => {
       <AnimatePresence>
         {actionItem && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="rounded-3xl border border-white/[0.08] bg-[#1a1a1a] p-6 max-w-sm w-full flex flex-col gap-4">
+            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="rounded-3xl nexty-glass-strong p-6 max-w-sm w-full flex flex-col gap-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-xs font-bold text-white/80">{actionType === "use" ? "Log Usage" : "Restock"}</p>
@@ -784,15 +784,15 @@ const AdminStock = () => {
                 <button onClick={closeAction} className="text-white/30 hover:text-white/60 transition-colors shrink-0"><X className="w-4 h-4" /></button>
               </div>
               <div className="grid grid-cols-3 gap-2 text-center">
-                <div className="rounded-xl bg-white/[0.04] border border-white/[0.06] px-2 py-2.5">
+                <div className="rounded-xl nexty-card px-2 py-2.5">
                   <p className="text-[9px] uppercase tracking-wider text-white/25 mb-0.5">On Hand</p>
                   <p className={`text-sm font-bold ${actionItem.stock_on_hand === 0 ? "text-red-400" : actionItem.stock_on_hand <= actionItem.reorder_level ? "text-amber-400" : "text-white/70"}`}>{actionItem.stock_on_hand}</p>
                 </div>
-                <div className="rounded-xl bg-white/[0.04] border border-white/[0.06] px-2 py-2.5">
+                <div className="rounded-xl nexty-card px-2 py-2.5">
                   <p className="text-[9px] uppercase tracking-wider text-white/25 mb-0.5">Reorder At</p>
                   <p className="text-sm font-bold text-white/50">{actionItem.reorder_level}</p>
                 </div>
-                <div className="rounded-xl bg-white/[0.04] border border-white/[0.06] px-2 py-2.5">
+                <div className="rounded-xl nexty-card px-2 py-2.5">
                   <p className="text-[9px] uppercase tracking-wider text-white/25 mb-0.5">Cost/Unit</p>
                   <p className="text-sm font-bold text-white/50">R{actionItem.cost}</p>
                 </div>
@@ -810,7 +810,7 @@ const AdminStock = () => {
                 </div>
               </div>
               {previewQty !== null && (
-                <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-white/[0.03] border border-white/[0.05]">
+                <div className="flex items-center justify-between px-3 py-2 rounded-xl nexty-card">
                   <span className="text-[10px] uppercase tracking-wider text-white/30">New qty on hand</span>
                   <span className={`text-sm font-bold ${previewQty === 0 ? "text-red-400" : previewQty <= actionItem.reorder_level ? "text-amber-400" : "text-emerald-400"}`}>{previewQty}</span>
                 </div>
@@ -833,7 +833,7 @@ const AdminStock = () => {
       <AnimatePresence>
         {deleteItem && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="rounded-3xl border border-white/[0.08] bg-[#1a1a1a] p-6 max-w-sm w-full flex flex-col gap-3">
+            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="rounded-3xl nexty-glass-strong p-6 max-w-sm w-full flex flex-col gap-3">
               <p className="text-sm font-bold text-white/80">Delete "{deleteItem.item_name}"?</p>
               <p className="text-xs text-white/40">This cannot be undone. All stock data for this product will be permanently removed.</p>
               <div className="flex gap-2 justify-end pt-1">

@@ -289,7 +289,7 @@ const StockScanModal = ({ tenantId, onClose }: Props) => {
         initial={{ y: 40, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: 40, opacity: 0 }}
-        className="relative rounded-t-2xl sm:rounded-2xl border border-white/[0.08] bg-[#1a1a1a] w-full sm:max-w-lg flex flex-col max-h-[92dvh]"
+        className="relative rounded-t-2xl sm:rounded-2xl nexty-glass-strong w-full sm:max-w-lg flex flex-col max-h-[92dvh]"
       >
         {/* ── Header ── */}
         <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-white/[0.06] shrink-0">
@@ -314,9 +314,9 @@ const StockScanModal = ({ tenantId, onClose }: Props) => {
             {/* Camera */}
             <button
               onClick={() => cameraRef.current?.click()}
-              className="flex items-center gap-3 w-full px-4 py-4 rounded-xl bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] transition-colors text-left"
+              className="flex items-center gap-3 w-full px-4 py-4 rounded-xl nexty-card hover:bg-white/[0.08] transition-colors text-left"
             >
-              <span className="p-2 rounded-lg bg-white/[0.06] border border-white/[0.08]">
+              <span className="p-2 rounded-lg nexty-card">
                 <Camera className="w-4 h-4 text-white/60" />
               </span>
               <div>
@@ -338,9 +338,9 @@ const StockScanModal = ({ tenantId, onClose }: Props) => {
             {/* File upload (PDF or image) */}
             <button
               onClick={() => fileRef.current?.click()}
-              className="flex items-center gap-3 w-full px-4 py-4 rounded-xl bg-white/[0.04] border border-white/[0.08] hover:bg-white/[0.08] transition-colors text-left"
+              className="flex items-center gap-3 w-full px-4 py-4 rounded-xl nexty-card hover:bg-white/[0.08] transition-colors text-left"
             >
-              <span className="p-2 rounded-lg bg-white/[0.06] border border-white/[0.08]">
+              <span className="p-2 rounded-lg nexty-card">
                 <FileText className="w-4 h-4 text-white/60" />
               </span>
               <div>
@@ -469,7 +469,7 @@ const StockScanModal = ({ tenantId, onClose }: Props) => {
               <button
                 onClick={handleImport}
                 disabled={stage === "saving" || rows.filter(r => r.item_name.trim() && r.cost > 0).length === 0}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/[0.09] border border-white/[0.14] text-xs font-semibold text-white/80 hover:bg-white/[0.14] disabled:opacity-30 transition-colors"
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl nexty-card text-xs font-semibold text-white/80 hover:bg-white/[0.14] disabled:opacity-30 transition-colors"
               >
                 {stage === "saving"
                   ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving…</>
