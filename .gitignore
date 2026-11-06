@@ -29,3 +29,4 @@ dist-ssr
 .env.local
 .env.*.local
 graphify-out/cache/
+graphify-out/[0-9]*/
