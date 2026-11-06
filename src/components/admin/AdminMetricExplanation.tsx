@@ -8,6 +8,9 @@ import { adminTransition, adminFadeVariants, useAdminReducedMotion } from "@/com
 export interface AdminMetricExplanationLine {
   term: string;
   def: string;
+  /** Optional icon + badge colour (e.g. from getLeadSourceConfig) to render `term` as a pill, matching identifiers used elsewhere (e.g. AdminConsultations' acquisition channel badges). */
+  badgeIcon?: React.ReactNode;
+  badgeClassName?: string;
 }
 
 export interface AdminMetricExplanationProps {
@@ -152,8 +155,15 @@ function MetricExplanationBody({
           <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/35">{extraLinesTitle}</p>
           {extraLines.map((line, index) => (
             <div key={`${line.term}-${index}`} className="min-w-0">
-              <p className="text-[12px] font-semibold text-white/90">{line.term}</p>
-              <p className="mt-0.5 text-[12px] leading-relaxed text-white/60 break-words">{line.def}</p>
+              {line.badgeIcon ? (
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium ${line.badgeClassName ?? ""}`}>
+                  {line.badgeIcon}
+                  {line.term}
+                </span>
+              ) : (
+                <p className="text-[12px] font-semibold text-white/90">{line.term}</p>
+              )}
+              <p className="mt-1 text-[12px] leading-relaxed text-white/60 break-words">{line.def}</p>
             </div>
           ))}
         </div>

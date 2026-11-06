@@ -47,6 +47,8 @@ export interface MetricEntry {
 export interface InfoLine {
   term: string;
   def: string;
+  badgeIcon?: React.ReactNode;
+  badgeClassName?: string;
 }
 
 export interface ExpandedCard extends MetricEntry {

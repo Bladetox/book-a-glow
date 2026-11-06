@@ -18,13 +18,14 @@ import { useTenant } from "@/contexts/TenantContext";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { useNextyInsights } from "@/hooks/useNextyInsights";
 import { AdminNextyOrb } from "@/components/admin/AdminNextyOrb";
-import BusinessHealthSection, { MetricExpandOverlay, type ExpandedCard } from "@/components/admin/BusinessHealthSection";
+import BusinessHealthSection, { MetricExpandOverlay, type ExpandedCard, type InfoLine as HealthInfoLine } from "@/components/admin/BusinessHealthSection";
 import DashboardStockAlerts from "@/components/admin/DashboardStockAlerts";
 import AdminPayshapQueue from "@/components/admin/AdminPayshapQueue";
 import { TrialCountdownNudge } from "@/components/admin/TrialCountdownNudge";
 import { ADMIN_METRIC_DEFINITIONS, ADMIN_METRIC_INFO, type AdminMetricDefinition, type AdminMetricInfoLine } from "@/components/admin/metricDefinitions";
 import { FirstBookingCelebration } from "@/components/admin/FirstBookingCelebration";
 import { AdminSwitch } from "@/components/admin/AdminSharedUI";
+import { getLeadSourceConfig } from "@/components/admin/leadSourceConfig";
 type MetricEntry = AdminMetricDefinition;
 type InfoLine = AdminMetricInfoLine;
 
@@ -392,6 +393,7 @@ export const AdminDashboardView = ({
   const totalClientIdentities = leadSourceBreakdown.reduce((sum, row) => sum + row.count, 0);
   const totalRecordedSources = recordedLeadSources.reduce((sum, row) => sum + row.count, 0);
   const topChannel = recordedLeadSources[0]?.channel ?? "No recorded source";
+  const topChannelCfg = getLeadSourceConfig(recordedLeadSources[0]?.channel ?? null);
   const topChannelPct = totalRecordedSources > 0 && recordedLeadSources[0]
     ? Math.round((recordedLeadSources[0].count / totalRecordedSources) * 100)
     : null;
@@ -401,12 +403,17 @@ export const AdminDashboardView = ({
   const operationalAlerts = (data.alerts ?? []).filter((alert: any) =>
     !String(alert.text ?? "").toLowerCase().includes("stock")
   );
-  const leadSourceExtraLines: { term: string; def: string }[] = leadSourceBreakdown.map((row) => ({
-    term: row.channel,
-    def: row.channel === "Not recorded"
-      ? `${row.count} client${row.count !== 1 ? "s" : ""} (${totalClientIdentities > 0 ? Math.round((row.count / totalClientIdentities) * 100) : 0}% of all clients)`
-      : `${row.count} client${row.count !== 1 ? "s" : ""} (${totalRecordedSources > 0 ? Math.round((row.count / totalRecordedSources) * 100) : 0}% of recorded sources)`,
-  }));
+  const leadSourceExtraLines: HealthInfoLine[] = leadSourceBreakdown.map((row) => {
+    const channelCfg = getLeadSourceConfig(row.channel);
+    return {
+      term: row.channel,
+      def: row.channel === "Not recorded"
+        ? `${row.count} client${row.count !== 1 ? "s" : ""} (${totalClientIdentities > 0 ? Math.round((row.count / totalClientIdentities) * 100) : 0}% of all clients)`
+        : `${row.count} client${row.count !== 1 ? "s" : ""} (${totalRecordedSources > 0 ? Math.round((row.count / totalRecordedSources) * 100) : 0}% of recorded sources)`,
+      badgeIcon: channelCfg.icon,
+      badgeClassName: channelCfg.className,
+    };
+  });
 
   // ── Tesler's Law: safe next-appointment parsing ─────────────────────────
   const parsedNext = parseNextAppt(nextAppt);
@@ -825,9 +832,12 @@ export const AdminDashboardView = ({
               <div className="w-8 h-8 rounded-lg bg-white/[0.06] flex items-center justify-center shrink-0 mt-0.5">
                 <Megaphone className="w-4 h-4 text-white/50" />
               </div>
-              <div className="flex flex-col gap-0.5 flex-1 min-w-0 justify-center">
+              <div className="flex flex-col gap-1 flex-1 min-w-0 justify-center">
                 <span className="text-[10px] tracking-[0.1em] uppercase text-white/30 truncate">Top Acquisition Channel</span>
-                <span className="text-base font-bold truncate text-white/90">{topChannel}</span>
+                <span className={`inline-flex w-fit max-w-full items-center gap-1.5 px-2.5 py-1 rounded-full text-[13px] font-bold truncate ${topChannelCfg.className}`}>
+                  {topChannelCfg.icon}
+                  <span className="truncate">{topChannel}</span>
+                </span>
                 {leadSourceSub && <span className="text-[10px] text-white/25 truncate">{leadSourceSub}</span>}
               </div>
               <div className="shrink-0 mt-1 ml-1">
