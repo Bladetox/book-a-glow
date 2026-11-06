@@ -1,7 +1,7 @@
 # Graph Report - book-a-glow  (2026-11-06)
 
 ## Corpus Check
-- 386 files · ~332,338 words
+- 386 files · ~332,237 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 14 file(s) not represented in the graph (top: .css 5, (none) 2, .example 1)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `8df1ef8b`
+- Built from commit: `03471826`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -654,15 +654,15 @@ Nodes (10): pdfjs-dist@^4.4.168, tesseract.js@^5.1.1, pdfjs-dist, tesseract.js, 
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `react` connect `cn` to `AdminCommunications.tsx`, `sheet.tsx`, `Feature Flag Admin Panels`, `dependencies`, `lucide-react`, `Admin Billing Plans`, `homepage-journey.test.tsx`, `App Routing`, `SiteFooter`, `Billing Provider Configuration`, `Resources.tsx`, `Consistency Pricing Admin`, `Admin Shell & Subscription Gate`, `StockScanModal.tsx`, `Admin Dashboard View`, `PWA Updates & Toasts`, `Demo Dashboard Views`, `tokens.ts`, `Booking Flow Steps & Splash`, `Admin Bookings Management`, `Admin Calendar`, `package.json`, `Dialogs & Command Palette`, `Booking Review & Payment`, `Nexty AI Recommendations`, `Admin Services Management`, `Staff Availability Management`, `AdminLoyalty.tsx`, `Admin Mobile Navigation`, `Admin Booking Settings`, `Booking Details & Consultation Form`, `Pricing.tsx`, `use-admin-viewport.ts`, `Super Admin Revenue`, `Business Theme Provider`, `@tanstack/react-query`, `Notifications & Client Alerts`, `Admin Integrations`, `Payment Setup Checklist`, `DemoAdminEmbed.tsx`, `Tenant Onboarding`, `class-variance-authority`, `Admin Help Guides`, `AdminSpecialOccasions.tsx`, `Booking Schedule & Availability`, `SEO Landing Pages`, `Loyalty Client Card`, `toast.tsx`, `PublicTenantContext.tsx`, `FirstBookingCelebration.tsx`, `Public Services & Addons`, `ConsultationFormBuilder.tsx`, `Login & Marketing Layout`, `PayShap Payment Queue`, `Tenant Health Scoring`, `Book.tsx`, `Dashboard Data Hook`, `Revenue Trend Card`, `Cohort Retention Analytics`, `Super Admin Tenants`, `SAGrowth.tsx`, `calendar.tsx`, `Consultations Admin View`, `Integrations Guide Panel`, `Feature Adoption Analytics`, `Super Admin Navigation`, `Super Admin Bookings`, `SATroubleshoot.tsx`, `date-fns`, `SASystemHealth.tsx`, `Super Admin User Management`?**
-  _High betweenness centrality (0.170) - this node is a cross-community bridge._
+  _High betweenness centrality (0.173) - this node is a cross-community bridge._
 - **Should `20260308214729_abe41b98-2217-4182-8511-10a994985858.sql` be split into smaller, more focused modules?**
   _Cohesion score 0.09420289855072464 - nodes in this community are weakly interconnected._
 - **Why does `lucide-react` connect `lucide-react` to `AdminCommunications.tsx`, `sheet.tsx`, `Feature Flag Admin Panels`, `dependencies`, `Admin Billing Plans`, `homepage-journey.test.tsx`, `App Routing`, `SiteFooter`, `Billing Provider Configuration`, `Resources.tsx`, `Consistency Pricing Admin`, `Admin Shell & Subscription Gate`, `StockScanModal.tsx`, `Admin Dashboard View`, `Super Admin Navigation`, `Demo Dashboard Views`, `Booking Flow Steps & Splash`, `Admin Bookings Management`, `Admin Calendar`, `package.json`, `Dialogs & Command Palette`, `Booking Review & Payment`, `Nexty AI Recommendations`, `Admin Services Management`, `Staff Availability Management`, `AdminLoyalty.tsx`, `Admin Mobile Navigation`, `Admin Booking Settings`, `Booking Details & Consultation Form`, `Pricing.tsx`, `Super Admin Revenue`, `Business Theme Provider`, `@tanstack/react-query`, `Notifications & Client Alerts`, `Admin Integrations`, `Payment Setup Checklist`, `DemoAdminEmbed.tsx`, `Tenant Onboarding`, `Admin Help Guides`, `DashboardPreview.tsx`, `AdminSpecialOccasions.tsx`, `Booking Schedule & Availability`, `SEO Landing Pages`, `Loyalty Client Card`, `toast.tsx`, `FirstBookingCelebration.tsx`, `Public Services & Addons`, `ConsultationFormBuilder.tsx`, `Login & Marketing Layout`, `DashboardStockAlerts.tsx`, `PayShap Payment Queue`, `Tenant Health Scoring`, `Business Health Metrics`, `Revenue Trend Card`, `Cohort Retention Analytics`, `Super Admin Tenants`, `SAGrowth.tsx`, `calendar.tsx`, `Consultations Admin View`, `Integrations Guide Panel`, `Feature Adoption Analytics`, `SATroubleshoot.tsx`, `Super Admin Bookings`, `date-fns`, `SASystemHealth.tsx`, `Super Admin User Management`, `Display Cards Component`?**
-  _High betweenness centrality (0.121) - this node is a cross-community bridge._
+  _High betweenness centrality (0.136) - this node is a cross-community bridge._
 - **Should `bookings` be split into smaller, more focused modules?**
   _Cohesion score 0.14666666666666667 - nodes in this community are weakly interconnected._
 - **Why does `supabase` connect `lucide-react` to `AdminCommunications.tsx`, `Feature Flag Admin Panels`, `Admin Billing Plans`, `App Routing`, `Billing Provider Configuration`, `Consistency Pricing Admin`, `StockScanModal.tsx`, `Admin Shell & Subscription Gate`, `Booking Flow Steps & Splash`, `Admin Bookings Management`, `Admin Calendar`, `Booking Review & Payment`, `Nexty AI Recommendations`, `Admin Services Management`, `Staff Availability Management`, `AdminLoyalty.tsx`, `Admin Booking Settings`, `Booking Details & Consultation Form`, `Pricing.tsx`, `Super Admin Revenue`, `Business Theme Provider`, `@tanstack/react-query`, `Notifications & Client Alerts`, `Admin Integrations`, `Payment Setup Checklist`, `Tenant Onboarding`, `AdminSpecialOccasions.tsx`, `Booking Schedule & Availability`, `Loyalty Client Card`, `PublicTenantContext.tsx`, `FirstBookingCelebration.tsx`, `Public Services & Addons`, `ConsultationFormBuilder.tsx`, `Login & Marketing Layout`, `PayShap Payment Queue`, `Tenant Health Scoring`, `Book.tsx`, `Dashboard Data Hook`, `Cohort Retention Analytics`, `Super Admin Tenants`, `SAGrowth.tsx`, `Consultations Admin View`, `Feature Adoption Analytics`, `SATroubleshoot.tsx`, `Super Admin Bookings`, `SASystemHealth.tsx`, `Super Admin User Management`?**
-  _High betweenness centrality (0.046) - this node is a cross-community bridge._
+  _High betweenness centrality (0.047) - this node is a cross-community bridge._
 - **Should `Slot Holds & Tenant Access` be split into smaller, more focused modules?**
   _Cohesion score 0.11829268292682926 - nodes in this community are weakly interconnected._
 - **Should `Nexty Insight Analytics RPCs` be split into smaller, more focused modules?**
