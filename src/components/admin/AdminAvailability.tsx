@@ -6,8 +6,6 @@ import {
   ChevronRight,
   Clock,
   Loader2,
-  ToggleLeft,
-  ToggleRight,
 } from "lucide-react";
 import {
   addMonths,
@@ -31,7 +29,7 @@ import {
   useSaveDailyOverride,
   useStaffAvailability,
 } from "@/hooks/useSupabaseAvailability";
-import { AdminPageHeader, AdminTag, SectionLabel } from "@/components/admin/AdminSharedUI";
+import { AdminPageHeader, AdminSwitch, AdminTag, SectionLabel } from "@/components/admin/AdminSharedUI";
 
 function buildAllSlots(): string[] {
   const slots: string[] = [];
@@ -353,16 +351,11 @@ const AdminAvailability = () => {
                         <AdminTag label="Closed" color="default" />
                       )}
                     </div>
-                    <button
-                      onClick={() => toggleDayEnabled(day)}
-                      className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl text-white/60 transition-colors hover:bg-white/[0.05] hover:text-white"
-                    >
-                      {config.enabled ? (
-                        <ToggleRight className="h-6 w-6 text-emerald-400" />
-                      ) : (
-                        <ToggleLeft className="h-6 w-6 text-white/20" />
-                      )}
-                    </button>
+                    <AdminSwitch
+                      checked={config.enabled}
+                      onChange={() => toggleDayEnabled(day)}
+                      label={`Enable availability on ${day}`}
+                    />
                   </div>
 
                   {config.enabled ? (
@@ -527,16 +520,11 @@ const AdminAvailability = () => {
                               Reset
                             </button>
                           )}
-                          <button
-                            onClick={() => toggleDailyEnabled(selectedDate)}
-                            className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl text-white/60 transition-colors hover:bg-white/[0.05] hover:text-white"
-                          >
-                            {config.enabled ? (
-                              <ToggleRight className="h-6 w-6 text-emerald-400" />
-                            ) : (
-                              <ToggleLeft className="h-6 w-6 text-white/20" />
-                            )}
-                          </button>
+                          <AdminSwitch
+                            checked={config.enabled}
+                            onChange={() => toggleDailyEnabled(selectedDate)}
+                            label={`Enable availability for ${format(selectedDate, "EEEE d MMMM")}`}
+                          />
                         </div>
                       </div>
 

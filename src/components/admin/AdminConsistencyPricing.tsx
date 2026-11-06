@@ -8,7 +8,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Sparkles, ChevronDown, Pencil } from "lucide-react";
 import { useTenant } from "@/contexts/TenantContext";
-import { AdminCard, SectionLabel } from "./AdminSharedUI";
+import { AdminCard, AdminSwitch, SectionLabel } from "./AdminSharedUI";
 
 interface ProgramRow {
   id: string;
@@ -483,20 +483,15 @@ export default function AdminConsistencyPricing() {
             </span>
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            <button
-              type="button"
-              role="switch"
-              aria-checked={enabled}
-              aria-label="Turn on consistency pricing for this business"
-              disabled={saving || reviewRequired || !formReady}
-              onClick={() => {
-                setEnabled((value) => !value);
+            <AdminSwitch
+              checked={enabled}
+              onChange={(checked) => {
+                setEnabled(checked);
                 markDirty();
               }}
-              className={`relative inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full p-0.5 transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-400/70 focus-visible:ring-offset-2 focus-visible:ring-offset-[#0b0b0b] disabled:cursor-not-allowed disabled:opacity-50 ${enabled ? "bg-green-500" : "bg-white/15"}`}
-            >
-              <span className={`h-6 w-6 rounded-full bg-white shadow-sm transition-transform duration-200 ${enabled ? "translate-x-5" : "translate-x-0"}`} />
-            </button>
+              label="Enable consistency pricing for this business"
+              disabled={saving || reviewRequired || !formReady}
+            />
             {program && (
               <button
                 type="button"

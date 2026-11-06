@@ -24,6 +24,7 @@ import AdminPayshapQueue from "@/components/admin/AdminPayshapQueue";
 import { TrialCountdownNudge } from "@/components/admin/TrialCountdownNudge";
 import { ADMIN_METRIC_DEFINITIONS, ADMIN_METRIC_INFO, type AdminMetricDefinition, type AdminMetricInfoLine } from "@/components/admin/metricDefinitions";
 import { FirstBookingCelebration } from "@/components/admin/FirstBookingCelebration";
+import { AdminSwitch } from "@/components/admin/AdminSharedUI";
 type MetricEntry = AdminMetricDefinition;
 type InfoLine = AdminMetricInfoLine;
 
@@ -457,19 +458,24 @@ export const AdminDashboardView = ({
               <p className="text-[10px] font-semibold tracking-[0.12em] uppercase text-white/30 mb-3">Show / Hide Sections</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {ALL_SECTIONS.map((key) => (
-                  <button
+                  <div
                     key={key}
-                    data-demo-customize-control={demo ? "section-toggle" : undefined}
-                    onClick={() => toggle(key)}
-                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-colors border ${
+                    className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-2 transition-colors ${
                       visibility[key]
-                        ? "bg-white/[0.06] border-white/[0.1] text-white/70"
-                        : "bg-transparent border-white/[0.04] text-white/25"
+                        ? "bg-white/[0.06] border-white/[0.1]"
+                        : "bg-transparent border-white/[0.04]"
                     }`}
                   >
-                    <div className={`w-2 h-2 rounded-full ${visibility[key] ? "bg-emerald-400" : "bg-white/10"}`} />
-                    {sectionLabels[key]}
-                  </button>
+                    <span className={`min-w-0 text-xs ${visibility[key] ? "text-white/70" : "text-white/35"}`}>
+                      {sectionLabels[key]}
+                    </span>
+                    <AdminSwitch
+                      checked={visibility[key]}
+                      onChange={() => toggle(key)}
+                      label={`Show ${sectionLabels[key]} on dashboard`}
+                      dataDemoCustomizeControl={demo ? "section-toggle" : undefined}
+                    />
+                  </div>
                 ))}
               </div>
             </div>
