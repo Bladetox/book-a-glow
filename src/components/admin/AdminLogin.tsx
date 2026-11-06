@@ -148,10 +148,10 @@ const AdminLogin = ({ onLogin }: AdminLoginProps) => {
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-sm"
       >
-        <div className="rounded-2xl border border-white/[0.08] bg-white/[0.04] backdrop-blur-xl p-8 flex flex-col items-center gap-6">
+        <div className="rounded-2xl nexty-card backdrop-blur-xl p-8 flex flex-col items-center gap-6">
 
           {/* ── Logo / Avatar ─────────────────────────────────────────────── */}
-          <div className="w-14 h-14 rounded-2xl bg-white/[0.06] border border-white/[0.1] flex items-center justify-center overflow-hidden">
+          <div className="w-14 h-14 rounded-2xl nexty-card flex items-center justify-center overflow-hidden">
             {logoUrl ? (
               <img
                 src={logoUrl}

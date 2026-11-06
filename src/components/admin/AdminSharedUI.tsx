@@ -34,7 +34,7 @@ export const AdminCard = ({
 
   const heading = (
     <>
-      {Icon && <div className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.06] shrink-0"><Icon className="w-4 h-4 text-white/40" /></div>}
+      {Icon && <div className="p-2 rounded-xl nexty-card shrink-0"><Icon className="w-4 h-4 text-white/40" /></div>}
       <h4 className="text-base font-bold text-white/80 flex-1 text-left">{title}</h4>
       {collapsible && <ChevronDown aria-hidden="true" className={`w-4 h-4 text-white/25 shrink-0 ${open ? "rotate-180" : ""}`} />}
     </>
@@ -110,13 +110,13 @@ export const FieldRow = ({
 
     {masked ? (
       <div className="flex items-center gap-2">
-        <p className="flex-1 px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/20 font-mono italic">
+        <p className="flex-1 px-4 py-2.5 rounded-xl nexty-card text-sm text-white/20 font-mono italic">
           ••••••••••••••••
         </p>
         <button
           onClick={onUnmask}
           type="button"
-          className="min-h-11 min-w-11 px-3 py-2 rounded-xl bg-white/[0.06] border border-white/[0.08] text-[10px] font-bold text-white/40 hover:text-white/70 transition-colors"
+          className="min-h-11 min-w-11 px-3 py-2 rounded-xl nexty-card text-[10px] font-bold text-white/40 hover:text-white/70 transition-colors"
         >
           Edit
         </button>
@@ -318,7 +318,7 @@ export const EmptyState = ({
   icon?: React.ElementType;
   action?: React.ReactNode;
 }) => (
-  <div className="py-12 flex flex-col items-center justify-center text-center px-4 rounded-3xl bg-white/[0.02] border border-dashed border-white/[0.08]">
+  <div className="py-12 flex flex-col items-center justify-center text-center px-4 rounded-3xl border border-dashed border-white/[0.1] bg-white/[0.015]">
     {Icon && <Icon className="w-6 h-6 text-white/20 mb-3" />}
     <p className="text-sm text-white/30 font-medium mb-1">{title ?? message}</p>
     {description && <p className="text-xs text-white/20 max-w-xs">{description}</p>}
@@ -368,7 +368,7 @@ export const HintTooltip = ({ text }: { text: string }) => {
           <HelpCircle className="w-4 h-4" aria-hidden="true" />
         </button>
       </PopoverTrigger>
-      <PopoverContent side="top" align="center" className="w-60 rounded-xl border border-white/[0.12] bg-zinc-900 px-3 py-2.5 text-white shadow-2xl">
+      <PopoverContent side="top" align="center" className="nexty-glass-strong w-60 rounded-xl px-3 py-2.5 text-white">
         <p className="text-xs text-white/70 leading-relaxed">{text}</p>
       </PopoverContent>
     </Popover>
