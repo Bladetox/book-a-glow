@@ -318,6 +318,8 @@ const Index = () => {
                     releaseHold={slotHold.releaseHold}
                     holdId={slotHold.holdId}
                     sessionToken={slotHold.sessionToken}
+                    resizeHold={slotHold.resizeHold}
+                    isResizing={slotHold.isResizing}
                     onPayshapComplete={() => setShowSplash(true)}
                   />
                 )}

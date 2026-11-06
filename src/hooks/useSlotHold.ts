@@ -10,6 +10,12 @@ export interface SlotHoldState {
   durationMins: number | null;
 }
 
+export interface ResizeHoldResult {
+  success: boolean;
+  message: string;
+  durationMins?: number;
+}
+
 const SESSION_TOKEN_KEY = 'bag_session_token';
 
 function getSessionToken(): string {
@@ -28,6 +34,7 @@ export function useSlotHold() {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const holdIdRef = useRef<string | null>(null);
   const sessionToken = useRef(getSessionToken());
+  const [isResizing, setIsResizing] = useState(false);
 
   const clearCountdown = useCallback(() => {
     if (intervalRef.current) {
@@ -102,6 +109,33 @@ export function useSlotHold() {
     return { success: true as const, holdId: row.hold_id as string };
   }, [clearCountdown, startCountdown]);
 
+  const resizeHold = useCallback(async (serviceIds: string[]): Promise<ResizeHoldResult> => {
+    const activeHoldId = holdIdRef.current;
+    if (!activeHoldId) {
+      return { success: false, message: "Your appointment hold has expired. Please choose your time again." };
+    }
+
+    setIsResizing(true);
+    try {
+      const { data, error } = await supabase.rpc('resize_slot_hold', {
+        p_hold_id: activeHoldId,
+        p_session_token: sessionToken.current,
+        p_service_ids: serviceIds,
+      } as any);
+
+      const row = (data as any)?.[0];
+      if (error || !row?.success) {
+        const msg = row?.message ?? error?.message ?? 'Could not update the held appointment time.';
+        return { success: false, message: msg };
+      }
+
+      setState(prev => ({ ...prev, durationMins: row.duration_mins }));
+      return { success: true, message: row.message, durationMins: row.duration_mins };
+    } finally {
+      setIsResizing(false);
+    }
+  }, []);
+
   const releaseHold = useCallback(async () => {
     const activeHoldId = holdIdRef.current;
     if (!activeHoldId) return;
@@ -130,5 +164,5 @@ export function useSlotHold() {
     }
   }, [clearCountdown]);
 
-  return { ...state, sessionToken: sessionToken.current, acquireHold, releaseHold };
+  return { ...state, sessionToken: sessionToken.current, isResizing, acquireHold, resizeHold, releaseHold };
 }
