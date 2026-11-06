@@ -207,7 +207,7 @@ const ViewToggle = ({
   view: CalendarView;
   onChange: (v: CalendarView) => void;
 }) => (
-  <div className="flex items-center bg-white/[0.04] rounded-xl p-1 gap-0.5">
+  <div className="flex items-center nexty-inset rounded-xl p-1 gap-0.5">
     {(["day", "week", "month"] as CalendarView[]).map((v) => (
       <button
         key={v}
@@ -348,7 +348,7 @@ const DetailDrawer = ({
         <motion.div
           layoutId={`booking-${booking.id}`}
           transition={DRAWER_SPRING}
-          className={`m-3 rounded-2xl bg-[#151515] border border-white/[0.08] flex flex-col flex-1 min-h-0 pointer-events-auto overflow-hidden ${isCompact ? "rounded-t-3xl rounded-b-2xl" : ""}`}
+          className={`m-3 rounded-2xl nexty-glass-strong flex flex-col flex-1 min-h-0 pointer-events-auto overflow-hidden ${isCompact ? "rounded-t-3xl rounded-b-2xl" : ""}`}
         >
           {isCompact && (
             <div className="flex justify-center pt-3 pb-1" aria-hidden="true">
@@ -423,7 +423,7 @@ const DetailDrawer = ({
               </div>
 
               <div className="grid grid-cols-2 gap-2">
-                <div className="bg-white/[0.03] rounded-xl p-3">
+                <div className="nexty-inset rounded-xl p-3">
                   <p className="text-[10px] text-white/30 mb-1">
                     Total booking amount
                   </p>
@@ -431,7 +431,7 @@ const DetailDrawer = ({
                     {fmt.currency(booking.total_amount)}
                   </p>
                 </div>
-                <div className="bg-white/[0.03] rounded-xl p-3">
+                <div className="nexty-inset rounded-xl p-3">
                   <p className="text-[10px] text-white/30 mb-1">Deposit</p>
                   <p className="text-sm font-semibold text-white/80">
                     {fmt.currency(booking.deposit_amount)}
@@ -1316,7 +1316,7 @@ const AdminCalendar = () => {
         />
 
         {/* Booking cards */}
-        <div className="flex-1 min-h-0 bg-white/[0.02] border border-white/[0.06] rounded-2xl overflow-hidden flex flex-col mt-2">
+        <div className="flex-1 min-h-0 nexty-card rounded-2xl overflow-hidden flex flex-col mt-2">
           <MobileDayList
             date={mobileDay}
             bookings={bookings}
@@ -1365,7 +1365,7 @@ const AdminCalendar = () => {
         </div>
 
         {/* Calendar area */}
-        <div className="flex-1 min-h-0 bg-white/[0.02] border border-white/[0.06] rounded-2xl overflow-hidden flex flex-col">
+        <div className="flex-1 min-h-0 nexty-card rounded-2xl overflow-hidden flex flex-col">
           {view === "month" ? (
             <MonthView
               anchor={anchor}

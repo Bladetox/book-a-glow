@@ -100,7 +100,7 @@ const OverflowMenu = ({ isClientBlocked, canCancel, onBlock, onCancel, onDelete 
       <button
         onClick={e => { e.stopPropagation(); setOpen(v => !v); }}
         aria-label="More actions"
-        className="p-2 rounded-xl border border-white/[0.08] bg-white/[0.03] text-white/30 hover:text-white/60 hover:bg-white/[0.06] transition-colors"
+        className="p-2 rounded-xl text-white/30 hover:text-white/60 hover:bg-white/[0.06] transition-colors"
       >
         <MoreHorizontal className="w-3.5 h-3.5" />
       </button>
@@ -112,7 +112,7 @@ const OverflowMenu = ({ isClientBlocked, canCancel, onBlock, onCancel, onDelete 
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.94, y: 4 }}
             transition={{ duration: 0.14, ease: "easeOut" }}
-            className="absolute right-0 bottom-full mb-2 z-30 w-44 rounded-2xl border border-white/[0.10] bg-[#111] shadow-2xl overflow-hidden"
+            className="absolute right-0 bottom-full mb-2 z-30 w-44 rounded-2xl nexty-glass-strong overflow-hidden"
             onClick={e => e.stopPropagation()}
           >
             <button
@@ -177,7 +177,7 @@ const ConfirmDialog = ({ open, title, description, confirmLabel, confirmClass, o
             key="dialog"
             initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
             transition={{ type: "spring", stiffness: 340, damping: 30 }}
-            className="pointer-events-auto w-full max-w-xs rounded-3xl border border-white/[0.12] bg-[#0f0f0f] shadow-2xl overflow-hidden"
+            className="pointer-events-auto w-full max-w-xs rounded-3xl nexty-glass-strong overflow-hidden"
           >
             <div className="px-5 pt-5 pb-4 flex flex-col gap-3">
               <div className="flex items-center gap-2">
@@ -231,7 +231,7 @@ const RescheduleModal = ({
             key="rs-modal"
             initial={{ scale: 0.96, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.96, opacity: 0 }}
             transition={{ type: "spring", stiffness: 340, damping: 30 }}
-            className="pointer-events-auto w-full max-w-lg max-h-[90dvh] rounded-3xl border border-white/[0.12] bg-[#0f0f0f] shadow-2xl overflow-y-auto"
+            className="pointer-events-auto w-full max-w-lg max-h-[90dvh] rounded-3xl nexty-glass-strong overflow-y-auto"
           >
             <div className="flex items-center justify-between px-5 pt-5 pb-3 sticky top-0 bg-[#0f0f0f] z-10">
               <div>
@@ -246,7 +246,7 @@ const RescheduleModal = ({
             <div className="px-5 py-4 flex flex-col sm:flex-row gap-4">
               <div className="flex-1 min-w-0">
                 <p className="text-[10px] text-white/30 mb-2">New Date</p>
-                <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-2">
+                <div className="rounded-2xl nexty-card p-2">
                   <Calendar
                     mode="single"
                     selected={rescheduleDate}
@@ -1032,22 +1032,22 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
       <section className="flex flex-col gap-3">
         <SectionLabel label="Overview" />
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="rounded-3xl border border-white/[0.05] bg-gradient-to-br from-white/[0.04] to-white/[0.02] p-4 flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.06]"><CalendarCheck className="w-4 h-4 text-white/35" /></div>
+          <div className="rounded-3xl nexty-card p-4 flex items-center gap-3">
+            <div className="p-2 rounded-xl nexty-inset"><CalendarCheck className="w-4 h-4 text-white/35" /></div>
             <div>
               <p className="text-lg font-bold text-white/90">{counts.Today}</p>
               <p className="text-[10px] tracking-[0.12em] uppercase text-white/30">Today</p>
             </div>
           </div>
-          <div className="rounded-3xl border border-white/[0.05] bg-gradient-to-br from-white/[0.04] to-white/[0.02] p-4 flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.06]"><Clock className="w-4 h-4 text-amber-400/60" /></div>
+          <div className="rounded-3xl nexty-card p-4 flex items-center gap-3">
+            <div className="p-2 rounded-xl nexty-inset"><Clock className="w-4 h-4 text-amber-400/60" /></div>
             <div>
               <p className="text-lg font-bold text-amber-400">{counts.Pending}</p>
               <p className="text-[10px] tracking-[0.12em] uppercase text-white/30">Pending</p>
             </div>
           </div>
-          <div className="col-span-2 rounded-3xl border border-white/[0.05] bg-gradient-to-br from-white/[0.04] to-white/[0.02] p-4 flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.06]"><CircleDollarSign className="w-4 h-4 text-white/35 shrink-0" /></div>
+          <div className="col-span-2 rounded-3xl nexty-card p-4 flex items-center gap-3">
+            <div className="p-2 rounded-xl nexty-inset"><CircleDollarSign className="w-4 h-4 text-white/35 shrink-0" /></div>
             <div className="flex flex-1 items-center justify-between gap-3 flex-wrap">
               <div className="min-w-0">
                 <p className="text-lg font-bold text-white/90">R {totalRevenue.toLocaleString()}</p>
@@ -1085,7 +1085,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
             placeholder="Search client, service, or ref…"
-            className="w-full pl-9 pr-9 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/70 placeholder:text-white/20 focus:outline-none focus:border-white/[0.15] transition-colors"
+            className="w-full pl-9 pr-9 py-2.5 rounded-xl nexty-inset text-sm text-white/70 placeholder:text-white/20 focus:outline-none focus:border-white/[0.15] transition-colors"
           />
           {searchQuery && (
             <button onClick={() => setSearchQuery("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/25 hover:text-white/60 transition-colors">
@@ -1230,7 +1230,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -8 }}
                       layout
-                      className={`rounded-3xl border border-white/[0.05] bg-gradient-to-br from-white/[0.04] to-white/[0.02] overflow-hidden ${statusBorderAccent[b.status]}`}
+                      className={`rounded-3xl nexty-card overflow-hidden ${statusBorderAccent[b.status]}`}
                     >
                       {/* ── Card header ──────────────────────────────────── */}
                       <div
@@ -1392,17 +1392,17 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
 
                                 {/* Payment summary */}
                                 <div className="grid grid-cols-3 gap-2 mt-1">
-                                  <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-3 text-center">
+                                  <div className="rounded-xl nexty-inset p-3 text-center">
                                     <p className="text-[10px] text-white/30">Total</p>
                                     <p className="text-sm font-bold text-white/80">R {b.total.toLocaleString()}</p>
                                   </div>
-                                  <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-3 text-center">
+                                  <div className="rounded-xl nexty-inset p-3 text-center">
                                     <p className="text-[10px] text-white/30">{b.fullPaymentReceived && b.balance === 0 ? "Full Payment" : "Deposit"}</p>
                                     <p className={`text-sm font-bold ${b.fullPaymentReceived && b.balance === 0 ? "text-white/50" : "text-emerald-400"}`}>
                                       {b.fullPaymentReceived && b.balance === 0 ? "Paid ✓" : `R ${b.deposit.toLocaleString()}`}
                                     </p>
                                   </div>
-                                  <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-3 text-center">
+                                  <div className="rounded-xl nexty-inset p-3 text-center">
                                     <p className="text-[10px] text-white/30">Balance</p>
                                     <p className={`text-sm font-bold ${b.balance > 0 && !b.fullPaymentReceived ? "text-amber-400" : "text-white/50"}`}>
                                       {b.fullPaymentReceived ? "Paid ✓" : `R ${b.balance.toLocaleString()}`}
@@ -1417,7 +1417,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                   </div>
                                 )}
 
-                                <div className="flex items-center gap-2 rounded-xl border border-white/[0.07] bg-white/[0.03] px-3 py-2.5">
+                                <div className="flex items-center gap-2 rounded-xl nexty-card px-3 py-2.5">
                                 <CalendarCheck className="h-3.5 w-3.5 shrink-0 text-sky-400/70" />
 
                                 <div className="min-w-0">
@@ -1437,7 +1437,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                               </div>
 
                                 {/* Edit accordion */}
-                                <div className="rounded-2xl border border-white/[0.07] bg-white/[0.02] overflow-hidden">
+                                <div className="rounded-2xl nexty-card overflow-hidden">
                                   <button
                                     onClick={e => {
                                       e.stopPropagation();
@@ -1640,7 +1640,7 @@ const EditField = ({ label, value, onChange }: { label: string; value: string; o
       type="text"
       value={value}
       onChange={e => onChange(e.target.value)}
-      className="px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-sm text-white/70 placeholder:text-white/20 focus:outline-none focus:border-white/[0.18] transition-colors"
+      className="px-4 py-2.5 rounded-xl nexty-inset text-sm text-white/70 placeholder:text-white/20 focus:outline-none focus:border-white/[0.18] transition-colors"
     />
   </div>
 );
