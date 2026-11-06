@@ -1,7 +1,7 @@
 {
   ".claude/settings.json": {
-    "mtime": 1793973968.5798807,
-    "seen": 1793973975.6584384,
+    "mtime": 1793974627.677565,
+    "seen": 1793974630.545437,
     "ast_hash": "0a0ef578e59e2bb38c69f1dcb49a0e1a",
     "semantic_hash": "0a0ef578e59e2bb38c69f1dcb49a0e1a",
     "ast_empty": true
@@ -1114,9 +1114,9 @@
     "semantic_hash": "acefd457e7c96054c7e74245fc533ec2"
   },
   "src/hooks/useSlotHold.ts": {
-    "mtime": 1793973968.631909,
-    "seen": 1793973975.6588337,
-    "ast_hash": "52b7b6b4542009e4f6c31b7a165ab8a2",
+    "mtime": 1793974627.735948,
+    "seen": 1793974630.545798,
+    "ast_hash": "6d8392cf6ba22a794063556b79321158",
     "semantic_hash": ""
   },
   "src/hooks/useStockAlerts.ts": {
@@ -1192,10 +1192,10 @@
     "semantic_hash": "2b3924aa617b30d23d25e01e3b4df360"
   },
   "src/integrations/supabase/types.ts": {
-    "mtime": 1793963760.8948262,
-    "seen": 1793963856.733788,
-    "ast_hash": "bf3293b18b13dd9541a4cbb494fee069",
-    "semantic_hash": "bf3293b18b13dd9541a4cbb494fee069"
+    "mtime": 1793974627.735948,
+    "seen": 1793974630.5458124,
+    "ast_hash": "d3c1fc5be7e301a0dc68e840dbed3611",
+    "semantic_hash": ""
   },
   "src/lib/clientIdentity.ts": {
     "mtime": 1793963760.8948262,
@@ -2314,14 +2314,14 @@
     "semantic_hash": "3280df2695a76ed77887e7c98bc744d8"
   },
   ".claude/CLAUDE.md": {
-    "mtime": 1793973968.575909,
-    "seen": 1793973975.6592536,
+    "mtime": 1793974627.6759481,
+    "seen": 1793974630.5460346,
     "ast_hash": "9b31786b637be3c13978bec4c2330752",
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1793973968.5809526,
-    "seen": 1793973975.6592557,
+    "mtime": 1793974627.679948,
+    "seen": 1793974630.546036,
     "ast_hash": "67d88e9d0760c3ba54c75dfd9551c1c5",
     "semantic_hash": ""
   },
