@@ -14,6 +14,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import BookingConfirmation from "@/components/BookingConfirmation";
 import { toast } from "sonner";
 import type { PublicService } from "@/hooks/usePublicServices";
+import type { ResizeHoldResult } from "@/hooks/useSlotHold";
 import YocoImg from "@/assets/Yoco.svg";
 import PayfastImg from "@/assets/Payfast.webp";
 import PayshapImg from "@/assets/payshap.png";
@@ -26,6 +27,8 @@ interface ReviewStepProps {
   releaseHold: () => Promise<void>;
   holdId: string | null;
   sessionToken: string;
+  resizeHold: (serviceIds: string[]) => Promise<ResizeHoldResult>;
+  isResizing: boolean;
   onPayshapComplete: () => void;
 }
 
@@ -101,7 +104,7 @@ function GatewayLogo({ choice, className }: { choice: PaymentChoice; className?:
   return null;
 }
 
-const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, holdId, sessionToken, onPayshapComplete }: ReviewStepProps) => {
+const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, holdId, sessionToken, resizeHold, isResizing, onPayshapComplete }: ReviewStepProps) => {
   const { data: allServices = [] } = usePublicServices();
   const { sections: termsSections } = usePublicTerms();
   const config = usePublicBusinessConfig();
@@ -146,6 +149,9 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, holdId, sessio
     return () => clearTimeout(t);
   }, [payshapSuccess, payshapCountdown, onPayshapComplete]);
 
+  // Shows every configured suggestion for the selected trigger service(s),
+  // including ones already added — so their quantity/remove controls stay
+  // reachable instead of the card disappearing the moment it's picked.
   const pairWithAddons = useMemo(() => {
     if (!addonsConfig || !allServices.length) return [];
     const selectedSet = new Set(booking.selectedTreatments);
@@ -154,7 +160,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, holdId, sessio
     for (const rule of addonsConfig.rules) {
       if (!selectedSet.has(rule.triggerId)) continue;
       for (const id of rule.suggestIds) {
-        if (seen.has(id) || selectedSet.has(id)) continue;
+        if (seen.has(id)) continue;
         const svc = allServices.find((s) => s.id === id);
         if (svc) { seen.add(id); result.push(svc); }
       }
@@ -167,15 +173,72 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, holdId, sessio
   const getAddonQty = (id: string) =>
     booking.selectedTreatments.filter((t) => t === id).length;
 
-  const incrementAddon = (id: string) =>
-    onUpdate({ selectedTreatments: [...booking.selectedTreatments, id] });
+  // The NextSlot 10-minute hold protects a specific staff/date/start-time/
+  // duration. Changing the selection here can grow or shrink that duration,
+  // so every add/remove goes through resize_slot_hold first — the booking
+  // selection only changes once the database has confirmed the held
+  // appointment can actually accommodate it. If an extension can't fit, the
+  // original hold is left completely untouched and the client is offered a
+  // choice instead of a silently-rejected add-on.
+  const [addonBusyId, setAddonBusyId] = useState<string | null>(null);
+  const [extensionBlocked, setExtensionBlocked] = useState<{
+    proposedTreatments: string[];
+    message: string;
+  } | null>(null);
+
+  const applyAddonChange = async (nextTreatments: string[], addedId: string) => {
+    if (!holdId) {
+      // No active hold (e.g. it already expired) — nothing to resize against.
+      // Let the existing "hold expired" banner/CTA guide the client back to Schedule.
+      return;
+    }
+    setAddonBusyId(addedId);
+    try {
+      const result = await resizeHold(nextTreatments);
+      if (result.success) {
+        onUpdate({ selectedTreatments: nextTreatments });
+        return;
+      }
+      // The hold itself is gone (expired or already released) rather than
+      // just too short for the new selection — there's no "original
+      // appointment" left to offer to keep, so just surface it plainly.
+      if (/expired|could not be found/i.test(result.message)) {
+        toast.error(result.message);
+        return;
+      }
+      setExtensionBlocked({ proposedTreatments: nextTreatments, message: result.message });
+    } finally {
+      setAddonBusyId(null);
+    }
+  };
+
+  const incrementAddon = (id: string) => {
+    void applyAddonChange([...booking.selectedTreatments, id], id);
+  };
 
   const decrementAddon = (id: string) => {
     const idx = booking.selectedTreatments.lastIndexOf(id);
     if (idx === -1) return;
     const next = [...booking.selectedTreatments];
     next.splice(idx, 1);
-    onUpdate({ selectedTreatments: next });
+    void applyAddonChange(next, id);
+  };
+
+  // "Keep your original appointment": discard the proposed add-on, leave the
+  // hold and selection exactly as they were.
+  const keepOriginalAppointment = () => setExtensionBlocked(null);
+
+  // "Choose another time": the add-on IS kept in the booking selection (the
+  // client's intent), but the current hold no longer matches it, so it's
+  // released and the client returns to Schedule to pick a time that fits the
+  // new total duration.
+  const chooseAnotherTime = async () => {
+    if (!extensionBlocked) return;
+    const { proposedTreatments } = extensionBlocked;
+    setExtensionBlocked(null);
+    onUpdate({ selectedTreatments: proposedTreatments, selectedTime: null });
+    await releaseHold();
+    onGoToStep(1);
   };
 
   const selectedWithQty = (() => {
@@ -369,8 +432,15 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, holdId, sessio
     } as any);
 
     if (error) throw error;
-    const bookingId: string = data?.[0]?.booking_id;
-    if (!bookingId) throw new Error("Booking creation returned no ID.");
+    const bookingRow = data?.[0];
+    if (!bookingRow?.success || !bookingRow?.booking_id) {
+      // Surface the RPC's own rejection reason (e.g. a hold that expired or
+      // no longer matches the selected services) instead of a generic error,
+      // so an expired hold or last-minute conflict never looks like an
+      // unexplained checkout failure.
+      throw new Error(bookingRow?.message || "Booking creation returned no ID.");
+    }
+    const bookingId: string = bookingRow.booking_id;
     setPendingBookingId(bookingId);
 
     if (config.payshapEnabled) {
@@ -476,7 +546,12 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, holdId, sessio
         toast.error("It looks like this booking already exists.");
         return;
       }
-      if (err?.message?.includes("no longer available") || err?.message?.includes("not available")) {
+      if (
+        err?.message?.includes("no longer available") ||
+        err?.message?.includes("not available") ||
+        /hold.*expired|choose.*time again|select.*time again/i.test(err?.message ?? "")
+      ) {
+        toast.error(err.message || friendlyBookingError(err));
         onGoToStep(1);
         return;
       } else {
@@ -904,6 +979,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, holdId, sessio
                       <div className="flex-1 overflow-y-auto px-5 pb-2 flex flex-col gap-3 scrollbar-hide">
                         {pairWithAddons.map((svc) => {
                           const qty = getAddonQty(svc.id);
+                          const busy = addonBusyId === svc.id;
                           return (
                             <motion.div
                               key={svc.id}
@@ -916,29 +992,46 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, holdId, sessio
                                   <p className="text-[11px] text-muted-foreground mt-0.5">{svc.duration_minutes} min</p>
                                 )}
                                 <p className="text-sm font-bold text-primary mt-1">{cur}{svc.price.toLocaleString()}</p>
+                                {qty > 0 && (
+                                  <p className="text-[11px] text-primary font-medium mt-1">Added to booking</p>
+                                )}
                               </div>
                               <div className="flex items-center gap-2 shrink-0">
-                                {qty > 0 ? (
+                                {busy ? (
+                                  <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                                ) : qty > 0 ? (
                                   <>
                                     <motion.button
                                       whileTap={{ scale: 0.9 }}
                                       onClick={() => decrementAddon(svc.id)}
-                                      className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-foreground"
+                                      disabled={isResizing}
+                                      className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-foreground disabled:opacity-50"
                                       aria-label="Remove one"
                                     >
                                       <Minus className="w-3.5 h-3.5" />
                                     </motion.button>
                                     <span className="text-sm font-bold text-foreground w-4 text-center">{qty}</span>
+                                    <motion.button
+                                      whileTap={{ scale: 0.9 }}
+                                      onClick={() => incrementAddon(svc.id)}
+                                      disabled={isResizing}
+                                      className="w-7 h-7 rounded-full bg-primary flex items-center justify-center text-primary-foreground disabled:opacity-50"
+                                      aria-label="Add one"
+                                    >
+                                      <Plus className="w-3.5 h-3.5" />
+                                    </motion.button>
                                   </>
-                                ) : null}
-                                <motion.button
-                                  whileTap={{ scale: 0.9 }}
-                                  onClick={() => incrementAddon(svc.id)}
-                                  className="w-7 h-7 rounded-full bg-primary flex items-center justify-center text-primary-foreground"
-                                  aria-label="Add one"
-                                >
-                                  <Plus className="w-3.5 h-3.5" />
-                                </motion.button>
+                                ) : (
+                                  <motion.button
+                                    whileTap={{ scale: 0.9 }}
+                                    onClick={() => incrementAddon(svc.id)}
+                                    disabled={isResizing}
+                                    className="h-7 px-3 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-xs font-semibold disabled:opacity-50"
+                                    aria-label="Add"
+                                  >
+                                    Add
+                                  </motion.button>
+                                )}
                               </div>
                             </motion.div>
                           );
@@ -957,6 +1050,59 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, holdId, sessio
                   </>
                 )}
               </AnimatePresence>,
+        document.body
+      )}
+      {/* Extension-blocked dialog: the held slot can't accommodate the proposed
+          add-on. Portalled like the other overlays so it always renders above
+          the pair-with sheet. */}
+      {createPortal(
+        <AnimatePresence>
+          {extensionBlocked && (
+            <>
+              <motion.div
+                key="extension-blocked-backdrop"
+                className="fixed inset-0 z-[10002] bg-black/60 backdrop-blur-sm"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
+              />
+              <motion.div
+                key="extension-blocked-sheet"
+                className="fixed inset-0 z-[10003] m-auto w-[calc(100%-2rem)] max-w-sm h-fit rounded-3xl bg-background border border-border/60 shadow-2xl flex flex-col overflow-hidden"
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.98 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+              >
+                <div className="p-5 flex flex-col gap-3">
+                  <h2 className="font-display text-lg font-bold text-foreground leading-tight">
+                    This enhancement needs more appointment time
+                  </h2>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {extensionBlocked.message} Your original appointment time is still being held.
+                  </p>
+                  <div className="flex flex-col gap-2 mt-2">
+                    <motion.button
+                      whileTap={{ scale: 0.97 }}
+                      onClick={keepOriginalAppointment}
+                      className="btn-next w-full"
+                    >
+                      Keep your original appointment
+                    </motion.button>
+                    <button
+                      type="button"
+                      onClick={() => void chooseAnotherTime()}
+                      className="w-full py-2.5 text-sm font-semibold text-muted-foreground underline underline-offset-4"
+                    >
+                      Choose another time
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            </>
+          )}
+        </AnimatePresence>,
         document.body
       )}
       {/* Terms dialog is portalled outside the animated booking-step layer. */}
