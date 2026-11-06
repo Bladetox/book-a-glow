@@ -1,7 +1,7 @@
 {
   ".claude/settings.json": {
-    "mtime": 1793968500.166546,
-    "seen": 1793968508.2225714,
+    "mtime": 1793973968.5798807,
+    "seen": 1793973975.6584384,
     "ast_hash": "0a0ef578e59e2bb38c69f1dcb49a0e1a",
     "semantic_hash": "0a0ef578e59e2bb38c69f1dcb49a0e1a",
     "ast_empty": true
@@ -86,10 +86,10 @@
     "semantic_hash": "67883c39651f17da46cd2fbcd031b41a"
   },
   "src/components/ReviewStep.tsx": {
-    "mtime": 1793963760.8686223,
-    "seen": 1793963856.7294433,
-    "ast_hash": "5c8545763d6fbf4cb2ce445c7df0c038",
-    "semantic_hash": "5c8545763d6fbf4cb2ce445c7df0c038"
+    "mtime": 1793973968.631909,
+    "seen": 1793973975.658493,
+    "ast_hash": "d8719fca54b0e3ea2463f1446aa1a570",
+    "semantic_hash": ""
   },
   "src/components/ScheduleStep.tsx": {
     "mtime": 1793963760.8686223,
@@ -188,8 +188,8 @@
     "semantic_hash": "bc4214f5e18da9a86a35b414287bdc6d"
   },
   "src/components/admin/AdminDashboard.tsx": {
-    "mtime": 1793968500.227215,
-    "seen": 1793968508.2226317,
+    "mtime": 1793968738.9724379,
+    "seen": 1793973975.6585357,
     "ast_hash": "a3d3d9ab78df1cf8887a6ef64e9e82c1",
     "semantic_hash": ""
   },
@@ -764,8 +764,8 @@
     "semantic_hash": "f4bca09614280717f826474a04335ee9"
   },
   "src/components/superadmin/views/SASettings.tsx": {
-    "mtime": 1793968500.227215,
-    "seen": 1793968508.222759,
+    "mtime": 1793968738.9724379,
+    "seen": 1793973975.6587155,
     "ast_hash": "89e9be0f6eac5cfe7c7f01359908fe69",
     "semantic_hash": ""
   },
@@ -788,8 +788,8 @@
     "semantic_hash": "74ad94d7db39cbdc2b63816385a0bda3"
   },
   "src/components/superadmin/views/SATroubleshoot.tsx": {
-    "mtime": 1793968500.227215,
-    "seen": 1793968508.2227635,
+    "mtime": 1793968738.9724379,
+    "seen": 1793973975.6587322,
     "ast_hash": "6112634bf3775005eeed5be8283cdb69",
     "semantic_hash": ""
   },
@@ -800,8 +800,8 @@
     "semantic_hash": "0c452595e042de630fa0305183de842f"
   },
   "src/components/superadmin/views/SAWebhookQueue.tsx": {
-    "mtime": 1793968500.227215,
-    "seen": 1793968508.222766,
+    "mtime": 1793968738.9724379,
+    "seen": 1793973975.658735,
     "ast_hash": "3f0a1d8577cef1cb19f73e81057ac5f1",
     "semantic_hash": ""
   },
@@ -1114,10 +1114,10 @@
     "semantic_hash": "acefd457e7c96054c7e74245fc533ec2"
   },
   "src/hooks/useSlotHold.ts": {
-    "mtime": 1793963760.8910522,
-    "seen": 1793963856.733577,
-    "ast_hash": "713ddec7dd23a39063a10473cd0f3f87",
-    "semantic_hash": "713ddec7dd23a39063a10473cd0f3f87"
+    "mtime": 1793973968.631909,
+    "seen": 1793973975.6588337,
+    "ast_hash": "52b7b6b4542009e4f6c31b7a165ab8a2",
+    "semantic_hash": ""
   },
   "src/hooks/useStockAlerts.ts": {
     "mtime": 1793963760.8910522,
@@ -1294,10 +1294,10 @@
     "semantic_hash": "a47e520ed2025d10cc50d30ff27191cf"
   },
   "src/pages/Book.tsx": {
-    "mtime": 1793963760.8969042,
-    "seen": 1793963856.734084,
-    "ast_hash": "11be6a259524661c91afa7963a914ff3",
-    "semantic_hash": "11be6a259524661c91afa7963a914ff3"
+    "mtime": 1793973968.631909,
+    "seen": 1793973975.6588926,
+    "ast_hash": "edb64a620d9b00b9d2d69f88e396dc8d",
+    "semantic_hash": ""
   },
   "src/pages/BookingSoftwareSouthAfrica.tsx": {
     "mtime": 1793963760.8969042,
@@ -2314,14 +2314,14 @@
     "semantic_hash": "3280df2695a76ed77887e7c98bc744d8"
   },
   ".claude/CLAUDE.md": {
-    "mtime": 1793968500.1629295,
-    "seen": 1793968508.2230659,
+    "mtime": 1793973968.575909,
+    "seen": 1793973975.6592536,
     "ast_hash": "9b31786b637be3c13978bec4c2330752",
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1793968500.1681,
-    "seen": 1793968508.2230673,
+    "mtime": 1793973968.5809526,
+    "seen": 1793973975.6592557,
     "ast_hash": "67d88e9d0760c3ba54c75dfd9551c1c5",
     "semantic_hash": ""
   },
@@ -2569,6 +2569,12 @@
     "mtime": 1793963760.8616657,
     "seen": 1793968508.2231014,
     "ast_hash": "5d58522b96d5ff3df29b7e9adf8330b1",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20261106120000_add_resize_slot_hold_rpc.sql": {
+    "mtime": 1793973968.631909,
+    "seen": 1793973975.6592376,
+    "ast_hash": "08d79d66bf45d5fd446dbabbd7b1b870",
     "semantic_hash": ""
   },
   "package-lock.json": {
