@@ -36,7 +36,7 @@ const Callout = ({
 
 const Step = ({ n, children }: { n: number; children: React.ReactNode }) => (
   <div className="flex gap-3">
-    <div className="w-5 h-5 rounded-full bg-white/[0.06] border border-white/[0.1] flex items-center justify-center shrink-0 mt-0.5">
+    <div className="w-5 h-5 rounded-full nexty-card flex items-center justify-center shrink-0 mt-0.5">
       <span className="text-[10px] font-bold text-white/40">{n}</span>
     </div>
     <p className="text-[12px] text-white/50 leading-relaxed flex-1">{children}</p>
@@ -44,7 +44,7 @@ const Step = ({ n, children }: { n: number; children: React.ReactNode }) => (
 );
 
 const Code = ({ children }: { children: React.ReactNode }) => (
-  <code className="px-1.5 py-0.5 rounded-md bg-white/[0.06] border border-white/[0.08] text-[11px] text-white/60 font-mono">
+  <code className="px-1.5 py-0.5 rounded-md nexty-card text-[11px] text-white/60 font-mono">
     {children}
   </code>
 );
@@ -86,7 +86,7 @@ const AccordionCard = ({
   };
 
   return (
-    <div className="rounded-3xl border border-white/[0.05] bg-gradient-to-br from-white/[0.04] to-white/[0.01] overflow-hidden">
+    <div className="rounded-3xl nexty-card overflow-hidden">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
@@ -94,7 +94,7 @@ const AccordionCard = ({
         aria-controls={contentId}
         className="flex min-h-[64px] w-full items-center gap-3 p-5 text-left hover:bg-white/[0.02] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-amber-400/70"
       >
-        <div className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.06] shrink-0">
+        <div className="p-2 rounded-xl nexty-card shrink-0">
           <Icon className="w-4 h-4 text-white/40" />
         </div>
         <span className="text-sm font-bold text-white/80 flex-1">{title}</span>
@@ -197,7 +197,7 @@ const SmtpGuide = () => (
       If you missed the dialog, go back to App Passwords, delete the old entry, and create a new one.
     </Callout>
     <p className="text-[11px] text-white/40 font-semibold uppercase tracking-widest mt-1">Field reference</p>
-    <div className="rounded-xl border border-white/[0.06] overflow-hidden">
+    <div className="rounded-xl nexty-card overflow-hidden">
       {[
         { field: "SMTP Host",        value: "smtp.gmail.com" },
         { field: "Port",             value: "587" },
@@ -303,15 +303,15 @@ const AdminHelp = () => (
 
     <section className="flex flex-col gap-3">
       <SectionLabel label="Frequently Asked Questions" />
-      <div className="rounded-3xl border border-white/[0.05] bg-gradient-to-br from-white/[0.04] to-white/[0.01] divide-y divide-white/[0.05] px-5">
+      <div className="rounded-3xl nexty-card divide-y divide-white/[0.05] px-5">
         {FAQS.map((f) => <FaqItem key={f.q} q={f.q} a={f.a} />)}
       </div>
     </section>
 
     <section className="flex flex-col gap-3">
       <SectionLabel label="Support" />
-      <div className="rounded-3xl border border-white/[0.05] bg-gradient-to-br from-white/[0.04] to-white/[0.01] p-5 flex items-start gap-4">
-        <div className="p-2.5 rounded-xl bg-white/[0.04] border border-white/[0.06] shrink-0">
+      <div className="rounded-3xl nexty-card p-5 flex items-start gap-4">
+        <div className="p-2.5 rounded-xl nexty-card shrink-0">
           <MessageCircle className="w-4 h-4 text-white/40" />
         </div>
         <div>

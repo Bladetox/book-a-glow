@@ -191,7 +191,7 @@ const IkhokhaCard = ({ settings, onSaved, payshapEnabled, tenantId }: IkhokhaCar
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`rounded-3xl border border-white/[0.05] bg-gradient-to-br from-white/[0.05] to-white/[0.02] overflow-hidden ${accentBorder}`}
+      className={`rounded-3xl nexty-card overflow-hidden ${accentBorder}`}
     >
       {/* Header */}
       <button
@@ -200,7 +200,7 @@ const IkhokhaCard = ({ settings, onSaved, payshapEnabled, tenantId }: IkhokhaCar
         className="w-full flex items-center justify-between p-5 text-left"
       >
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.06] shrink-0">
+          <div className="p-2 rounded-xl nexty-card shrink-0">
             <CreditCard className="w-4 h-4 text-white/40" />
           </div>
           <div>
@@ -244,7 +244,7 @@ const IkhokhaCard = ({ settings, onSaved, payshapEnabled, tenantId }: IkhokhaCar
           >
             <div className="border-t border-white/[0.04]">
               {payshapEnabled && (
-                <div className="flex items-start gap-2.5 mx-5 mt-5 rounded-xl bg-white/[0.03] border border-white/[0.06] px-3.5 py-3 mb-5">
+                <div className="flex items-start gap-2.5 mx-5 mt-5 rounded-xl nexty-card px-3.5 py-3 mb-5">
                   <AlertCircle className="w-3.5 h-3.5 text-white/20 mt-0.5 shrink-0" />
                   <p className="text-[11px] text-white/25 leading-relaxed">
                     iKhokha cannot be used alongside PayShap. Disable PayShap first to configure iKhokha.
@@ -322,7 +322,7 @@ const IkhokhaCard = ({ settings, onSaved, payshapEnabled, tenantId }: IkhokhaCar
                     </div>
 
                     {/* Info note */}
-                    <div className="flex items-start gap-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06] px-3.5 py-3 mb-5">
+                    <div className="flex items-start gap-2.5 rounded-xl nexty-card px-3.5 py-3 mb-5">
                       <AlertCircle className="w-3.5 h-3.5 text-white/20 mt-0.5 shrink-0" />
                       <p className="text-[11px] text-white/25 leading-relaxed">
                         iKhokha generates a secure paylink for each booking. Clients are

@@ -153,7 +153,7 @@ export function FirstBookingCelebration() {
       />
 
       {/* Card */}
-      <div className="relative w-full max-w-sm overflow-hidden rounded-2xl border border-emerald-200 bg-white shadow-2xl animate-in zoom-in-95 duration-300 dark:border-emerald-800/50 dark:bg-zinc-900">
+      <div className="nexty-glass-strong relative w-full max-w-sm overflow-hidden rounded-2xl animate-in zoom-in-95 duration-300">
         {/* Top band */}
         <div className="h-1.5 w-full bg-gradient-to-r from-emerald-400 via-teal-300 to-emerald-500" />
 
@@ -161,7 +161,7 @@ export function FirstBookingCelebration() {
         <button
           onClick={handleClose}
           aria-label="Close celebration"
-          className="absolute right-4 top-4 rounded-md p-1 text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+          className="absolute right-4 top-4 rounded-md p-1 text-white/40 transition-colors hover:bg-white/[0.08] hover:text-white/70"
         >
           <X size={16} />
         </button>
@@ -169,17 +169,17 @@ export function FirstBookingCelebration() {
         {/* Content */}
         <div className="flex flex-col gap-4 p-6 pt-7">
           <div>
-            <h2 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
+            <h2 className="text-lg font-bold text-[#F1F0EC]">
               Your first booking! 🎉
             </h2>
-            <p className="mt-1.5 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">
+            <p className="mt-1.5 text-sm leading-relaxed text-white/55">
               Someone just booked an appointment. Your calendar is officially
               live.
             </p>
           </div>
 
-          <div className="w-full rounded-xl border border-emerald-200/60 bg-emerald-50 px-4 py-3 dark:border-emerald-800/30 dark:bg-emerald-950/30">
-            <p className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
+          <div className="nexty-tint-success w-full rounded-xl px-4 py-3">
+            <p className="text-xs font-medium text-emerald-400">
               Head to Bookings to see the details and confirm the appointment.
             </p>
           </div>

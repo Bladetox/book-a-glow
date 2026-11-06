@@ -67,7 +67,7 @@ const AdminBlockedClients = () => {
           <button
             onClick={loadBlockedClients}
             disabled={blockedLoading}
-            className="px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.08] text-[10px] font-bold text-white/50 hover:text-white/80 transition-colors disabled:opacity-50 flex items-center gap-1.5"
+            className="px-3 py-2 rounded-xl nexty-card text-[10px] font-bold text-white/50 hover:text-white/80 transition-colors disabled:opacity-50 flex items-center gap-1.5"
           >
             {blockedLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <ShieldCheck className="w-3 h-3" />}
             Refresh
@@ -81,7 +81,7 @@ const AdminBlockedClients = () => {
         {blockedLoading ? (
           <div className="flex flex-col gap-2">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="h-16 rounded-2xl bg-white/[0.03] border border-white/[0.05] animate-pulse" />
+              <div key={i} className="h-16 rounded-2xl nexty-card animate-pulse" />
             ))}
           </div>
         ) : blockedClients.length === 0 ? (
@@ -95,7 +95,7 @@ const AdminBlockedClients = () => {
             {blockedClients.map((client) => (
               <div
                 key={client.id}
-                className="rounded-2xl border border-white/[0.06] bg-gradient-to-br from-white/[0.04] to-white/[0.02] px-4 py-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
+                className="rounded-2xl nexty-card px-4 py-3.5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3"
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2 mb-1 flex-wrap">

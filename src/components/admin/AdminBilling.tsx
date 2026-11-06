@@ -343,7 +343,7 @@ export function AdminBilling() {
       {/* ── Current Plan ── */}
       <div>
         <SectionLabel label="Your Plan" />
-        <div className="mt-3 rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5 flex flex-col gap-4">
+        <div className="mt-3 rounded-2xl nexty-card p-5 flex flex-col gap-4">
 
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center gap-2">
@@ -482,7 +482,7 @@ export function AdminBilling() {
                   </button>
                   <button
                     onClick={() => setConfirmDowngrade(false)}
-                    className="flex-1 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.08] text-xs font-semibold text-white/50 hover:bg-white/[0.08] transition-colors"
+                    className="flex-1 py-2.5 rounded-xl nexty-card text-xs font-semibold text-white/50 hover:bg-white/[0.08] transition-colors"
                   >
                     Cancel
                   </button>

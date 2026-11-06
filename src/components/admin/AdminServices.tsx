@@ -234,7 +234,7 @@ const RuleEditor = ({
   const suggestOptions = services.filter((s) => s.id !== rule.triggerId);
 
   return (
-    <div className="rounded-2xl border border-white/[0.08] bg-white/[0.03] overflow-hidden transition-all">
+    <div className="rounded-2xl nexty-card overflow-hidden transition-all">
       <div className="px-4 py-3 flex items-center justify-between bg-white/[0.02]">
         <div className="flex items-center gap-3">
           <span className="text-[10px] font-bold text-white/20 uppercase tracking-wider">#{index + 1}</span>
@@ -335,7 +335,7 @@ const ServiceReorderRow = ({
   onMoveUp, onMoveDown, onEdit, onDelete, onArchive,
 }: ServiceReorderRowProps) => {
   return (
-    <div className="group flex items-center gap-3 p-3.5 rounded-2xl bg-gradient-to-br from-white/[0.04] to-white/[0.02] border border-white/[0.06] hover:border-white/[0.12] transition-all">
+    <div className="group flex items-center gap-3 p-3.5 rounded-2xl nexty-card hover:border-white/[0.12] transition-all">
       <span className="text-[10px] font-bold text-white/20 w-4 shrink-0 tabular-nums">{index + 1}</span>
 
       <div className="flex-1 min-w-0">
@@ -409,7 +409,7 @@ const SortableServiceRow = ({
     <div
       ref={setNodeRef}
       style={style}
-      className="group relative flex items-center gap-3 p-4 rounded-2xl bg-gradient-to-br from-white/[0.04] to-white/[0.02] border border-white/[0.06] hover:border-white/[0.12] transition-all"
+      className="group relative flex items-center gap-3 p-4 rounded-2xl nexty-card hover:border-white/[0.12] transition-all"
     >
       <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing p-1 text-white/10 group-hover:text-white/30 transition-colors">
         <GripVertical className="w-4 h-4" />
@@ -417,7 +417,7 @@ const SortableServiceRow = ({
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-0.5 flex-wrap">
           <h4 className="text-sm font-semibold text-white/90 truncate">{service.name}</h4>
-          <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.05] border border-white/[0.08] text-white/40 font-medium">
+          <span className="text-[10px] px-2 py-0.5 rounded-full nexty-card text-white/40 font-medium">
             {service.category.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
           </span>
           {!service.is_active && !service.is_archived && (
@@ -866,7 +866,7 @@ const AdminServices = () => {
     return (
       <div className="flex flex-col gap-3">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="h-20 rounded-2xl bg-white/[0.03] border border-white/[0.06] animate-pulse" />
+          <div key={i} className="h-20 rounded-2xl nexty-card animate-pulse" />
         ))}
       </div>
     );
@@ -911,7 +911,7 @@ const AdminServices = () => {
               return (
                 <div
                   key={cat.id}
-                  className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-white/[0.03] border border-white/[0.06]"
+                  className="flex items-center gap-3 px-4 py-2.5 rounded-xl nexty-card"
                 >
                   <span className="text-[10px] font-bold text-white/20 w-4 shrink-0 tabular-nums">{idx + 1}</span>
                   <span className="flex-1 text-sm font-medium text-white/70">{cat.label}</span>
@@ -1124,7 +1124,7 @@ const AdminServices = () => {
                   exit={{ opacity: 0, scale: 0.94, y: 10 }}
                   transition={SPRING}
                   style={{ willChange: "transform" }}
-                  className="pointer-events-auto w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-3xl bg-gradient-to-br from-[#161616] to-[#0f0f0f] border border-white/[0.1] shadow-2xl p-5 flex flex-col gap-4"
+                  className="pointer-events-auto w-full max-w-2xl max-h-[85vh] overflow-y-auto rounded-3xl nexty-glass-strong shadow-2xl p-5 flex flex-col gap-4"
                 >
             <div className="flex items-center justify-between">
               <p className="text-[10px] font-semibold tracking-[0.14em] uppercase text-white/30">
@@ -1316,7 +1316,7 @@ const AdminServices = () => {
                 setAddonRules([...addonRules, { triggerId: "", suggestIds: [] }]);
                 setOpenRuleIndex(newIndex);
               }}
-              className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/[0.06] border border-white/[0.1] text-white/70 text-xs font-bold hover:bg-white/[0.10] transition-colors"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl nexty-card text-white/70 text-xs font-bold hover:bg-white/[0.10] transition-colors"
             >
               <Plus className="w-3.5 h-3.5" /> Add Rule
             </button>

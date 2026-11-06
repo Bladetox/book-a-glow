@@ -271,7 +271,7 @@ export function NotificationBell() {
                   top: panelTop,
                   maxHeight: `calc(100dvh - ${panelTop}px - 4.5rem - env(safe-area-inset-bottom, 0px))`,
                 }}
-                className="fixed z-[70] inset-x-3 sm:inset-x-auto sm:right-4 lg:right-8 sm:w-96 sm:!max-h-[min(520px,calc(100dvh-6rem))] flex flex-col bg-[#0c0c0c] rounded-2xl shadow-2xl shadow-black/50 border border-white/[0.08] overflow-hidden"
+                className="nexty-glass-strong fixed z-[70] inset-x-3 sm:inset-x-auto sm:right-4 lg:right-8 sm:w-96 sm:!max-h-[min(520px,calc(100dvh-6rem))] flex flex-col rounded-2xl overflow-hidden"
               >
                 <div className="flex shrink-0 items-center justify-between px-4 py-3 border-b border-white/[0.08]">
                   <span className="font-semibold text-sm text-white/80">

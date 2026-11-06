@@ -131,10 +131,7 @@ const TrialExpiredPaywall = ({ onSignOut }: Props) => {
             </p>
           </div>
 
-          <div
-            className="w-full rounded-2xl p-5 text-left"
-            style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}
-          >
+          <div className="nexty-card w-full rounded-2xl p-5 text-left">
             <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-white/25 mb-3">
               What happens next
             </p>
@@ -212,19 +209,10 @@ const TrialExpiredPaywall = ({ onSignOut }: Props) => {
           {tiers.map((tier) => (
             <div
               key={tier.name}
-              className="relative rounded-2xl flex flex-col transition-all duration-300"
-              style={
-                tier.featured
-                  ? {
-                      background: "rgba(255,255,255,0.05)",
-                      border: "1.5px solid rgba(255,255,255,0.18)",
-                      boxShadow: "0 0 40px -8px rgba(255,255,255,0.06)",
-                    }
-                  : {
-                      background: "rgba(255,255,255,0.02)",
-                      border: "1px solid rgba(255,255,255,0.08)",
-                    }
-              }
+              className={`relative rounded-2xl flex flex-col transition-all duration-300 nexty-card ${
+                tier.featured ? "!border-[#D99B43]/35" : ""
+              }`}
+              style={tier.featured ? { boxShadow: "0 0 40px -8px rgba(217,155,67,0.12)" } : undefined}
             >
               {tier.featured && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2">

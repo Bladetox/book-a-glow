@@ -418,7 +418,7 @@ const AdminSpecialOccasions = () => {
       ) : filteredRows.length === 0 ? (
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-          className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-10 flex flex-col items-center gap-3 text-center"
+          className="rounded-2xl nexty-card p-10 flex flex-col items-center gap-3 text-center"
         >
           <div className="w-12 h-12 rounded-full bg-pink-500/[0.07] flex items-center justify-center">
             <Cake className="w-5 h-5 text-pink-400/40" />

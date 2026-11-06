@@ -94,7 +94,7 @@ export default function AdminCommunications() {
     <div className="flex flex-col gap-5 w-full min-w-0 max-w-4xl">
       <AdminPageHeader title="Communications" subtitle="Choose how messages from your business sound. NextSlot provides suggested wording, while you remain in control of what your clients receive." />
 
-      <section className="rounded-2xl border border-white/[0.08] bg-white/[0.025] p-4 sm:p-5 flex flex-col gap-4 min-w-0">
+      <section className="rounded-2xl nexty-card p-4 sm:p-5 flex flex-col gap-4 min-w-0">
         <div>
           <h2 className="text-sm font-semibold text-white/85">WhatsApp message tone</h2>
           <p className="text-xs text-white/40 mt-1 leading-relaxed">Tone guides the suggested wording. Your saved message edits remain in place when you change this preference.</p>
@@ -144,7 +144,7 @@ export default function AdminCommunications() {
             const preview = buildWhatsAppMessage(type, PREVIEW_DATA, tone, { [type]: current });
             const variables = WHATSAPP_TEMPLATE_VARIABLES[type];
             return (
-              <article key={type} className="rounded-xl border border-white/[0.08] bg-white/[0.02] overflow-hidden min-w-0">
+              <article key={type} className="rounded-xl nexty-card overflow-hidden min-w-0">
                 <button type="button" aria-expanded={isOpen} onClick={() => setOpenTemplate(isOpen ? null : type)}
                   className="flex min-h-[56px] w-full min-w-0 items-center justify-between gap-3 px-4 py-3.5 text-left hover:bg-white/[0.035] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-amber-400/70">
                   <span className="min-w-0 flex-1">
@@ -178,7 +178,7 @@ export default function AdminCommunications() {
                     <span className="text-[10px] text-white/30">{current.length}/2000 characters</span>
                     {validationError && <span className="text-xs text-red-300">{validationError}</span>}
                   </div>
-                  <div className="rounded-xl border border-white/[0.07] bg-black/30 p-4 min-w-0">
+                  <div className="rounded-xl nexty-inset p-4 min-w-0">
                     <div className="flex items-center gap-2 mb-3"><MessageCircle className="w-4 h-4 text-[#25D366]" /><span className="text-[10px] uppercase tracking-wider font-semibold text-white/35">Live WhatsApp preview</span></div>
                     <p className="text-sm text-white/75 leading-relaxed whitespace-pre-wrap break-words">{preview}</p>
                     <p className="text-[10px] text-white/25 mt-3">Sample details are shown here. Real client and booking details are inserted when the message is prepared.</p>

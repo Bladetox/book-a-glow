@@ -92,7 +92,7 @@ const BlockClientModal = ({
               key="bc-dialog"
               initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
               transition={{ type: "spring", stiffness: 340, damping: 30 }}
-              className="pointer-events-auto w-full max-w-sm rounded-2xl border border-white/[0.12] bg-[#0f0f0f] shadow-2xl overflow-hidden"
+              className="pointer-events-auto w-full max-w-sm rounded-2xl nexty-glass-strong shadow-2xl overflow-hidden"
             >
               {/* Header */}
               <div className="flex items-center justify-between px-5 pt-5 pb-3">

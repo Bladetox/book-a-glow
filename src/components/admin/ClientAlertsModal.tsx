@@ -232,7 +232,7 @@ export default function ClientAlertsModal({
             </div>
 
             {/* ─── WA tip ─── */}
-            <div className="mx-5 mt-4 rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2.5 flex items-start gap-2 shrink-0">
+            <div className="mx-5 mt-4 rounded-xl nexty-card px-3 py-2.5 flex items-start gap-2 shrink-0">
               <MessageCircle className="w-3.5 h-3.5 shrink-0 mt-0.5" style={{ color: "#25D366" }} />
               <p className="text-[11px] text-white/40 leading-relaxed">
                 Tap <span className="font-semibold" style={{ color: "#25D366" }}>WA</span> to open a pre-filled message in WhatsApp. Choose your message tone in{" "}

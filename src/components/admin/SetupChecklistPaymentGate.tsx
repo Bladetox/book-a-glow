@@ -165,7 +165,7 @@ export function SetupChecklistPaymentGate({ onNavigate }: Props) {
         ) : (
           <Circle
             size={18}
-            className="text-amber-400 dark:text-amber-600"
+            className="text-amber-600"
             aria-label="Incomplete"
           />
         )}
@@ -178,20 +178,20 @@ export function SetupChecklistPaymentGate({ onNavigate }: Props) {
           className={[
             'text-sm font-medium',
             done
-              ? 'line-through text-amber-700/60 dark:text-amber-500/60'
-              : 'text-amber-900 dark:text-amber-200',
+              ? 'line-through text-amber-500/60'
+              : 'text-amber-200',
           ].join(' ')}
         >
           Set up payments
           {/* Plan + lifetime badge */}
-          <span className="ml-2 text-[10px] font-semibold tracking-wide text-amber-600/70 dark:text-amber-500/70 normal-case">
+          <span className="ml-2 text-[10px] font-semibold tracking-wide text-amber-500/70 normal-case">
             {planLabel}
           </span>
         </p>
 
         {/* Hint (only when not done) */}
         {!done && (
-          <p className="mt-0.5 text-xs text-amber-700/80 dark:text-amber-400">
+          <p className="mt-0.5 text-xs text-amber-400">
             {paymentFocus.hint}
           </p>
         )}
@@ -204,14 +204,14 @@ export function SetupChecklistPaymentGate({ onNavigate }: Props) {
                 {sub.done ? (
                   <CheckCircle2 size={13} className="text-green-500 shrink-0" />
                 ) : (
-                  <Circle size={13} className="text-amber-400/70 dark:text-amber-600/70 shrink-0" />
+                  <Circle size={13} className="text-amber-600/70 shrink-0" />
                 )}
                 <span
                   className={[
                     'text-xs',
                     sub.done
-                      ? 'line-through text-amber-700/50 dark:text-amber-500/50'
-                      : 'text-amber-800/80 dark:text-amber-300/80',
+                      ? 'line-through text-amber-500/50'
+                      : 'text-amber-300/80',
                   ].join(' ')}
                 >
                   {sub.label}
@@ -225,7 +225,7 @@ export function SetupChecklistPaymentGate({ onNavigate }: Props) {
         {!done && onNavigate && (
           <button
             onClick={() => onNavigate('Integrations')}
-            className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-amber-700 dark:text-amber-400 hover:text-amber-900 dark:hover:text-amber-200 underline underline-offset-2 transition-colors"
+            className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-amber-400 hover:text-amber-200 underline underline-offset-2 transition-colors"
           >
             <ExternalLink size={11} />
             Go to Integrations →

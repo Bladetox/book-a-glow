@@ -251,7 +251,7 @@ const AddServiceModal = ({
                     {localItems.map(item => (
                       <div
                         key={item.id}
-                        className="flex w-full flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2.5"
+                        className="flex w-full flex-wrap items-center gap-x-3 gap-y-2 rounded-xl nexty-card px-3 py-2.5"
                       >
                         <div className="min-w-[100px] flex-1">
                           <p className="break-words text-xs font-semibold text-white/75">
