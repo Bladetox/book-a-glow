@@ -1,7 +1,7 @@
 {
   ".claude/settings.json": {
-    "mtime": 1793981641.6511505,
-    "seen": 1793981645.5238523,
+    "mtime": 1794001760.0081227,
+    "seen": 1794001767.0151744,
     "ast_hash": "0a0ef578e59e2bb38c69f1dcb49a0e1a",
     "semantic_hash": "0a0ef578e59e2bb38c69f1dcb49a0e1a",
     "ast_empty": true
@@ -134,9 +134,9 @@
     "semantic_hash": ""
   },
   "src/components/admin/AdminAvailability.tsx": {
-    "mtime": 1793981641.7088392,
-    "seen": 1793981645.5239167,
-    "ast_hash": "5f3dc5f5c3cc6871fddbca86e4084c9c",
+    "mtime": 1794001760.1209972,
+    "seen": 1794001767.0152354,
+    "ast_hash": "33e634c8bef431e151a2730028534f59",
     "semantic_hash": ""
   },
   "src/components/admin/AdminBilling.tsx": {
@@ -176,21 +176,21 @@
     "semantic_hash": ""
   },
   "src/components/admin/AdminConsistencyPricing.tsx": {
-    "mtime": 1793963760.870097,
-    "seen": 1793963856.7297137,
-    "ast_hash": "eb61e63e6cdef4e447ea0bd667d7b0d9",
-    "semantic_hash": "eb61e63e6cdef4e447ea0bd667d7b0d9"
+    "mtime": 1794001760.1209972,
+    "seen": 1794001767.0152469,
+    "ast_hash": "2b3c4a3dab3c0c6ff5278eca983e68f4",
+    "semantic_hash": ""
   },
   "src/components/admin/AdminConsultations.tsx": {
-    "mtime": 1793981641.7128391,
-    "seen": 1793981645.5239341,
-    "ast_hash": "7f69e9be396d461c47a253cbb672895c",
+    "mtime": 1794001760.1209972,
+    "seen": 1794001767.0152478,
+    "ast_hash": "186f230c0e6be7428781a6925bcf8210",
     "semantic_hash": ""
   },
   "src/components/admin/AdminDashboard.tsx": {
-    "mtime": 1793981641.7128391,
-    "seen": 1793981645.523936,
-    "ast_hash": "4a7079f54b166bf89221fd4f870daf12",
+    "mtime": 1794001760.1209972,
+    "seen": 1794001767.0152493,
+    "ast_hash": "ac0b30535aaea5bd1bc82179d8d56a35",
     "semantic_hash": ""
   },
   "src/components/admin/AdminHelp.tsx": {
@@ -248,21 +248,21 @@
     "semantic_hash": ""
   },
   "src/components/admin/AdminServices.tsx": {
-    "mtime": 1793981641.7128391,
-    "seen": 1793981645.5239515,
-    "ast_hash": "049b1b58f5ebb0d696fe6315b0d40d24",
+    "mtime": 1794001760.1209972,
+    "seen": 1794001767.0152621,
+    "ast_hash": "b5c1aae7eedc2c1e03be073eb5c3f0e9",
     "semantic_hash": ""
   },
   "src/components/admin/AdminSettings.tsx": {
-    "mtime": 1793981641.7128391,
-    "seen": 1793981645.5239527,
-    "ast_hash": "ce6119408d1f7e9b5cf74367a2fd4174",
+    "mtime": 1794001760.1209972,
+    "seen": 1794001767.0152638,
+    "ast_hash": "93780e7174b7938f3756c09f31aad582",
     "semantic_hash": ""
   },
   "src/components/admin/AdminSharedUI.tsx": {
-    "mtime": 1793981641.7128391,
-    "seen": 1793981645.523954,
-    "ast_hash": "32e12d6fb43bd2b0756112b54d45f461",
+    "mtime": 1794001760.1209972,
+    "seen": 1794001767.0152652,
+    "ast_hash": "705fb7a599363e9b9ab657a382bdf75d",
     "semantic_hash": ""
   },
   "src/components/admin/AdminSidebar.tsx": {
@@ -440,10 +440,10 @@
     "semantic_hash": "8577fb1de9aa302fbc172689e79e3781"
   },
   "src/components/admin/loyalty/LoyaltyTenantCriteria.tsx": {
-    "mtime": 1793963760.8781767,
-    "seen": 1793963856.730547,
-    "ast_hash": "0e49e2dda3bf1f01ed1a3489cae1e076",
-    "semantic_hash": "0e49e2dda3bf1f01ed1a3489cae1e076"
+    "mtime": 1794001760.1209972,
+    "seen": 1794001767.0153055,
+    "ast_hash": "cc7861e4ab6150cc7875ad68dcbc9fb9",
+    "semantic_hash": ""
   },
   "src/components/admin/loyalty/loyaltyConstants.ts": {
     "mtime": 1793963760.8781767,
@@ -2314,14 +2314,14 @@
     "semantic_hash": "3280df2695a76ed77887e7c98bc744d8"
   },
   ".claude/CLAUDE.md": {
-    "mtime": 1793981641.6488392,
-    "seen": 1793981645.5243664,
+    "mtime": 1794001760.0049973,
+    "seen": 1794001767.0159216,
     "ast_hash": "9b31786b637be3c13978bec4c2330752",
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1793981641.6528392,
-    "seen": 1793981645.5243673,
+    "mtime": 1794001760.0609972,
+    "seen": 1794001767.0159235,
     "ast_hash": "67d88e9d0760c3ba54c75dfd9551c1c5",
     "semantic_hash": ""
   },
