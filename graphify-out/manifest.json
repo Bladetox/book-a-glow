@@ -1,7 +1,7 @@
 {
   ".claude/settings.json": {
-    "mtime": 1794024936.6893444,
-    "seen": 1794024940.0774636,
+    "mtime": 1794027148.6280987,
+    "seen": 1794027156.4210713,
     "ast_hash": "0a0ef578e59e2bb38c69f1dcb49a0e1a",
     "semantic_hash": "0a0ef578e59e2bb38c69f1dcb49a0e1a",
     "ast_empty": true
@@ -1846,15 +1846,15 @@
     "semantic_hash": "3280df2695a76ed77887e7c98bc744d8"
   },
   ".claude/CLAUDE.md": {
-    "mtime": 1794024936.6861296,
-    "seen": 1794024940.0781825,
+    "mtime": 1794027148.6280987,
+    "seen": 1794027156.421885,
     "ast_hash": "9b31786b637be3c13978bec4c2330752",
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1794024936.8585796,
-    "seen": 1794024940.0781837,
-    "ast_hash": "165796eb98f31223fe20276531474346",
+    "mtime": 1794027149.326473,
+    "seen": 1794027156.4218864,
+    "ast_hash": "b7d74664452096fd8abe4e9ae8c78042",
     "semantic_hash": ""
   },
   "README.md": {
@@ -3667,6 +3667,12 @@
     "mtime": 1794024918.0221286,
     "seen": 1794024940.0781727,
     "ast_hash": "749886e0eeb453a6b704f802c2af6d08",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20261107045129_slot_holds_respect_booking_gap.sql": {
+    "mtime": 1794027149.2520988,
+    "seen": 1794027156.4218738,
+    "ast_hash": "ffcf6e7d6a45f2a28782c5a59f5e676c",
     "semantic_hash": ""
   },
   "package-lock.json": {
