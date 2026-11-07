@@ -93,7 +93,7 @@ const Index = () => {
     if (!config.mobileServiceEnabled && (booking.address || booking.addressVerified)) {
       updateBooking({ address: "", addressVerified: false, distanceKm: null });
     }
-  }, [config.mobileServiceEnabled, config.loading]);
+  }, [config.mobileServiceEnabled, config.loading, booking.address, booking.addressVerified, updateBooking]);
 
   // Brand font (sister-studios only; null for all other tenants)
   const brandFontFamily = useBrandFont(config.brandFontUrl ?? null);

@@ -62,14 +62,15 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
   const bgColor = `hsl(var(--background))`;
 
   // ── Brand name heading style ──────────────────────────────────────────────
+  const brandGlow = orbColor(0.10);
   const brandNameStyle = useMemo<React.CSSProperties>(() => ({
     fontSize: "clamp(2rem, 8vw, 2.6rem)",
     color: config.brandNameColor ?? textPrimary,
     textShadow: config.brandNameColor
       ? `0 2px 24px ${config.brandNameColor}55, 0 0 48px ${config.brandNameColor}33`
-      : isDark ? `0 2px 32px ${orbColor(0.10)}` : "none",
+      : isDark ? `0 2px 32px ${brandGlow}` : "none",
     ...(brandFontFamily ? { fontFamily: brandFontFamily } : {}),
-  }), [brandFontFamily, config.brandNameColor, textPrimary, isDark]);
+  }), [brandFontFamily, config.brandNameColor, textPrimary, isDark, brandGlow]);
 
   const orbs = useMemo(
     () => [

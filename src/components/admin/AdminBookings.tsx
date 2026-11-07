@@ -378,8 +378,12 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
 
   const todayStr = format(new Date(), "yyyy-MM-dd");
 
+  // Jump to the client passed in from another view once per client, even if
+  // the bookings list refetches before the parent clears initialClient.
+  const handledInitialClientRef = useRef<string | null>(null);
   useEffect(() => {
-    if (initialClient && bookings.length > 0) {
+    if (initialClient && bookings.length > 0 && handledInitialClientRef.current !== initialClient) {
+      handledInitialClientRef.current = initialClient;
       const match = bookings.find(b =>
         b.client.toLowerCase().includes(initialClient.toLowerCase().split(" ")[0].replace(/\./g, ""))
       );
@@ -389,7 +393,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
       }
       onClearClient?.();
     }
-  }, [initialClient, bookings.length, onClearClient]);
+  }, [initialClient, bookings, onClearClient]);
 
   useEffect(() => {
     if (!expandedId || !tenantId) return;
@@ -419,7 +423,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
     };
 
     checkBlock();
-  }, [expandedId, tenantId, bookings]);
+  }, [expandedId, tenantId, bookings, blockStatusMap]);
 
   useEffect(() => {
     const b = reschedulingBooking;

@@ -113,6 +113,8 @@ const ScheduleStep = ({
     return monthAvailability[ds]?.status === "available";
   };
 
+  const releaseHold = slotHold.releaseHold;
+
   const showAvailabilityNotice = useCallback((status: "insufficient_time" | "fully_booked" | "restricted") => {
     if (popupTimerRef.current) clearTimeout(popupTimerRef.current);
     setAvailabilityRefreshError(false);
@@ -130,10 +132,10 @@ const ScheduleStep = ({
     const status = monthAvailability?.[format(selectedDate, "yyyy-MM-dd")]?.status ?? "restricted";
     onSelectDate(null);
     onSelectTime("");
-    void slotHold.releaseHold();
+    void releaseHold();
     setCalendarOpen(true);
     showAvailabilityNotice(status === "available" ? "restricted" : status);
-  }, [selectedDate, selectedTime, loadingSlots, fetchingSlots, dateSlots, monthAvailability, onSelectDate, onSelectTime, slotHold.releaseHold, showAvailabilityNotice]);
+  }, [selectedDate, selectedTime, loadingSlots, fetchingSlots, dateSlots, monthAvailability, onSelectDate, onSelectTime, releaseHold, showAvailabilityNotice]);
 
   // A hold can expire while the guest is reviewing the details. Clear the
   // selected time immediately so the booking cannot proceed without a live hold.
@@ -149,8 +151,8 @@ const ScheduleStep = ({
   useEffect(() => {
     if (!selectedTime || !slotHold.holdId || slotHold.durationMins === totalDuration) return;
     onSelectTime("");
-    void slotHold.releaseHold();
-  }, [selectedTime, slotHold.holdId, slotHold.durationMins, slotHold.releaseHold, totalDuration, onSelectTime]);
+    void releaseHold();
+  }, [selectedTime, slotHold.holdId, slotHold.durationMins, releaseHold, totalDuration, onSelectTime]);
 
   // Revalidate a chosen date against its date-specific slot result. If it has
   // become unavailable since the horizon was loaded, replace the calendar with

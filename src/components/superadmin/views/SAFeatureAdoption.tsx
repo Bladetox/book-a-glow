@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { RefreshCw, Zap } from "lucide-react";
 
@@ -64,7 +64,7 @@ export default function SAFeatureAdoption() {
   const [refreshedAt, setRefreshedAt] = useState(new Date());
   const [sortBy,      setSortBy]      = useState<"adoption" | "lift">("adoption");
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     const thirtyAgo = new Date(Date.now() - 30 * 86_400_000).toISOString();
 
@@ -131,9 +131,9 @@ export default function SAFeatureAdoption() {
     setFeatures(sorted);
     setRefreshedAt(new Date());
     setLoading(false);
-  };
+  }, [sortBy]);
 
-  useEffect(() => { load(); }, [sortBy]);
+  useEffect(() => { load(); }, [load]);
 
   const topLift = [...features].sort((a, b) => b.retentionLift - a.retentionLift).slice(0, 3);
 
