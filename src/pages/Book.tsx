@@ -327,7 +327,7 @@ const Index = () => {
               </motion.div>
             </AnimatePresence>
 
-            <p className="flex-shrink-0 text-[9px] text-muted-foreground/40 tracking-[0.12em] text-center mt-6 pb-2">
+            <p className="flex-shrink-0 text-[8px] text-muted-foreground/40 tracking-[0.08em] text-center mt-2 pb-1">
               {"Powered by "}
               <a
                 href="https://nextslot.co.za"
