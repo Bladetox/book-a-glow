@@ -261,11 +261,9 @@ const Index = () => {
           data-booking-scroll
           className={`flex-1 min-h-0 ${step === 0 ? "overflow-hidden" : "overflow-y-auto scrollbar-hide"}`}
         >
+          {/* Reserve the measured fixed bottom bar height so the Services list can scroll fully clear of it. */}
           <div
             className={`w-full max-w-md mx-auto px-4 pt-4 ${step === 0 ? "h-full min-h-0 flex flex-col" : ""}`}
-            // The bottom bar is fixed-positioned, so every step must reserve its
-            // measured height. This is especially important on Services, whose
-            // inner list is the only scrollable region on that step.
             style={{ paddingBottom: "calc(var(--bottom-bar-height, 80px) + 16px)" }}
           >
             <AnimatePresence mode="wait" custom={direction}>
