@@ -1,7 +1,7 @@
 {
   ".claude/settings.json": {
-    "mtime": 1794027148.6280987,
-    "seen": 1794027156.4210713,
+    "mtime": 1794027302.5463638,
+    "seen": 1794027304.930653,
     "ast_hash": "0a0ef578e59e2bb38c69f1dcb49a0e1a",
     "semantic_hash": "0a0ef578e59e2bb38c69f1dcb49a0e1a",
     "ast_empty": true
@@ -1540,9 +1540,9 @@
     "semantic_hash": "bc6d1c3e72fffdefca80b2e6dcc5ccdd"
   },
   "supabase/functions/places-autocomplete/index.ts": {
-    "mtime": 1794024918.0024335,
-    "seen": 1794024940.0778046,
-    "ast_hash": "5c900787d5978ebe6e16fb191c82b9ca",
+    "mtime": 1794027302.692108,
+    "seen": 1794027304.9312534,
+    "ast_hash": "95ed1c3610f269e44f2df72ca7aaff36",
     "semantic_hash": ""
   },
   "supabase/functions/platform-monthly-billing/index.ts": {
@@ -1846,15 +1846,15 @@
     "semantic_hash": "3280df2695a76ed77887e7c98bc744d8"
   },
   ".claude/CLAUDE.md": {
-    "mtime": 1794027148.6280987,
-    "seen": 1794027156.421885,
+    "mtime": 1794027302.5401077,
+    "seen": 1794027304.9319444,
     "ast_hash": "9b31786b637be3c13978bec4c2330752",
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1794027149.326473,
-    "seen": 1794027156.4218864,
-    "ast_hash": "b7d74664452096fd8abe4e9ae8c78042",
+    "mtime": 1794027302.7719188,
+    "seen": 1794027304.931947,
+    "ast_hash": "e68e245541ce89596a0bf22dae0af25b",
     "semantic_hash": ""
   },
   "README.md": {
