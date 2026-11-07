@@ -263,7 +263,10 @@ const Index = () => {
         >
           <div
             className={`w-full max-w-md mx-auto px-4 pt-4 ${step === 0 ? "h-full min-h-0 flex flex-col" : ""}`}
-            style={{ paddingBottom: step === 0 ? "16px" : "calc(var(--bottom-bar-height, 80px) + 16px)" }}
+            // The bottom bar is fixed-positioned, so every step must reserve its
+            // measured height. This is especially important on Services, whose
+            // inner list is the only scrollable region on that step.
+            style={{ paddingBottom: "calc(var(--bottom-bar-height, 80px) + 16px)" }}
           >
             <AnimatePresence mode="wait" custom={direction}>
               <motion.div
@@ -273,7 +276,7 @@ const Index = () => {
                 initial="enter"
                 animate="center"
                 exit="exit"
-                className={step === 0 ? "h-full min-h-0 flex flex-col" : undefined}
+                className={step === 0 ? "flex-1 min-h-0 flex flex-col" : undefined}
               >
                 {step === 0 && (
                   <ServicesStep
