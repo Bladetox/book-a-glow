@@ -2,33 +2,10 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>NextSlot ad</title>
+<title>NextSlot ad · A · DM chaos</title>
+<link rel="stylesheet" href="ad-core.css">
 <style>
-@font-face { font-family: Montserrat; font-weight: 500; src: url(fonts/Montserrat-500.ttf); }
-@font-face { font-family: Montserrat; font-weight: 600; src: url(fonts/Montserrat-600.ttf); }
-@font-face { font-family: Montserrat; font-weight: 700; src: url(fonts/Montserrat-700.ttf); }
-@font-face { font-family: Montserrat; font-weight: 800; src: url(fonts/Montserrat-800.ttf); }
-@font-face { font-family: Inter; font-weight: 400; src: url(fonts/Inter-400.ttf); }
-@font-face { font-family: Inter; font-weight: 500; src: url(fonts/Inter-500.ttf); }
-@font-face { font-family: Inter; font-weight: 600; src: url(fonts/Inter-600.ttf); }
-@font-face { font-family: Inter; font-weight: 700; src: url(fonts/Inter-700.ttf); }
-
-:root {
-  --cream: #F5F0E7; --sand: #EDE4D7; --sand2: #E5D5C0; --ink: #1E1A16;
-  --ink2: #51483D; --muted: #74695C; --bronze: #94672F; --gold: #D4A574;
-  --night: #15110D; --green: #2E7D4F;
-}
-* { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { width: 1080px; height: 1920px; overflow: hidden; background: var(--cream); }
-body { font-family: Inter, sans-serif; color: var(--ink); -webkit-font-smoothing: antialiased; }
-.stage { position: relative; width: 1080px; height: 1920px; overflow: hidden; background: var(--cream); }
-.scene { position: absolute; inset: 0; opacity: 0; }
-.h { font-family: Montserrat, sans-serif; font-weight: 800; letter-spacing: -0.02em; line-height: 1.05; }
-.center { position: absolute; left: 0; right: 0; text-align: center; }
-.bronze { color: var(--bronze); }
-
-/* ── Scene 1: DM chaos ── */
-#s1 { background: radial-gradient(120% 80% at 50% 30%, #2A221B 0%, var(--night) 70%); }
+/* ── Hook: DM chaos ── */
 #s1 .h { color: #F5F0E7; font-size: 92px; top: 190px; padding: 0 80px; }
 #s1 .h span { color: var(--gold); }
 .bubble { position: absolute; max-width: 640px; padding: 26px 34px; border-radius: 34px;
@@ -36,125 +13,16 @@ body { font-family: Inter, sans-serif; color: var(--ink); -webkit-font-smoothing
   box-shadow: 0 18px 40px rgba(0,0,0,.35); }
 .bubble.me { background: #3D3127; }
 .bubble small { display: block; font-size: 24px; opacity: .55; margin-top: 8px; font-weight: 500; }
-.stamp { position: absolute; left: 50%; top: 1240px; padding: 22px 48px; border: 10px solid #E0533F; color: #E0533F;
+.stamp { position: absolute; left: 50%; top: 1240px; padding: 22px 48px; border: 10px solid var(--red); color: var(--red);
   font-family: Montserrat; font-weight: 800; font-size: 104px; letter-spacing: .04em; border-radius: 24px; white-space: nowrap;
   transform-origin: center; background: rgba(21,17,13,.55); }
-
-/* ── Scene 2: logo reveal ── */
-#s2 { background: var(--cream); }
-/* Brand mark: gear-clock icon + two-tone wordmark, as in the site header */
-.brand { position: absolute; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; }
-.brand img { filter: drop-shadow(0 24px 40px rgba(110,80,40,.28)); }
-.wm { font-family: Montserrat; font-weight: 800; letter-spacing: -0.04em; line-height: 1; }
-.wm .n { color: #000; } .wm .s { color: #B88B52; }
-#s2 .brand { top: 430px; }
-#s2 .brand img { width: 460px; height: 460px; }
-#s2 .wm { font-size: 150px; margin-top: 30px; }
-#s2 .tag { top: 1210px; font-size: 62px; padding: 0 90px; color: var(--ink); }
-#s2 .tag .w { display: inline-block; }
-
-/* ── Phone ── */
-.phone { position: absolute; left: 50%; top: 520px; width: 640px; height: 1300px; margin-left: -320px;
-  border-radius: 92px; background: #111; padding: 22px; box-shadow: 0 60px 120px rgba(60,40,20,.28); }
-.screen { position: relative; width: 100%; height: 100%; border-radius: 72px; overflow: hidden; background: #FBF8F3; }
-.notch { position: absolute; left: 50%; top: 18px; width: 180px; height: 44px; margin-left: -90px; background: #111; border-radius: 22px; z-index: 5; }
-.biz { padding: 96px 44px 20px; }
-.biz .avatar { width: 92px; height: 92px; border-radius: 50%; background: linear-gradient(145deg, var(--gold), var(--bronze));
-  display: flex; align-items: center; justify-content: center; color: #fff; font-family: Montserrat; font-weight: 800; font-size: 40px; }
-.biz .name { font-family: Montserrat; font-weight: 800; font-size: 40px; margin-top: 18px; }
-.biz .url { font-size: 24px; color: var(--muted); margin-top: 4px; }
-.step-label { font-size: 22px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--bronze); padding: 0 44px; margin: 22px 0 14px; }
-.svc { margin: 0 32px 16px; padding: 26px 28px; border-radius: 26px; background: #fff; border: 3px solid #EFE7DB;
-  display: flex; justify-content: space-between; align-items: center; }
-.svc b { font-size: 30px; font-weight: 600; display: block; }
-.svc span { font-size: 23px; color: var(--muted); }
-.svc .pr { font-family: Montserrat; font-weight: 700; font-size: 30px; }
-.svc.sel { border-color: var(--bronze); background: #FFF8EE; }
-.days { display: flex; gap: 14px; padding: 0 32px; }
-.day { flex: 1; padding: 16px 0; border-radius: 22px; background: #fff; border: 3px solid #EFE7DB; text-align: center; }
-.day i { display: block; font-style: normal; font-size: 20px; color: var(--muted); }
-.day b { font-size: 32px; font-family: Montserrat; }
-.day.sel { background: var(--ink); border-color: var(--ink); color: #fff; }
-.day.sel i { color: #cbbfae; }
-.times { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 0 32px; }
-.time { padding: 22px 0; text-align: center; border-radius: 22px; background: #fff; border: 3px solid #EFE7DB; font-size: 30px; font-weight: 600; }
-.time.sel { background: var(--bronze); border-color: var(--bronze); color: #fff; }
-.time.gone { color: #C9BFB1; text-decoration: line-through; background: #F6F1EA; }
-.hold { margin: 22px 32px 0; padding: 20px 26px; border-radius: 22px; background: #FFF1DC; color: #7A4F17;
-  font-size: 25px; font-weight: 600; display: flex; justify-content: space-between; }
-.paybtn { position: absolute; left: 32px; right: 32px; bottom: 54px; padding: 34px 0; border-radius: 32px; background: var(--ink);
-  color: #fff; text-align: center; font-size: 34px; font-weight: 700; }
-.done { position: absolute; inset: 0; background: #FBF8F3; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; }
-.check { width: 200px; height: 200px; border-radius: 50%; background: var(--green); display: flex; align-items: center; justify-content: center; }
-.done h3 { font-family: Montserrat; font-weight: 800; font-size: 56px; margin-top: 40px; }
-.done p { font-size: 28px; color: var(--muted); margin-top: 14px; text-align: center; line-height: 1.4; }
-.tap { position: absolute; width: 90px; height: 90px; border-radius: 50%; background: rgba(148,103,47,.35);
-  border: 4px solid rgba(148,103,47,.8); margin: -45px 0 0 -45px; opacity: 0; z-index: 9; }
-.caption { top: 150px; }
-.caption .h { font-size: 82px; }
-.caption p { font-size: 40px; color: var(--ink2); margin-top: 22px; font-weight: 500; }
-
-/* ── Scene 4: payments ── */
-#s4 .h.big { font-size: 112px; }
-.pay-grid { position: absolute; left: 90px; right: 90px; top: 820px; display: grid; grid-template-columns: 1fr 1fr; gap: 34px; }
-.pay { height: 240px; border-radius: 40px; background: #fff; box-shadow: 0 20px 50px rgba(80,55,25,.12);
-  display: flex; align-items: center; justify-content: center; }
-.pay img { width: 74%; max-height: 64%; object-fit: contain; }
-.pay.ps { gap: 18px; font-family: Montserrat; font-weight: 800; font-size: 50px; color: #1B1B3A; }
-.pay.ps img { width: 96px; height: 96px; }
-.toast { position: absolute; left: 70px; right: 70px; top: 1400px; padding: 34px 40px; border-radius: 36px; background: var(--ink); color: #fff;
-  display: flex; gap: 30px; align-items: center; box-shadow: 0 30px 60px rgba(30,20,10,.3); }
-.toast .ic { width: 96px; height: 96px; border-radius: 28px; background: var(--green); flex: none; display: flex; align-items: center; justify-content: center; }
-.toast b { font-size: 36px; display: block; }
-.toast span { font-size: 28px; color: #CDBFAE; }
-
-/* ── Scene 5: insights ── */
-.dash { position: absolute; left: 80px; right: 80px; top: 640px; padding: 50px; border-radius: 48px; background: #fff; box-shadow: 0 30px 70px rgba(80,55,25,.14); }
-.dash .lbl { font-size: 26px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
-.dash .num { font-family: Montserrat; font-weight: 800; font-size: 120px; margin-top: 8px; }
-.dash .delta { display: inline-block; margin-top: 6px; padding: 10px 22px; border-radius: 20px; background: #E6F2EA; color: var(--green); font-size: 28px; font-weight: 700; }
-.bars { display: flex; align-items: flex-end; gap: 22px; height: 300px; margin-top: 46px; }
-.bar { flex: 1; border-radius: 16px 16px 6px 6px; background: var(--sand2); position: relative; }
-.bar.hi { background: var(--bronze); }
-.bar.lo { background: #F0C9A0; }
-.bar i { position: absolute; bottom: -46px; left: 0; right: 0; text-align: center; font-style: normal; font-size: 24px; color: var(--muted); font-weight: 600; }
-.nexty { position: absolute; left: 80px; right: 80px; top: 1380px; padding: 40px 44px; border-radius: 40px; background: var(--ink); color: #fff; }
-.nexty .tagl { font-size: 24px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--gold); }
-.nexty h4 { font-family: Montserrat; font-weight: 800; font-size: 50px; margin-top: 12px; }
-.nexty p { font-size: 31px; line-height: 1.4; color: #DCD0C0; margin-top: 12px; }
-.illus { position: absolute; right: 100px; top: 668px; font-size: 22px; color: var(--muted); font-weight: 600; }
-
-/* ── Scene 6: who it's for ── */
-#s6 { background: var(--night); }
-.photo { position: absolute; inset: 0; background-size: cover; background-position: center; opacity: 0; }
-.shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(21,17,13,.85) 0%, rgba(21,17,13,.1) 35%, rgba(21,17,13,.1) 60%, rgba(21,17,13,.9) 100%); }
-#s6 .h { color: #F5F0E7; font-size: 84px; top: 170px; padding: 0 80px; }
-#s6 .h span { color: var(--gold); }
-.chip { position: absolute; left: 50%; bottom: 260px; padding: 26px 50px; border-radius: 60px; background: var(--cream); color: var(--ink);
-  font-family: Montserrat; font-weight: 800; font-size: 50px; white-space: nowrap; opacity: 0; }
-
-/* ── Scene 7: CTA ── */
-#s7 { background: radial-gradient(110% 70% at 50% 35%, #FBF7F0 0%, var(--cream) 50%, var(--sand) 100%); }
-#s7 .brand { top: 230px; }
-#s7 .brand img { width: 300px; height: 300px; }
-#s7 .wm { font-size: 92px; margin-top: 20px; }
-#s7 .h.cta { top: 760px; font-size: 118px; }
-#s7 .sub { top: 1020px; font-size: 42px; color: var(--ink2); font-weight: 500; line-height: 1.45; }
-#s7 .sub b { color: var(--ink); }
-.btn { position: absolute; left: 50%; top: 1300px; padding: 44px 80px; border-radius: 80px; background: var(--ink); color: #fff;
-  font-family: Montserrat; font-weight: 800; font-size: 54px; white-space: nowrap; box-shadow: 0 30px 60px rgba(30,20,10,.28); }
-.btn span { color: var(--gold); }
-#s7 .foot { top: 1700px; font-size: 30px; color: var(--muted); font-weight: 500; }
-
-/* wipe used for dark → cream transition */
-#wipe { position: absolute; inset: 0; background: var(--cream); clip-path: circle(0px at 50% 55%); }
 </style>
 </head>
 <body>
 <div class="stage" id="stage">
 
   <!-- 1. Hook -->
-  <div class="scene" id="s1">
+  <div class="scene dark" id="s1">
     <div class="center h" id="s1h">Still running your bookings from your <span>DMs?</span></div>
     <div class="bubble" data-x="90" data-y="560" data-r="-2">Hi! Are you free Saturday? <small>23:41</small></div>
     <div class="bubble me" data-x="330" data-y="740" data-r="1.5">Which time? 🙈 <small>23:58</small></div>
@@ -167,297 +35,52 @@ body { font-family: Inter, sans-serif; color: var(--ink); -webkit-font-smoothing
 
   <div id="wipe"></div>
 
-  <!-- 2. Logo -->
-  <div class="scene" id="s2">
-    <div class="brand" id="s2logo"><img src="assets/nextslot-icon.png" alt=""><div class="wm"><span class="n">Next</span><span class="s">Slot</span></div></div>
-    <div class="center h tag" id="s2tag"></div>
-  </div>
-
-  <!-- 3. Booking page -->
-  <div class="scene" id="s3">
-    <div class="center caption" id="s3cap">
-      <div class="h">Your own <span class="bronze">booking page.</span></div>
-      <p>Clients book &amp; pay 24/7. No back-and-forth.</p>
-    </div>
-    <div class="phone" id="phone">
-      <div class="screen">
-        <div class="notch"></div>
-        <div class="biz">
-          <div class="avatar">G</div>
-          <div class="name">Glow Studio</div>
-          <div class="url">glowstudio.nextslot.co.za</div>
-        </div>
-        <div id="p1">
-          <div class="step-label">Choose a service</div>
-          <div class="svc" id="svc1"><div><b>Lash Lift &amp; Tint</b><span>60 min</span></div><div class="pr">R450</div></div>
-          <div class="svc"><div><b>Brow Shape</b><span>30 min</span></div><div class="pr">R180</div></div>
-          <div class="svc"><div><b>Gel Manicure</b><span>45 min</span></div><div class="pr">R320</div></div>
-        </div>
-        <div id="p2" style="position:absolute;left:0;right:0;top:330px;">
-          <div class="step-label">Pick a time</div>
-          <div class="days">
-            <div class="day"><i>Thu</i><b>13</b></div>
-            <div class="day"><i>Fri</i><b>14</b></div>
-            <div class="day" id="day3"><i>Sat</i><b>15</b></div>
-            <div class="day"><i>Sun</i><b>16</b></div>
-          </div>
-          <div class="step-label" style="margin-top:30px">Saturday</div>
-          <div class="times">
-            <div class="time gone">09:00</div>
-            <div class="time" id="t1030">10:30</div>
-            <div class="time">12:00</div>
-            <div class="time gone">13:30</div>
-            <div class="time">15:00</div>
-            <div class="time">16:30</div>
-          </div>
-          <div class="hold" id="hold"><span>⏱ Slot held for you</span><span id="holdclock">10:00</span></div>
-        </div>
-        <div class="paybtn" id="paybtn">Pay R225 deposit</div>
-        <div class="done" id="done">
-          <div class="check"><svg width="110" height="110" viewBox="0 0 24 24"><path id="tick" d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="24" stroke-dashoffset="24"/></svg></div>
-          <h3>You're booked!</h3>
-          <p>Lash Lift &amp; Tint<br>Sat 15 · 10:30</p>
-        </div>
-        <div class="tap" id="tap"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- 4. Payments -->
-  <div class="scene" id="s4">
-    <div class="center" style="top:250px">
-      <div class="h big" id="s4a">Deposits upfront.</div>
-      <div class="h big bronze" id="s4b" style="margin-top:14px">Fewer no-shows.</div>
-    </div>
-    <div class="pay-grid">
-      <div class="pay ps"><img src="assets/payshap.png">PayShap</div>
-      <div class="pay"><img src="assets/Yoco.svg"></div>
-      <div class="pay"><img src="assets/ikhokha.svg"></div>
-      <div class="pay"><img src="assets/payfast-trim.png"></div>
-    </div>
-    <div class="toast" id="toast">
-      <div class="ic"><svg width="56" height="56" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-      <div><b>Deposit received · R225</b><span>Lash Lift &amp; Tint · Sat 10:30</span></div>
-    </div>
-  </div>
-
-  <!-- 5. Insights -->
-  <div class="scene" id="s5">
-    <div class="center caption" style="top:190px" id="s5cap">
-      <div class="h">See where your<br>business <span class="bronze">can grow.</span></div>
-    </div>
-    <div class="dash" id="dash">
-      <div class="lbl">Revenue this month</div>
-      <div class="num" id="rev">R0</div>
-      <div class="delta" id="delta">▲ 18% vs last month</div>
-      <div class="bars" id="bars">
-        <div class="bar" data-h="62"><i>Mon</i></div>
-        <div class="bar lo" data-h="24"><i>Tue</i></div>
-        <div class="bar" data-h="55"><i>Wed</i></div>
-        <div class="bar" data-h="70"><i>Thu</i></div>
-        <div class="bar hi" data-h="96"><i>Fri</i></div>
-        <div class="bar hi" data-h="100"><i>Sat</i></div>
-      </div>
-    </div>
-    <div class="illus" id="illus">Illustrative</div>
-    <div class="nexty" id="nexty">
-      <div class="tagl">✦ Nexty insight</div>
-      <h4>Fill your quietest day</h4>
-      <p>Tuesday is your slowest day. A targeted offer to your clients could fill those gaps.</p>
-    </div>
-  </div>
-
-  <!-- 6. Who it's for -->
-  <div class="scene" id="s6">
-    <div class="photo" style="background-image:url(assets/beautician.jpg)"></div>
-    <div class="photo" style="background-image:url(assets/barber.jpg)"></div>
-    <div class="photo" style="background-image:url(assets/tools-tattoo-artist-at-work.webp)"></div>
-    <div class="photo" style="background-image:url(assets/professional-photographer-at-work.webp)"></div>
-    <div class="shade"></div>
-    <div class="center h" id="s6h">Built for <span>independent</span> pros like you.</div>
-    <div class="chip">Beauty &amp; Wellness</div>
-    <div class="chip">Barbers</div>
-    <div class="chip">Tattoo Artists</div>
-    <div class="chip">Photographers</div>
-  </div>
-
-  <!-- 7. CTA -->
-  <div class="scene" id="s7">
-    <div class="brand" id="s7logo"><img src="assets/nextslot-icon.png" alt=""><div class="wm"><span class="n">Next</span><span class="s">Slot</span></div></div>
-    <div class="center h cta" id="s7h">Start <span class="bronze">free</span> today.</div>
-    <div class="center sub" id="s7sub"><b>Free trial · No payment required</b><br>Plans from R99/month</div>
-    <div class="btn" id="btn">nextslot<span>.co.za</span></div>
-    <div class="center foot" id="s7foot">Proudly made in Cape Town 🇿🇦</div>
-  </div>
+  <div class="scene c-reveal" id="s2"></div>
+  <div class="scene c-phone" id="s3"></div>
+  <div class="scene c-pay" id="s4"></div>
+  <div class="scene c-insights" id="s5"></div>
+  <div class="scene c-who" id="s6"></div>
+  <div class="scene c-cta" id="s7"></div>
 </div>
 
+<script src="ad-core.js"></script>
 <script>
-// ── timing helpers ────────────────────────────────────────────────────────────
-const cl = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
-const prog = (t, a, b) => cl((t - a) / (b - a));
-const eo = x => 1 - Math.pow(1 - x, 3);                       // ease-out cubic
-const eio = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
-const back = x => { const c = 1.70158, c3 = c + 1; return 1 + c3 * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); };
-const $ = s => document.querySelector(s);
-const $$ = s => Array.from(document.querySelectorAll(s));
-const lerp = (a, b, x) => a + (b - a) * x;
+mount("#s2", C.reveal({ tag: "Booking software for independent service businesses." }));
+mount("#s3", C.phone({ title: 'Your own <span class="bronze">booking page.</span>', sub: "Clients book &amp; pay 24/7. No back-and-forth." }));
+mount("#s4", C.pay({ line1: "Deposits upfront.", line2: "Fewer no-shows." }));
+mount("#s5", C.insights());
+mount("#s6", C.who({ headline: "Built for <span>independent</span> pros like you." }));
+mount("#s7", C.cta());
 
-// Scene windows [in, out] with 0.35s cross-fades.
-const W = { s1: [0, 3.3], s2: [3.25, 6.0], s3: [5.9, 10.05], s4: [9.95, 12.85], s5: [12.75, 16.0], s6: [15.9, 18.05], s7: [17.95, 20.1] };
-function sceneOpacity(t, [a, b], fade = .3) {
-  if (t < a || t > b) return 0;
-  return Math.min(a === 0 ? 1 : prog(t, a, a + fade), b >= 20 ? 1 : 1 - prog(t, b - fade, b));
-}
-function rise(el, t, a, dur = .5, dist = 60) {
-  const p = eo(prog(t, a, a + dur));
-  el.style.opacity = p; el.style.transform = `translateY(${(1 - p) * dist}px)`;
-}
-
-// Word-by-word tagline for scene 2.
-const tagWords = "Booking software for independent service businesses.".split(" ");
-$("#s2tag").innerHTML = tagWords.map(w => `<span class="w">${w}</span>`).join(" ");
-
-function renderBase(t) {
-  for (const id in W) $("#" + id).style.opacity = sceneOpacity(t, W[id]);
-
-  // ── 1. Hook ──
-  if (t < 3.6) {
-    rise($("#s1h"), t, 0.1, .55);
-    $$("#s1 .bubble").forEach((b, i) => {
-      const a = 0.45 + i * 0.32, p = back(prog(t, a, a + .32)), out = eio(prog(t, 2.95, 3.3));
-      const x = +b.dataset.x, y = +b.dataset.y, r = +b.dataset.r;
-      b.style.left = x + "px"; b.style.top = y + "px";
-      b.style.opacity = cl(prog(t, a, a + .12)) * (1 - out);
-      b.style.transform = `translateY(${(1 - p) * 40 + out * 80}px) scale(${lerp(.6, 1, p) * (1 - out * .15)}) rotate(${r + out * r * 4}deg)`;
-      b.style.filter = `blur(${out * 10}px)`;
-    });
-    const sp = prog(t, 2.45, 2.65), so = eio(prog(t, 3.0, 3.3));
-    const st = $("#stamp");
-    st.style.opacity = (sp > 0 ? 1 : 0) * (1 - so);
-    st.style.transform = `translateX(-50%) rotate(-12deg) scale(${lerp(2.4, 1, eo(sp)) * (1 + so * .2)})`;
-    $("#s1h").style.opacity = (+$("#s1h").style.opacity) * (1 - so);
-  }
-
-  // dark → cream circular wipe
-  const wp = eio(prog(t, 3.05, 3.55));
-  $("#wipe").style.clipPath = `circle(${wp * 1300}px at 50% 55%)`;
-  $("#wipe").style.opacity = t > 3.0 && t < 3.7 ? 1 : 0;
-
-  // ── 2. Logo ──
-  if (t > 3 && t < 6.2) {
-    const lp = back(prog(t, 3.35, 3.95));
-    const lg = $("#s2logo");
-    lg.style.opacity = cl(prog(t, 3.35, 3.6));
-    lg.style.transform = `scale(${lerp(.55, 1, lp)})`;
-    $$("#s2tag .w").forEach((w, i) => rise(w, t, 4.05 + i * .09, .4, 36));
-    // gentle push-in while holding
-    $("#s2").style.transform = `scale(${1 + prog(t, 3.4, 6.0) * .04})`;
-  }
-
-  // ── 3. Booking page ──
-  if (t > 5.8 && t < 10.2) {
-    rise($("#s3cap"), t, 6.0, .5, 50);
-    const ph = eo(prog(t, 5.95, 6.55));
-    $("#phone").style.transform = `translateY(${(1 - ph) * 500}px)`;
-    const tap = $("#tap");
-    // step 1: tap service (6.8s)
-    const tapAt = (tt, x, y) => { const p = prog(t, tt, tt + .35); return p > 0 && p < 1 ? { x, y, p } : null; };
-    const taps = [tapAt(6.75, 300, 420), tapAt(7.75, 420, 470), tapAt(8.2, 450, 742), tapAt(9.0, 300, 1185)];
-    const tp = taps.find(Boolean);
-    if (tp) { tap.style.left = tp.x + "px"; tap.style.top = tp.y + "px"; tap.style.opacity = 1 - tp.p; tap.style.transform = `scale(${lerp(.5, 1.6, tp.p)})`; }
-    else tap.style.opacity = 0;
-    $("#svc1").classList.toggle("sel", t > 6.85);
-    // slide from services to times
-    const sl = eio(prog(t, 7.15, 7.55));
-    $("#p1").style.transform = `translateX(${-sl * 640}px)`; $("#p1").style.opacity = 1 - sl;
-    $("#p2").style.transform = `translateX(${(1 - sl) * 640}px)`; $("#p2").style.opacity = sl;
-    $("#day3").classList.toggle("sel", t > 7.85);
-    $("#t1030").classList.toggle("sel", t > 8.3);
-    const hp = back(prog(t, 8.35, 8.7));
-    $("#hold").style.opacity = cl(prog(t, 8.35, 8.5)); $("#hold").style.transform = `scale(${lerp(.8, 1, hp)})`;
-    const secs = Math.max(0, 600 - Math.floor(Math.max(0, t - 8.4) * 2.2));
-    $("#holdclock").textContent = `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, "0")}`;
-    const bp = prog(t, 9.0, 9.18);
-    $("#paybtn").style.opacity = cl(prog(t, 8.5, 8.8));
-    $("#paybtn").style.transform = `scale(${1 - Math.sin(bp * Math.PI) * .05})`;
-    $("#paybtn").style.background = t > 9.05 ? "#94672F" : "";
-    const dn = eo(prog(t, 9.2, 9.5));
-    $("#done").style.opacity = dn;
-    $("#done").style.transform = `scale(${lerp(1.05, 1, dn)})`;
-    $("#tick").style.strokeDashoffset = 24 * (1 - eo(prog(t, 9.35, 9.7)));
-  }
-
-  // ── 4. Payments ──
-  if (t > 9.8 && t < 13) {
-    rise($("#s4a"), t, 10.05, .45, 50);
-    rise($("#s4b"), t, 10.3, .45, 50);
-    $$(".pay").forEach((p, i) => {
-      const a = 10.55 + i * .12, x = back(prog(t, a, a + .4));
-      p.style.opacity = cl(prog(t, a, a + .15)); p.style.transform = `scale(${lerp(.6, 1, x)})`;
-    });
-    const tp = back(prog(t, 11.4, 11.85));
-    $("#toast").style.opacity = cl(prog(t, 11.4, 11.6));
-    $("#toast").style.transform = `translateY(${(1 - tp) * 160}px)`;
-  }
-
-  // ── 5. Insights ──
-  if (t > 12.6 && t < 16.2) {
-    rise($("#s5cap"), t, 12.85, .5, 50);
-    const dp = eo(prog(t, 13.0, 13.5));
-    $("#dash").style.opacity = dp; $("#dash").style.transform = `translateY(${(1 - dp) * 120}px)`;
-    $("#illus").style.opacity = dp;
-    const rv = Math.round(18450 * eo(prog(t, 13.2, 14.4)) / 10) * 10;
-    $("#rev").textContent = "R" + rv.toLocaleString("en-ZA").replace(/ /g, " ");
-    $("#delta").style.opacity = cl(prog(t, 14.2, 14.45));
-    $$("#bars .bar").forEach((b, i) => {
-      const p = eo(prog(t, 13.35 + i * .08, 13.95 + i * .08));
-      b.style.height = (+b.dataset.h * p * 3) + "px";
-    });
-    // highlight the slow day when Nexty speaks
-    const lo = $(".bar.lo"); lo.style.boxShadow = t > 14.7 ? `0 0 0 ${6 + Math.sin(t * 10) * 3}px rgba(224,83,63,.35)` : "none";
-    const np = back(prog(t, 14.55, 15.05));
-    $("#nexty").style.opacity = cl(prog(t, 14.55, 14.75));
-    $("#nexty").style.transform = `translateY(${(1 - np) * 180}px)`;
-  }
-
-  // ── 6. Who it's for ──
-  if (t > 15.8 && t < 18.2) {
-    rise($("#s6h"), t, 16.0, .45, 50);
-    const photos = $$("#s6 .photo"), chips = $$("#s6 .chip");
-    const seg = 0.5, start = 16.0;
-    photos.forEach((p, i) => {
-      const a = start + i * seg;
-      const vis = i === photos.length - 1 ? prog(t, a, a + .15) : Math.min(prog(t, a, a + .15), 1 - prog(t, a + seg, a + seg + .15));
-      p.style.opacity = vis;
-      p.style.transform = `scale(${1.12 - prog(t, a, a + seg + .3) * .1})`;
-      const c = chips[i], cp = back(prog(t, a + .05, a + .35));
-      c.style.opacity = i === chips.length - 1 ? cl(prog(t, a + .05, a + .2)) : Math.min(cl(prog(t, a + .05, a + .2)), 1 - prog(t, a + seg - .05, a + seg + .05));
-      c.style.transform = `translateX(-50%) scale(${lerp(.7, 1, cp)})`;
-    });
-  }
-
-  // ── 7. CTA ──
-  if (t > 17.9) {
-    const lp = back(prog(t, 18.05, 18.55));
-    $("#s7logo").style.opacity = cl(prog(t, 18.05, 18.25));
-    $("#s7logo").style.transform = `scale(${lerp(.6, 1, lp)})`;
-    rise($("#s7h"), t, 18.3, .45, 50);
-    rise($("#s7sub"), t, 18.55, .45, 40);
-    const bp = back(prog(t, 18.8, 19.2)), pulse = t > 19.3 ? Math.sin((t - 19.3) * 7) * .025 : 0;
-    $("#btn").style.opacity = cl(prog(t, 18.8, 18.95));
-    $("#btn").style.transform = `translateX(-50%) scale(${lerp(.6, 1, bp) + pulse})`;
-    rise($("#s7foot"), t, 19.1, .4, 20);
-  }
-}
-// Length is set with ?d=<seconds> (default 20). The timeline above is authored
-// in 20-second time; longer cuts play the same choreography proportionally slower.
-const DURATION = +(new URLSearchParams(location.search).get("d") || 20);
-const STRETCH = DURATION / 20;
-window.DURATION = DURATION;
-window.render = t => renderBase(t / STRETCH);
-window.ready = document.fonts.ready.then(() => Promise.all(
-  Array.from(document.images).map(i => i.complete ? 1 : new Promise(r => { i.onload = i.onerror = r; }))));
-renderBase(0);
+defineAd({
+  windows: { s1: [0, 3.3], s2: [3.25, 6.0], s3: [5.9, 10.05], s4: [9.95, 12.85], s5: [12.75, 16.0], s6: [15.9, 18.05], s7: [17.95, 20.1] },
+  render(t) {
+    // ── Hook: messages pile up, then a no-show ──
+    if (t < 3.6) {
+      rise($("#s1h"), t, 0.1, .55);
+      $$("#s1 .bubble").forEach((b, i) => {
+        const a = 0.45 + i * 0.32, p = back(prog(t, a, a + .32)), out = eio(prog(t, 2.95, 3.3));
+        const x = +b.dataset.x, y = +b.dataset.y, r = +b.dataset.r;
+        b.style.left = x + "px"; b.style.top = y + "px";
+        b.style.opacity = cl(prog(t, a, a + .12)) * (1 - out);
+        b.style.transform = `translateY(${(1 - p) * 40 + out * 80}px) scale(${lerp(.6, 1, p) * (1 - out * .15)}) rotate(${r + out * r * 4}deg)`;
+        b.style.filter = `blur(${out * 10}px)`;
+      });
+      const sp = prog(t, 2.45, 2.65), so = eio(prog(t, 3.0, 3.3));
+      const st = $("#stamp");
+      st.style.opacity = (sp > 0 ? 1 : 0) * (1 - so);
+      st.style.transform = `translateX(-50%) rotate(-12deg) scale(${lerp(2.4, 1, eo(sp)) * (1 + so * .2)})`;
+      $("#s1h").style.opacity = (+$("#s1h").style.opacity) * (1 - so);
+    }
+    R.wipe(t, 3.05);
+    R.reveal(t, 3.25, "#s2");
+    R.phone(t, 5.9);
+    R.pay(t, 9.95);
+    R.insights(t, 12.75);
+    R.who(t, 15.9, "#s6");
+    R.cta(t, 17.95);
+  },
+});
 </script>
 </body>
 </html>

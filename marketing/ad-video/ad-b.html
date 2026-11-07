@@ -1,0 +1,189 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>NextSlot ad · B · No-shows cost you</title>
+<link rel="stylesheet" href="ad-core.css">
+<style>
+/* ── Hook: what no-shows cost ── */
+#s1 .h { color: #F5F0E7; font-size: 84px; top: 170px; padding: 0 70px; }
+#s1 .h span { color: var(--gold); }
+.loss { position: absolute; left: 0; right: 0; top: 470px; text-align: center; font-family: Montserrat; font-weight: 800;
+  font-size: 210px; letter-spacing: -0.04em; color: var(--red); line-height: 1; }
+.loss-sub { top: 700px; font-size: 52px; color: #F5F0E7; font-weight: 600; }
+.wk { position: absolute; left: 80px; right: 80px; height: 150px; border-radius: 36px; padding: 0 40px;
+  display: flex; align-items: center; justify-content: space-between; font-size: 34px; opacity: 0; }
+.wk .l { display: flex; flex-direction: column; gap: 6px; }
+.wk .l i { font-style: normal; font-size: 24px; letter-spacing: .1em; text-transform: uppercase; font-weight: 700; }
+.wk .l b { font-weight: 600; }
+.wk .amt { font-family: Montserrat; font-weight: 800; font-size: 46px; }
+.wk .badge { font-size: 24px; font-weight: 700; padding: 8px 18px; border-radius: 16px; margin-right: 26px; }
+.wk .r { display: flex; align-items: center; }
+#s1 .wk { background: #2A221B; color: #F5F0E7; }
+#s1 .wk .l i { color: #9C8E7C; }
+#s1 .wk .amt { color: var(--red); }
+#s1 .wk .badge { background: rgba(224,83,63,.16); color: #F08A79; }
+.wk .l b { position: relative; }
+.strike { position: absolute; left: -4px; top: 52%; height: 4px; background: var(--red); border-radius: 2px; width: 0; }
+.note { position: absolute; left: 0; right: 0; text-align: center; font-size: 28px; font-weight: 500; }
+#s1 .note { top: 1730px; color: rgba(245,240,231,.5); }
+
+/* ── Terms accepted at checkout ── */
+.policy { position: absolute; left: 90px; right: 90px; top: 660px; padding: 56px 56px 50px; border-radius: 48px; background: #fff;
+  box-shadow: 0 30px 70px rgba(80,55,25,.14); }
+.policy .tagl { font-size: 24px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--bronze); }
+.policy ul { list-style: none; margin-top: 30px; }
+.policy li { font-size: 36px; line-height: 1.35; padding: 16px 0 16px 44px; position: relative; color: var(--ink); }
+.policy li:before { content: ""; position: absolute; left: 4px; top: 32px; width: 14px; height: 14px; border-radius: 50%; background: var(--gold); }
+.accept { display: flex; align-items: center; gap: 26px; margin-top: 34px; padding-top: 36px; border-top: 3px solid #F1EADF; font-size: 34px; font-weight: 600; }
+.box { width: 66px; height: 66px; border-radius: 18px; border: 4px solid var(--ink2); display: flex; align-items: center; justify-content: center; flex: none; }
+.policy .go { margin-top: 36px; padding: 34px 0; border-radius: 32px; background: var(--ink); color: #fff; text-align: center; font-size: 34px; font-weight: 700; opacity: .3; }
+.c-terms .note { top: 1640px; color: var(--muted); font-size: 26px; }
+.c-terms .caption p { margin-top: 18px; }
+
+/* ── Result: the same four weeks, paid upfront ── */
+#s6 .h { top: 190px; font-size: 96px; }
+#s6 .wk { background: #fff; box-shadow: 0 16px 40px rgba(80,55,25,.10); }
+#s6 .wk .l i { color: var(--muted); }
+#s6 .wk .amt { color: var(--green); }
+#s6 .wk .badge { background: #E6F2EA; color: var(--green); }
+.total { position: absolute; left: 0; right: 0; top: 1380px; text-align: center; font-size: 40px; color: var(--ink2); font-weight: 600; }
+.total b { display: block; font-family: Montserrat; font-weight: 800; font-size: 110px; color: var(--green); margin-top: 6px; letter-spacing: -0.03em; }
+#s6 .note { top: 1700px; color: var(--muted); font-size: 26px; }
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+
+  <!-- 1. Hook: one no-show a week -->
+  <div class="scene dark" id="s1">
+    <div class="center h" id="s1h">One <span>no-show</span> a week costs you</div>
+    <div class="loss" id="loss">−R0</div>
+    <div class="center loss-sub" id="lossub">every month.</div>
+    <div class="wk" style="top:860px"><div class="l"><i>Week 1</i><b>Sat 10:30 · Lash Lift<span class="strike"></span></b></div><div class="r"><span class="badge">No-show</span><span class="amt">−R450</span></div></div>
+    <div class="wk" style="top:1030px"><div class="l"><i>Week 2</i><b>Thu 14:00 · Lash Lift<span class="strike"></span></b></div><div class="r"><span class="badge">No-show</span><span class="amt">−R450</span></div></div>
+    <div class="wk" style="top:1200px"><div class="l"><i>Week 3</i><b>Sat 09:00 · Lash Lift<span class="strike"></span></b></div><div class="r"><span class="badge">No-show</span><span class="amt">−R450</span></div></div>
+    <div class="wk" style="top:1370px"><div class="l"><i>Week 4</i><b>Fri 16:30 · Lash Lift<span class="strike"></span></b></div><div class="r"><span class="badge">No-show</span><span class="amt">−R450</span></div></div>
+    <div class="note" id="s1note">Example: one R450 appointment missed each week</div>
+  </div>
+
+  <div id="wipe"></div>
+
+  <div class="scene c-reveal" id="s2"></div>
+  <div class="scene c-phone" id="s3"></div>
+
+  <!-- 4. Terms accepted at checkout -->
+  <div class="scene c-terms" id="s4">
+    <div class="center caption" style="top:190px" id="s4cap">
+      <div class="h" style="font-size:92px">Your rules, <span class="bronze">agreed upfront.</span></div>
+      <p>Clients accept your policy before they pay.</p>
+    </div>
+    <div class="policy" id="policy">
+      <div class="tagl">Glow Studio · Booking policy</div>
+      <ul>
+        <li>A 50% deposit secures your slot.</li>
+        <li>Reschedule free up to 24 hours before.</li>
+        <li>Deposits aren't refunded for no-shows.</li>
+      </ul>
+      <div class="accept"><div class="box" id="box"><svg width="46" height="46" viewBox="0 0 24 24"><path id="boxtick" d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="24" stroke-dashoffset="24"/></svg></div>I accept the booking policy</div>
+      <div class="go" id="go">Pay R225 deposit</div>
+    </div>
+    <div class="tap" id="tap4"></div>
+    <div class="note">Example policy. You write your own.</div>
+  </div>
+
+  <div class="scene c-pay" id="s5"></div>
+
+  <!-- 6. The same four weeks, deposits paid -->
+  <div class="scene" id="s6">
+    <div class="center h">Every slot, <span class="bronze">protected.</span></div>
+    <div class="wk" style="top:520px"><div class="l"><i>Week 1</i><b>Sat 10:30 · Lash Lift</b></div><div class="r"><span class="badge">Deposit paid</span><span class="amt">+R225</span></div></div>
+    <div class="wk" style="top:690px"><div class="l"><i>Week 2</i><b>Thu 14:00 · Lash Lift</b></div><div class="r"><span class="badge">Deposit paid</span><span class="amt">+R225</span></div></div>
+    <div class="wk" style="top:860px"><div class="l"><i>Week 3</i><b>Sat 09:00 · Lash Lift</b></div><div class="r"><span class="badge">Deposit paid</span><span class="amt">+R225</span></div></div>
+    <div class="wk" style="top:1030px"><div class="l"><i>Week 4</i><b>Fri 16:30 · Lash Lift</b></div><div class="r"><span class="badge">Deposit paid</span><span class="amt">+R225</span></div></div>
+    <div class="total" id="total">Paid upfront this month<b id="totalv">R0</b></div>
+    <div class="note">Example: 50% deposits on four R450 bookings</div>
+  </div>
+
+  <div class="scene c-cta" id="s7"></div>
+</div>
+
+<script src="ad-core.js"></script>
+<script>
+mount("#s2", C.reveal({ tag: "Clients secure their slot with a deposit." }));
+mount("#s3", C.phone({ title: 'Deposits taken <span class="bronze">at booking.</span>', sub: "Your own booking page, open 24/7." }));
+mount("#s5", C.pay({ line1: "Get paid upfront,", line2: "your way." }));
+mount("#s7", C.cta());
+
+const rand = n => "R" + Math.round(n).toLocaleString("en-ZA").replace(/ /g, " ");
+
+defineAd({
+  windows: { s1: [0, 3.3], s2: [3.25, 6.0], s3: [5.9, 10.05], s4: [9.95, 12.85], s5: [12.75, 16.0], s6: [15.9, 18.05], s7: [17.95, 20.1] },
+  render(t) {
+    // ── Hook: four missed appointments add up ──
+    if (t < 3.6) {
+      const out = eio(prog(t, 2.95, 3.3));
+      rise($("#s1h"), t, 0.1, .5);
+      let lost = 0;
+      $$("#s1 .wk").forEach((w, i) => {
+        const a = 0.55 + i * 0.4, p = back(prog(t, a, a + .32));
+        w.style.opacity = cl(prog(t, a, a + .12)) * (1 - out);
+        w.style.transform = `translateY(${(1 - p) * 50 + out * 60}px) scale(${lerp(.85, 1, p)})`;
+        w.style.filter = `blur(${out * 8}px)`;
+        w.querySelector(".strike").style.width = `calc(${eo(prog(t, a + .2, a + .45)) * 100}% + 8px)`;
+        lost += 450 * eo(prog(t, a + .15, a + .4));
+      });
+      const loss = $("#loss");
+      loss.textContent = "−" + rand(Math.round(lost / 10) * 10);
+      const lp = back(prog(t, .35, .65));
+      loss.style.opacity = cl(prog(t, .35, .5)) * (1 - out);
+      loss.style.transform = `scale(${lerp(.7, 1, lp) * (1 + Math.sin(prog(t, 2.0, 2.3) * Math.PI) * .06)})`;
+      rise($("#lossub"), t, .55, .4, 30);
+      $("#lossub").style.opacity *= 1 - out;
+      $("#s1note").style.opacity = cl(prog(t, 2.1, 2.4)) * (1 - out);
+      $("#s1h").style.opacity = (+$("#s1h").style.opacity) * (1 - out);
+    }
+    R.wipe(t, 3.05);
+    R.reveal(t, 3.25, "#s2");
+    R.phone(t, 5.9);
+
+    // ── Terms accepted at checkout ──
+    const u = t - 9.95;
+    if (u > -.15 && u < 3.05) {
+      rise($("#s4cap"), u, .1, .5, 50);
+      const pp = eo(prog(u, .4, .9));
+      $("#policy").style.opacity = pp; $("#policy").style.transform = `translateY(${(1 - pp) * 120}px)`;
+      $$("#policy li").forEach((li, i) => rise(li, u, .7 + i * .16, .4, 24));
+      const tp = prog(u, 1.55, 1.9), tap = $("#tap4");
+      tap.style.left = "176px"; tap.style.top = "1312px";
+      tap.style.opacity = tp > 0 && tp < 1 ? 1 - tp : 0; tap.style.transform = `scale(${lerp(.5, 1.6, tp)})`;
+      const on = u > 1.65;
+      $("#box").style.background = on ? "#94672F" : "#fff";
+      $("#box").style.borderColor = on ? "#94672F" : "";
+      $("#boxtick").style.strokeDashoffset = 24 * (1 - eo(prog(u, 1.65, 1.95)));
+      $("#go").style.opacity = lerp(.3, 1, eo(prog(u, 1.8, 2.1)));
+      $("#go").style.background = u > 2.1 ? "#94672F" : "";
+    }
+
+    R.pay(t, 12.75);
+
+    // ── Result: the same weeks, paid upfront ──
+    const v = t - 15.9;
+    if (v > -.1 && v < 2.3) {
+      rise($("#s6 .h"), v, .1, .45, 50);
+      let paid = 0;
+      $$("#s6 .wk").forEach((w, i) => {
+        const a = .3 + i * .17, p = back(prog(v, a, a + .32));
+        w.style.opacity = cl(prog(v, a, a + .12));
+        w.style.transform = `translateX(${(1 - p) * -80}px)`;
+        paid += 225 * eo(prog(v, a + .1, a + .35));
+      });
+      rise($("#total"), v, .9, .4, 30);
+      $("#totalv").textContent = rand(Math.round(paid / 5) * 5);
+    }
+    R.cta(t, 17.95);
+  },
+});
+</script>
+</body>
+</html>

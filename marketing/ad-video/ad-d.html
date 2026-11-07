@@ -1,0 +1,152 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>NextSlot ad · D · Everything in one app</title>
+<link rel="stylesheet" href="ad-core.css">
+<style>
+/* ── Hook: kinetic words on full-bleed colour fields ── */
+.card { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+.card span { font-family: Montserrat; font-weight: 800; font-size: 164px; letter-spacing: -0.04em; line-height: 1; }
+.card.ink { background: var(--ink); color: var(--cream); }
+.card.bronze-f { background: var(--bronze); color: #FFF8EE; }
+.card.cream { background: var(--cream); color: var(--ink); }
+.card.gold { background: var(--ink); color: var(--gold); }
+.card.final span { font-size: 150px; text-align: center; }
+.card.final span em { font-style: normal; color: var(--bronze); }
+
+/* ── Feature grid ── */
+.feat { position: absolute; left: 70px; right: 70px; top: 470px; display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+.tile { height: 360px; border-radius: 44px; background: #fff; box-shadow: 0 18px 44px rgba(80,55,25,.10); padding: 40px 36px; opacity: 0; }
+.tile .ic { width: 104px; height: 104px; border-radius: 30px; background: #FFF1DC; display: flex; align-items: center; justify-content: center; }
+.tile b { display: block; font-family: Montserrat; font-weight: 800; font-size: 38px; line-height: 1.12; margin-top: 30px; letter-spacing: -0.01em; }
+.tile span { display: block; font-size: 27px; color: var(--muted); margin-top: 12px; line-height: 1.35; }
+
+/* ── Pricing ── */
+.plans { position: absolute; left: 80px; right: 80px; top: 560px; }
+.plan { position: relative; padding: 40px 46px; margin-bottom: 30px; border-radius: 44px; background: #fff;
+  box-shadow: 0 18px 44px rgba(80,55,25,.10); opacity: 0; }
+.plan .row { display: flex; justify-content: space-between; align-items: baseline; }
+.plan b { font-family: Montserrat; font-weight: 800; font-size: 50px; }
+.plan .pr { font-family: Montserrat; font-weight: 800; font-size: 64px; letter-spacing: -0.02em; }
+.plan .pr small { font-size: 28px; font-weight: 600; color: var(--muted); letter-spacing: 0; }
+.plan p { font-size: 29px; color: var(--ink2); margin-top: 10px; }
+.plan .trial { display: inline-block; margin-top: 18px; padding: 10px 22px; border-radius: 18px; background: #E6F2EA; color: var(--green); font-size: 26px; font-weight: 700; }
+.plans-foot { top: 1680px; font-size: 40px; color: var(--ink2); font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+
+  <!-- 1. Hook: one app for the whole business -->
+  <div class="scene" id="s1">
+    <div class="card ink"><span>Bookings.</span></div>
+    <div class="card bronze-f"><span>Deposits.</span></div>
+    <div class="card cream"><span>Clients.</span></div>
+    <div class="card gold"><span>Insights.</span></div>
+    <div class="card cream final"><span>All in<br><em>one app.</em></span></div>
+  </div>
+
+  <div class="scene c-reveal" id="s2"></div>
+
+  <!-- 3. Feature grid -->
+  <div class="scene" id="s3">
+    <div class="center caption" style="top:170px" id="s3cap">
+      <div class="h" style="font-size:96px">Everything in <span class="bronze">one place.</span></div>
+    </div>
+    <div class="feat" id="feat"></div>
+  </div>
+
+  <div class="scene c-pay" id="s4"></div>
+
+  <!-- 5. Pricing -->
+  <div class="scene" id="s5">
+    <div class="center caption" style="top:200px" id="s5cap">
+      <div class="h" style="font-size:100px">Plans from <span class="bronze">R99</span><br>a month.</div>
+    </div>
+    <div class="plans">
+      <div class="plan"><div class="row"><b>Starter</b><span class="pr">R99<small>/mo</small></span></div><p>Bookings, PayShap &amp; the essentials</p><span class="trial">7-day free trial</span></div>
+      <div class="plan"><div class="row"><b>Flow</b><span class="pr">R399<small>/mo</small></span></div><p>Card payments &amp; deposit tracking</p><span class="trial">30-day free trial</span></div>
+      <div class="plan"><div class="row"><b>Professional</b><span class="pr">R699<small>/mo</small></span></div><p>Loyalty, consultation forms &amp; insights</p><span class="trial">30-day free trial</span></div>
+    </div>
+    <div class="center plans-foot" id="plansfoot">No payment required to start.</div>
+  </div>
+
+  <div class="scene c-who" id="s6"></div>
+  <div class="scene c-cta" id="s7"></div>
+</div>
+
+<script src="ad-core.js"></script>
+<script>
+mount("#s2", C.reveal({ tag: "Booking software for independent service businesses.", offer: "Free trial · No payment required" }));
+mount("#s4", C.pay({ line1: "Get paid upfront,", line2: "your way." }));
+mount("#s6", C.who({ headline: "Built for <span>independent</span> pros like you." }));
+mount("#s7", C.cta());
+
+// Line icons (bronze, 2px) for the feature grid.
+const ico = d => `<svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="#94672F" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+const FEATURES = [
+  [ico('<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18M8 14h3"/>'), "Online booking page", "Clients book 24/7, no app needed"],
+  [ico('<rect x="2.5" y="5.5" width="19" height="13" rx="2.5"/><path d="M2.5 10h19M6.5 15h4"/>'), "Deposits &amp; payments", "PayShap, Yoco, iKhokha, PayFast"],
+  [ico('<rect x="5" y="4" width="14" height="17" rx="2.5"/><path d="M9 4.5h6M8.5 10h7M8.5 13.5h7M8.5 17h4"/>'), "Consultation forms", "Collected before they arrive"],
+  [ico('<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>'), "Loyalty &amp; rebooking", "Regulars, VIPs and birthdays"],
+  [ico('<path d="M20 12a8 8 0 0 1-13.7 5.6M4 12a8 8 0 0 1 13.7-5.6"/><path d="M18 3v4h-4M6 21v-4h4"/>'), "Google Calendar sync", "Bookings land in your calendar"],
+  [ico('<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 16l.7 1.8L21.5 18.5l-1.8.7L19 21l-.7-1.8-1.8-.7 1.8-.7z"/>'), "Nexty insights", "Where your business can grow"],
+];
+$("#feat").innerHTML = FEATURES.map(([i, b, s]) => `<div class="tile"><div class="ic">${i}</div><b>${b}</b><span>${s}</span></div>`).join("");
+
+// Kinetic word cards: [start, end] on the timeline.
+const CARDS = [[0, .72], [.68, 1.42], [1.38, 2.12], [2.08, 2.82], [2.78, 3.4]];
+
+defineAd({
+  windows: { s1: [0, 3.3], s2: [3.25, 6.0], s3: [5.9, 10.05], s4: [9.95, 12.85], s5: [12.75, 16.0], s6: [15.9, 18.05], s7: [17.95, 20.1] },
+  render(t) {
+    // ── Hook: each card slides up over the last, its word slams in ──
+    if (t < 3.6) {
+      $$("#s1 .card").forEach((c, i) => {
+        const [a, b] = CARDS[i];
+        const enter = i === 0 ? 1 : eio(prog(t, a, a + .2));
+        const visible = t >= a && t < b + .05;
+        c.style.display = visible ? "flex" : "none";
+        c.style.transform = `translateY(${(1 - enter) * 1920}px)`;
+        const w = c.querySelector("span"), p = back(prog(t, a + .06, a + .36));
+        w.style.opacity = cl(prog(t, a + .06, a + .16));
+        w.style.transform = `scale(${lerp(1.5, 1, p)})`;
+        w.style.filter = `blur(${(1 - cl(prog(t, a + .06, a + .26))) * 12}px)`;
+      });
+    }
+    R.reveal(t, 3.25, "#s2");
+
+    // ── Feature grid ──
+    const u = t - 5.9;
+    if (u > -.1 && u < 4.3) {
+      rise($("#s3cap"), u, .1, .5, 50);
+      $$("#feat .tile").forEach((tile, i) => {
+        const a = .55 + i * .22, p = back(prog(u, a, a + .4));
+        tile.style.opacity = cl(prog(u, a, a + .15));
+        tile.style.transform = `translateY(${(1 - p) * 70}px) scale(${lerp(.85, 1, p)})`;
+        // gentle lift on each tile once all are in
+        const lift = Math.sin(prog(u, 2.2 + i * .18, 2.8 + i * .18) * Math.PI);
+        tile.style.boxShadow = `0 ${18 + lift * 16}px ${44 + lift * 20}px rgba(80,55,25,${.10 + lift * .08})`;
+      });
+    }
+    R.pay(t, 9.95);
+
+    // ── Pricing ──
+    const v = t - 12.75;
+    if (v > -.15 && v < 3.45) {
+      rise($("#s5cap"), v, .1, .5, 50);
+      $$("#s5 .plan").forEach((pl, i) => {
+        const a = .55 + i * .28, p = back(prog(v, a, a + .4));
+        pl.style.opacity = cl(prog(v, a, a + .15));
+        pl.style.transform = `translateX(${(1 - p) * 120}px)`;
+      });
+      rise($("#plansfoot"), v, 1.6, .45, 30);
+    }
+    R.who(t, 15.9, "#s6");
+    R.cta(t, 17.95);
+  },
+});
+</script>
+</body>
+</html>

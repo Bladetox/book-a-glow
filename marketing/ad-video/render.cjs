@@ -2,6 +2,8 @@
 //   node render.cjs stills 1.5 4 8.6        -> out/still-<t>.png for review
 //   node render.cjs video                    -> out/nextslot-ad.mp4 (needs out/music.wav)
 //   DURATION=30 node render.cjs video        -> out/nextslot-ad-30s.mp4 (needs out/music-30s.wav)
+//   VARIANT=b DURATION=30 node render.cjs video -> out/nextslot-ad-b-30s.mp4 (ad-b.html, out/music-b-30s.wav)
+// VARIANT a (default) is ad.html; b, c, d are ad-b.html, ad-c.html, ad-d.html.
 const { chromium } = require("playwright");
 const { spawn } = require("child_process");
 const path = require("path");
@@ -9,7 +11,9 @@ const fs = require("fs");
 
 const FPS = 30, W = 1080, H = 1920;
 const DURATION = +(process.env.DURATION || 20);
-const SUFFIX = DURATION === 20 ? "" : `-${DURATION}s`;
+const VARIANT = (process.env.VARIANT || "a").toLowerCase();
+const PAGE = VARIANT === "a" ? "ad.html" : `ad-${VARIANT}.html`;
+const SUFFIX = (VARIANT === "a" ? "" : `-${VARIANT}`) + (DURATION === 20 ? "" : `-${DURATION}s`);
 const OUT = path.join(__dirname, "out");
 
 (async () => {
@@ -17,7 +21,7 @@ const OUT = path.join(__dirname, "out");
   fs.mkdirSync(OUT, { recursive: true });
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
-  await page.goto("file://" + path.join(__dirname, "ad.html") + `?d=${DURATION}`, { waitUntil: "networkidle" });
+  await page.goto("file://" + path.join(__dirname, PAGE) + `?d=${DURATION}`, { waitUntil: "networkidle" });
   await page.evaluate(() => window.ready);
 
   const shot = async t => {

@@ -1,0 +1,192 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>NextSlot ad · C · Booked while you sleep</title>
+<link rel="stylesheet" href="ad-core.css">
+<style>
+/* ── Hook: lock screen at night ── */
+#s1 { background: radial-gradient(130% 90% at 50% 10%, #2B2440 0%, #141022 55%, #0B0A12 100%); color: #F2EEF8; }
+.star { position: absolute; width: 4px; height: 4px; border-radius: 50%; background: #fff; }
+#s1 .h { top: 150px; font-size: 76px; color: var(--gold); }
+.date { top: 330px; font-size: 40px; font-weight: 600; color: rgba(242,238,248,.8); }
+.clock { top: 380px; font-family: Montserrat; font-weight: 600; font-size: 230px; letter-spacing: -0.03em; line-height: 1; }
+.notif { position: absolute; left: 60px; right: 60px; padding: 30px 36px; border-radius: 44px; background: rgba(255,255,255,.14);
+  border: 1px solid rgba(255,255,255,.12); opacity: 0; }
+.notif .top { display: flex; align-items: center; gap: 18px; font-size: 26px; font-weight: 600; color: rgba(242,238,248,.65); letter-spacing: .04em; }
+.notif .app { width: 52px; height: 52px; border-radius: 14px; background: linear-gradient(180deg, #4FA3FF, #1E6FF2); display: flex; align-items: center; justify-content: center; }
+.notif .top .when { margin-left: auto; }
+.notif b { display: block; font-size: 32px; margin-top: 16px; }
+.notif p { font-size: 30px; line-height: 1.35; margin-top: 6px; color: rgba(242,238,248,.92); }
+#s1 .note { position: absolute; left: 0; right: 0; top: 1760px; text-align: center; font-size: 26px; color: rgba(242,238,248,.4); }
+
+/* ── Day view ── */
+.day-card { position: absolute; left: 70px; right: 70px; top: 520px; height: 1150px; border-radius: 48px; background: #fff;
+  box-shadow: 0 30px 70px rgba(80,55,25,.14); overflow: hidden; }
+.day-head { display: flex; justify-content: space-between; align-items: center; padding: 40px 44px 30px; border-bottom: 3px solid #F1EADF; }
+.day-head b { font-family: Montserrat; font-weight: 800; font-size: 40px; }
+.gcal { display: flex; align-items: center; gap: 12px; padding: 12px 22px; border-radius: 30px; background: #E6F2EA; color: var(--green);
+  font-size: 24px; font-weight: 700; opacity: 0; white-space: nowrap; }
+.grid { position: absolute; left: 0; right: 0; top: 130px; }
+.hr { position: absolute; left: 0; right: 0; height: 110px; border-top: 2px solid #F4EEE5; }
+.hr i { position: absolute; left: 30px; top: 10px; font-style: normal; font-size: 24px; color: var(--muted); font-weight: 600; }
+.blk { position: absolute; left: 150px; right: 34px; border-radius: 22px; padding: 18px 26px; opacity: 0;
+  display: flex; flex-direction: column; justify-content: center; transform-origin: left center; }
+.blk b { font-size: 30px; font-weight: 700; }
+.blk span { font-size: 24px; margin-top: 4px; }
+.blk.new { background: #FFF1DC; border-left: 10px solid var(--bronze); color: #5A3A10; }
+.blk.old { background: #F3EEE6; border-left: 10px solid #CDBFAE; color: var(--ink2); }
+.blk .tagp { font-style: normal; position: absolute; right: 22px; top: 18px; font-size: 22px; font-weight: 700; color: var(--green); background: #E6F2EA; padding: 6px 14px; border-radius: 12px; }
+.c-day .note { position: absolute; left: 0; right: 0; top: 1700px; text-align: center; font-size: 26px; color: var(--muted); }
+
+/* ── Admin handled ── */
+.todo { position: absolute; left: 80px; right: 80px; top: 640px; }
+.item { display: flex; align-items: center; gap: 34px; padding: 40px 44px; margin-bottom: 26px; border-radius: 40px; background: #fff;
+  box-shadow: 0 16px 40px rgba(80,55,25,.10); font-size: 38px; font-weight: 600; opacity: 0; }
+.dot { width: 84px; height: 84px; border-radius: 50%; background: #E9E1D5; flex: none; display: flex; align-items: center; justify-content: center; }
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+
+  <!-- 1. Hook: bookings arrive overnight -->
+  <div class="scene" id="s1">
+    <div id="stars"></div>
+    <div class="center h" id="s1h">While you sleep…</div>
+    <div class="center date" id="date">Thursday, 13 November</div>
+    <div class="center clock" id="clock">23:47</div>
+    <div class="notif" data-at="0.55" data-when="23:47"><div class="top"><div class="app"><svg width="30" height="30" viewBox="0 0 24 24"><path d="M3 6h18v12H3z M3 7l9 6 9-6" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg></div>MAIL<span class="when">now</span></div><b>NextSlot</b><p>🎉 New Booking - Deposit received 🎉 — Thandi M. on Saturday, 15 November 2026</p></div>
+    <div class="notif" data-at="1.3" data-when="01:12"><div class="top"><div class="app"><svg width="30" height="30" viewBox="0 0 24 24"><path d="M3 6h18v12H3z M3 7l9 6 9-6" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg></div>MAIL<span class="when">now</span></div><b>NextSlot</b><p>🎉 New Booking - Deposit received 🎉 — Lerato K. on Saturday, 15 November 2026</p></div>
+    <div class="notif" data-at="2.05" data-when="06:03"><div class="top"><div class="app"><svg width="30" height="30" viewBox="0 0 24 24"><path d="M3 6h18v12H3z M3 7l9 6 9-6" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg></div>MAIL<span class="when">now</span></div><b>NextSlot</b><p>🎉 New Booking - Deposit received 🎉 — Aisha P. on Saturday, 15 November 2026</p></div>
+    <div class="note">Illustrative</div>
+  </div>
+
+  <div id="wipe"></div>
+
+  <div class="scene c-reveal" id="s2"></div>
+  <div class="scene c-phone" id="s3"></div>
+
+  <!-- 4. Wake up to new bookings -->
+  <div class="scene c-day" id="s4">
+    <div class="center caption" style="top:180px" id="s4cap">
+      <div class="h" style="font-size:96px">Wake up to <span class="bronze">new bookings.</span></div>
+    </div>
+    <div class="day-card" id="daycard">
+      <div class="day-head"><b>Saturday 15 Nov</b><div class="gcal" id="gcal">✓ Synced to Google Calendar</div></div>
+      <div class="grid" id="grid"></div>
+    </div>
+    <div class="note">Illustrative</div>
+  </div>
+
+  <!-- 5. Admin handled -->
+  <div class="scene" id="s5">
+    <div class="center caption" style="top:200px" id="s5cap">
+      <div class="h" style="font-size:104px">The admin?<br><span class="bronze">Handled.</span></div>
+    </div>
+    <div class="todo">
+      <div class="item"><div class="dot"><svg width="50" height="50" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="24" stroke-dashoffset="24"/></svg></div>Confirmation emails sent</div>
+      <div class="item"><div class="dot"><svg width="50" height="50" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="24" stroke-dashoffset="24"/></svg></div>Deposits tracked against balances</div>
+      <div class="item"><div class="dot"><svg width="50" height="50" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="24" stroke-dashoffset="24"/></svg></div>Consultation forms sent ahead</div>
+      <div class="item"><div class="dot"><svg width="50" height="50" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="24" stroke-dashoffset="24"/></svg></div>Balance requests in one tap</div>
+    </div>
+  </div>
+
+  <div class="scene c-who" id="s6"></div>
+  <div class="scene c-cta" id="s7"></div>
+</div>
+
+<script src="ad-core.js"></script>
+<script>
+mount("#s2", C.reveal({ tag: "Takes bookings and deposits, even while you sleep." }));
+mount("#s3", C.phone({ title: 'Clients book <span class="bronze">themselves.</span>', sub: "Pick a service, pick a time, pay. Done." }));
+mount("#s6", C.who({ headline: "More time for the work <span>you love.</span>" }));
+mount("#s7", C.cta());
+
+// Night sky: fixed pseudo-random stars so every render is identical.
+let seed = 11;
+const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+$("#stars").innerHTML = Array.from({ length: 40 }, () =>
+  `<div class="star" style="left:${(rnd() * 1060).toFixed(0)}px;top:${(rnd() * 760).toFixed(0)}px;opacity:${(.15 + rnd() * .5).toFixed(2)}"></div>`).join("");
+
+// Day view: hours 08:00–17:00, 110px per hour.
+const HOUR = 110, START = 8;
+const at = (h, m) => (h - START + m / 60) * HOUR;
+$("#grid").innerHTML =
+  Array.from({ length: 10 }, (_, i) => `<div class="hr" style="top:${i * HOUR}px"><i>${String(START + i).padStart(2, "0")}:00</i></div>`).join("") +
+  [
+    { h: 9, m: 0, len: 45, cls: "new", t: "Brow Shape", who: "Lerato K. · 09:00" },
+    { h: 10, m: 30, len: 60, cls: "new", t: "Lash Lift &amp; Tint", who: "Thandi M. · 10:30" },
+    { h: 12, m: 0, len: 45, cls: "old", t: "Gel Manicure", who: "Nomsa D. · 12:00" },
+    { h: 14, m: 0, len: 60, cls: "new", t: "Lash Lift &amp; Tint", who: "Aisha P. · 14:00" },
+  ].map(b => `<div class="blk ${b.cls}" style="top:${at(b.h, b.m) + 6}px;height:${b.len / 60 * HOUR - 12}px">
+      <b>${b.t}</b><span>${b.who}</span>${b.cls === "new" ? '<em class="tagp">Deposit paid</em>' : ""}</div>`).join("");
+
+defineAd({
+  windows: { s1: [0, 3.3], s2: [3.25, 6.0], s3: [5.9, 10.05], s4: [9.95, 12.85], s5: [12.75, 16.0], s6: [15.9, 18.05], s7: [17.95, 20.1] },
+  render(t) {
+    // ── Hook: emails stack up overnight; newest on top ──
+    if (t < 3.6) {
+      const out = eio(prog(t, 2.95, 3.3));
+      rise($("#s1h"), t, .1, .5, 40);
+      const notifs = $$("#s1 .notif");
+      let clock = "23:47";
+      notifs.forEach((n, i) => {
+        const a = +n.dataset.at, p = back(prog(t, a, a + .35));
+        if (t >= a) clock = n.dataset.when;
+        // pushed down by every later notification
+        const push = notifs.slice(i + 1).reduce((s, m) => s + eo(prog(t, +m.dataset.at, +m.dataset.at + .35)) * 270, 0);
+        n.style.top = (760 + push) + "px";
+        n.style.opacity = cl(prog(t, a, a + .15)) * (1 - out);
+        n.style.transform = `translateY(${(1 - p) * -60}px) scale(${lerp(.92, 1, p)})`;
+        n.style.filter = `blur(${out * 8}px)`;
+      });
+      // lock-screen style relative times: "now", "1h ago", …
+      const mins = hm => { const [h, m] = hm.split(":").map(Number); return (h < 12 ? h + 24 : h) * 60 + m; };
+      notifs.forEach(n => {
+        const d = Math.round((mins(clock) - mins(n.dataset.when)) / 60);
+        n.querySelector(".when").textContent = d <= 0 ? "now" : `${d}h ago`;
+      });
+      $("#clock").textContent = clock;
+      $("#date").textContent = clock === "23:47" ? "Thursday, 13 November" : "Friday, 14 November";
+      const fade = 1 - out;
+      $("#clock").style.opacity = fade; $("#date").style.opacity = fade;
+      $("#s1h").style.opacity = (+$("#s1h").style.opacity) * fade;
+    }
+    R.wipe(t, 3.05);
+    R.reveal(t, 3.25, "#s2");
+    R.phone(t, 5.9);
+
+    // ── Day view fills up ──
+    const u = t - 9.95;
+    if (u > -.15 && u < 3.05) {
+      rise($("#s4cap"), u, .1, .5, 50);
+      const dp = eo(prog(u, .25, .7));
+      $("#daycard").style.opacity = dp; $("#daycard").style.transform = `translateY(${(1 - dp) * 120}px)`;
+      $$("#grid .blk").forEach((b, i) => {
+        const a = .65 + i * .25, p = back(prog(u, a, a + .35));
+        b.style.opacity = cl(prog(u, a, a + .12));
+        b.style.transform = `scaleX(${lerp(.6, 1, p)})`;
+      });
+      const g = back(prog(u, 1.85, 2.2));
+      $("#gcal").style.opacity = cl(prog(u, 1.85, 2.0)); $("#gcal").style.transform = `scale(${lerp(.7, 1, g)})`;
+    }
+
+    // ── Admin checklist ──
+    const v = t - 12.75;
+    if (v > -.15 && v < 3.45) {
+      rise($("#s5cap"), v, .1, .5, 50);
+      $$("#s5 .item").forEach((it, i) => {
+        const a = .55 + i * .4;
+        rise(it, v, a, .4, 40);
+        const on = v > a + .3;
+        it.querySelector(".dot").style.background = on ? "#2E7D4F" : "";
+        it.querySelector("path").style.strokeDashoffset = 24 * (1 - eo(prog(v, a + .3, a + .6)));
+      });
+    }
+    R.who(t, 15.9, "#s6");
+    R.cta(t, 17.95);
+  },
+});
+</script>
+</body>
+</html>
