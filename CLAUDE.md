@@ -22,8 +22,13 @@
 - The repository is public: never commit secrets, keys or client data (names,
   emails, phones). Data-only fixes are committed as content-free placeholder
   migrations (`<version>_data_fix.sql`).
-- Supabase Vault is not used. Internal secrets (e.g. the webhook-queue cron
-  secret) live in `public.internal_cron_secrets` (RLS on, service role only).
+- Internal/platform secrets (e.g. the webhook-queue cron secret) live in
+  `public.internal_cron_secrets` (RLS on, service role only), not Vault.
+- Tenant credentials (Yoco/SMTP/Google keys) are stored encrypted by the
+  `save-secret` function; `app_settings` then holds the marker
+  `vault:configured`. Edge functions read them only via the
+  `get_tenant_secret(p_tenant_id, p_key)` RPC. Never query `vault.*` through
+  PostgREST (`.from('vault.decrypted_secrets')` always 404s).
 
 ## Quality gates
 - Fix lint issues and failing tests you come across, don't leave them.
