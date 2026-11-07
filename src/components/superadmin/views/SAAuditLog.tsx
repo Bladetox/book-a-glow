@@ -42,23 +42,22 @@ export default function SAAuditLog() {
   const [page,     setPage]     = useState(0);
   const [hasMore,  setHasMore]  = useState(false);
 
-  const fetchLogs = useCallback(async (reset = true) => {
+  // Loads the first page; loadMore() appends the following pages.
+  const fetchLogs = useCallback(async () => {
     setLoading(true);
-    const from = reset ? 0 : page * PAGE_SIZE;
     const { data } = await supabase
       .from("sa_audit_logs")
       .select("id, action, entity, entity_id, label, meta, actor_id, actor_email, created_at")
       .order("created_at", { ascending: false })
-      .range(from, from + PAGE_SIZE - 1);
+      .range(0, PAGE_SIZE - 1);
     const rows = data ?? [];
-    if (reset) setLogs(rows);
-    else setLogs(prev => [...prev, ...rows]);
+    setLogs(rows);
     setHasMore(rows.length === PAGE_SIZE);
-    if (reset) setPage(0);
+    setPage(0);
     setLoading(false);
-  }, [page]);
+  }, []);
 
-  useEffect(() => { fetchLogs(true); }, []);
+  useEffect(() => { fetchLogs(); }, [fetchLogs]);
 
   const loadMore = async () => {
     const nextPage = page + 1;
@@ -107,7 +106,7 @@ export default function SAAuditLog() {
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/[0.04] border border-white/[0.07] text-white/35 hover:text-white/70 transition-colors text-xs">
             <Download className="w-3.5 h-3.5" />CSV
           </button>
-          <button onClick={() => fetchLogs(true)}
+          <button onClick={() => fetchLogs()}
             className="p-2 rounded-xl bg-white/[0.04] border border-white/[0.07] text-white/35 hover:text-white/70 hover:bg-white/[0.06] transition-colors">
             <RefreshCw className="w-3.5 h-3.5" />
           </button>

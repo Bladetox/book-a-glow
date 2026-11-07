@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { ShieldBan, ShieldCheck, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
@@ -24,7 +24,7 @@ const AdminBlockedClients = () => {
   const [blockModalOpen, setBlockModalOpen] = useState(false);
   const [selectedBlockedClient, setSelectedBlockedClient] = useState<BlockedClientRow | null>(null);
 
-  const loadBlockedClients = async () => {
+  const loadBlockedClients = useCallback(async () => {
     if (!tenantId) return;
     setBlockedLoading(true);
     try {
@@ -41,9 +41,9 @@ const AdminBlockedClients = () => {
     } finally {
       setBlockedLoading(false);
     }
-  };
+  }, [tenantId]);
 
-  useEffect(() => { loadBlockedClients(); }, [tenantId]);
+  useEffect(() => { loadBlockedClients(); }, [loadBlockedClients]);
 
   return (
     <div className="flex flex-col gap-6 pb-12">

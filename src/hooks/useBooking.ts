@@ -1,13 +1,13 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { BookingState, initialBookingState } from "@/data/bookingData";
 
 export function useBooking() {
   const [step, setStep] = useState(0);
   const [booking, setBooking] = useState<BookingState>(initialBookingState);
 
-  const updateBooking = (updates: Partial<BookingState>) => {
+  const updateBooking = useCallback((updates: Partial<BookingState>) => {
     setBooking((prev) => ({ ...prev, ...updates }));
-  };
+  }, []);
 
   /** Add one occurrence of a service id (duplicates allowed). */
   const addTreatment = (id: string) => {

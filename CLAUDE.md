@@ -7,10 +7,10 @@
   version timestamp, so rename the repo file to the applied version afterwards.
 - Check sync: sorted versions from `supabase/migrations/*.sql` must equal
   `select version from supabase_migrations.schema_migrations order by 1`.
-- Edge functions in `supabase/functions/` must match what is deployed. The CI
-  deploy workflow fails while the `SUPABASE_ACCESS_TOKEN` GitHub secret is
-  invalid; until it is fixed, deploy changed functions manually via MCP
-  `deploy_edge_function`. `supabase/config.toml` holds per-function `verify_jwt`.
+- Edge functions in `supabase/functions/` must match what is deployed. There is
+  no CI deploy: after changing a function, deploy it manually via MCP
+  `deploy_edge_function`, using the `verify_jwt` value from
+  `supabase/config.toml`, and confirm with `get_edge_function`.
 - After schema changes, regenerate `src/integrations/supabase/types.ts`.
 
 ## Secrets
