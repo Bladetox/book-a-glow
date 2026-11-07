@@ -1,7 +1,7 @@
 {
   ".claude/settings.json": {
-    "mtime": 1794027302.5463638,
-    "seen": 1794027304.930653,
+    "mtime": 1794027512.5721204,
+    "seen": 1794027515.971957,
     "ast_hash": "0a0ef578e59e2bb38c69f1dcb49a0e1a",
     "semantic_hash": "0a0ef578e59e2bb38c69f1dcb49a0e1a",
     "ast_empty": true
@@ -1846,14 +1846,14 @@
     "semantic_hash": "3280df2695a76ed77887e7c98bc744d8"
   },
   ".claude/CLAUDE.md": {
-    "mtime": 1794027302.5401077,
-    "seen": 1794027304.9319444,
+    "mtime": 1794027512.5721204,
+    "seen": 1794027515.9730372,
     "ast_hash": "9b31786b637be3c13978bec4c2330752",
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1794027302.7719188,
-    "seen": 1794027304.931947,
+    "mtime": 1794027512.7766228,
+    "seen": 1794027515.973039,
     "ast_hash": "e68e245541ce89596a0bf22dae0af25b",
     "semantic_hash": ""
   },
@@ -3673,6 +3673,12 @@
     "mtime": 1794027149.2520988,
     "seen": 1794027156.4218738,
     "ast_hash": "ffcf6e7d6a45f2a28782c5a59f5e676c",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20261107045758_fix_cleanup_orphan_gcal_events_cron.sql": {
+    "mtime": 1794027512.7041204,
+    "seen": 1794027515.9730253,
+    "ast_hash": "d3f0e921dc8c679a3dc3393f0a37ae22",
     "semantic_hash": ""
   },
   "package-lock.json": {
