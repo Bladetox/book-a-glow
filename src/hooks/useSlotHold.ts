@@ -89,8 +89,8 @@ export function useSlotHold() {
       p_session_token: sessionToken.current,
     } as any);
 
-    if (error || !(data as any)?.[0]?.success) {
-      const msg = (data as any)?.[0]?.message ?? error?.message ?? 'Could not hold slot';
+    if (error || !data?.[0]?.success) {
+      const msg = data?.[0]?.message ?? error?.message ?? 'Could not hold slot';
       setState({
         holdId: null, expiresAt: null, secondsLeft: 0, isHolding: false,
         error: msg, durationMins: null,
@@ -98,7 +98,7 @@ export function useSlotHold() {
       return { success: false as const, message: msg };
     }
 
-    const row = (data as any)[0];
+    const row = data[0];
     const expiresAt = new Date(row.expires_at);
     holdIdRef.current = row.hold_id;
     setState({

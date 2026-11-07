@@ -643,9 +643,9 @@ export function useNextyInsights() {
         const count     = outsideData.length;
         const names     = outsideData
           .slice(0, 4)
-          .map((c: any) => c.client_name.trim())
+          .map((c) => c.client_name.trim())
           .join(", ");
-        const totalSpend = outsideData.reduce((s: number, c: any) => s + Number(c.total_spend ?? 0), 0);
+        const totalSpend = outsideData.reduce((s: number, c) => s + Number(c.total_spend ?? 0), 0);
         const extraLabel = count > 4 ? ` and ${count - 4} more` : "";
 
         push({
@@ -687,7 +687,7 @@ export function useNextyInsights() {
       // -- 12. SA Salary Cycle Dead Zones ------------------------------------
       const { data: salaryData } = await supabase.rpc("get_salary_cycle_analysis", { p_tenant_id: tenantId });
       if (salaryData && salaryData.length >= 2) {
-        const sorted = [...salaryData].sort((a: any, b: any) => Number(b.window_revenue) - Number(a.window_revenue));
+        const sorted = [...salaryData].sort((a, b) => Number(b.window_revenue) - Number(a.window_revenue));
         const peak   = sorted[0];
         const quiet  = sorted[sorted.length - 1];
         const peakPct   = Number(peak.pct_of_total);
@@ -714,10 +714,10 @@ export function useNextyInsights() {
       // -- 13. Top Client Concentration Risk ---------------------------------
       const { data: topClients } = await supabase.rpc("get_top_client_concentration", { p_tenant_id: tenantId });
       if (topClients && topClients.length >= 3) {
-        const top5Rev   = topClients.reduce((s: number, c: any) => s + Number(c.total_spend), 0);
-        const top5Pct   = topClients.reduce((s: number, c: any) => s + Number(c.pct_of_revenue), 0);
-        const atRisk    = topClients.filter((c: any) => Number(c.days_since) > 42);
-        const atRiskNames = atRisk.map((c: any) => c.client_name.trim()).join(", ");
+        const top5Rev   = topClients.reduce((s: number, c) => s + Number(c.total_spend), 0);
+        const top5Pct   = topClients.reduce((s: number, c) => s + Number(c.pct_of_revenue), 0);
+        const atRisk    = topClients.filter((c) => Number(c.days_since) > 42);
+        const atRiskNames = atRisk.map((c) => c.client_name.trim()).join(", ");
         if (top5Pct > 35) {
           push({
             id: "top_client_concentration",
@@ -733,7 +733,7 @@ export function useNextyInsights() {
                   `the revenue impact is immediate. Focus on converting mid-tier clients into regulars to distribute the base.`),
             actionLabel: "View Clients",
             actionView: "Client Management",
-            impactRand: atRisk.length > 0 ? Math.round(atRisk.reduce((s: number, c: any) => s + Number(c.total_spend), 0)) : undefined,
+            impactRand: atRisk.length > 0 ? Math.round(atRisk.reduce((s: number, c) => s + Number(c.total_spend), 0)) : undefined,
           });
         }
       }
@@ -741,7 +741,7 @@ export function useNextyInsights() {
       // -- 14. Repeat Cancellers ---------------------------------------------
       const { data: cancellers } = await supabase.rpc("get_repeat_cancellers", { p_tenant_id: tenantId });
       if (cancellers && cancellers.length > 0) {
-        const names = cancellers.slice(0, 3).map((c: any) => c.client_name.trim()).join(", ");
+        const names = cancellers.slice(0, 3).map((c) => c.client_name.trim()).join(", ");
         const count = cancellers.length;
         push({
           id: "repeat_cancellers",
@@ -903,7 +903,7 @@ export function useNextyInsights() {
         .from("app_settings").select("key, value")
         .eq("tenant_id", tenantId)
         .in("key", ["google_review_url", "gmb_connected"]);
-      const ctxMap = Object.fromEntries((ctxFull ?? []).map((r: any) => [r.key, r.value]));
+      const ctxMap = Object.fromEntries((ctxFull ?? []).map((r) => [r.key, r.value]));
       const hasGmb = ctxMap.gmb_connected === "true" && ctxMap.google_review_url;
       if (hasGmb) {
         // Past visits only: future confirmed bookings have nothing to review yet.

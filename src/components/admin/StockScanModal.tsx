@@ -177,7 +177,7 @@ const StockScanModal = ({ tenantId, onClose }: Props) => {
       try {
         const images = await pdfToImages(file);
         await runOcr(images);
-      } catch (err: any) {
+      } catch (err) {
         toast.error("Could not read PDF: " + err.message);
         setStage("idle");
       }
@@ -267,7 +267,7 @@ const StockScanModal = ({ tenantId, onClose }: Props) => {
         `Done! ${inserted} added, ${updated} updated.`
       );
       onClose();
-    } catch (err: any) {
+    } catch (err) {
       toast.error("Import failed: " + err.message);
       setStage("review");
     }

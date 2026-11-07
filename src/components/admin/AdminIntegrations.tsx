@@ -248,7 +248,7 @@ const GoogleCalendarCard = ({ connected, tenantId }: GoogleCalendarCardProps) =>
       if (error) throw error;
       setIsConnected(false);
       toast.success("Google Calendar disconnected.");
-    } catch (err: any) {
+    } catch (err) {
       toast.error(err.message ?? "Failed to disconnect. Please try again.");
     } finally {
       setIsDisconnecting(false);
@@ -414,7 +414,7 @@ const PayfastCard = ({ settings, onSaved, payshapEnabled }: PayfastCardProps) =>
       toast.success("PayFast credentials saved.");
       onSaved();
       setEditing(false);
-    } catch (err: any) {
+    } catch (err) {
       toast.error(err.message ?? "Failed to save PayFast credentials.");
     } finally {
       setSaving(false);
@@ -705,7 +705,7 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved, payshapEnabled }: YocoC
       }
       onSaved();
       setLiveEditing(false);
-    } catch (err: any) {
+    } catch (err) {
       toast.error(err.message ?? "Failed to save live keys.");
     } finally {
       setSavingLive(false);
@@ -730,7 +730,7 @@ const YocoCard = ({ settings, yocoMode, userId, onSaved, payshapEnabled }: YocoC
       toast.success("Test keys saved. Payments will now use Yoco test mode.");
       onSaved();
       setTestEditing(false);
-    } catch (err: any) {
+    } catch (err) {
       toast.error(err.message ?? "Failed to save test keys.");
     } finally {
       setSavingTest(false);
@@ -1058,7 +1058,7 @@ const PayshapCard = ({ settings, tenantId, onSaved }: PayshapCardProps) => {
           : "PayShap disabled."
       );
       onSaved();
-    } catch (err: any) {
+    } catch (err) {
       setEnabled(!newValue);
       toast.error(err.message ?? "Failed to update PayShap setting.");
     } finally {

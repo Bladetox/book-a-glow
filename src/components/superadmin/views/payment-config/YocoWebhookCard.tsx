@@ -87,7 +87,7 @@ export default function YocoWebhookCard() {
       setWebhookId(data.id);
       setWebhookSecret(data.secret);
       setStatus("done");
-    } catch (e: any) {
+    } catch (e) {
       setStatus("error");
       setErr(e.message ?? "Failed to register webhook.");
     }
@@ -111,7 +111,7 @@ export default function YocoWebhookCard() {
       setWebhookSecret("");
       setStatus("idle");
       setDeleteStatus("done");
-    } catch (e: any) {
+    } catch (e) {
       setDeleteStatus("error");
       setDeleteErr(e.message ?? "Failed to delete webhook.");
     }

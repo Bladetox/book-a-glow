@@ -158,7 +158,7 @@ function CopyLinkButton({ url }: { url: string }) {
 
 function SendInvoiceModal({ invoice, onClose }: { invoice: PlatformInvoice; onClose: () => void }) {
   const [copied, setCopied] = useState(false);
-  const tenantName = (invoice.tenants as any)?.name ?? invoice.tenant_id.slice(0, 8);
+  const tenantName = invoice.tenants?.name ?? invoice.tenant_id.slice(0, 8);
   const link = invoice.yoco_payment_link ?? "";
 
   const handleCopy = async () => {
@@ -316,10 +316,10 @@ function CreateInvoiceModal({ tenants, onClose, onCreated }: {
     }
     setSaving(true); setErr("");
     try {
-      const { error } = await (supabase as any).rpc("create_platform_invoice", {
+      const { error } = await supabase.rpc("create_platform_invoice", {
         p_tenant_id:    tenantId,
         p_plan:         plan,
-        p_amount_rands: amount,
+        p_amount:       amount,
         p_period_start: periodStart,
         p_period_end:   periodEnd,
         p_due_date:     dueDate,
@@ -329,7 +329,7 @@ function CreateInvoiceModal({ tenants, onClose, onCreated }: {
       if (error) throw error;
       // also persist yoco_checkout_id if provided
       if (yocoCheckoutId) {
-        const { data: newInv } = await (supabase as any)
+        const { data: newInv } = await supabase
           .from("platform_invoices")
           .select("id")
           .eq("tenant_id", tenantId)
@@ -337,7 +337,7 @@ function CreateInvoiceModal({ tenants, onClose, onCreated }: {
           .limit(1)
           .single();
         if (newInv?.id) {
-          await (supabase as any)
+          await supabase
             .from("platform_invoices")
             .update({
               yoco_payment_link: yocoLink || null,
@@ -348,7 +348,7 @@ function CreateInvoiceModal({ tenants, onClose, onCreated }: {
       }
       onCreated();
       onClose();
-    } catch (e: any) {
+    } catch (e) {
       setErr(e.message ?? "Failed to create invoice.");
     } finally {
       setSaving(false);
@@ -497,17 +497,17 @@ function MarkPaidModal({ invoice, onClose, onPaid }: {
   const handleConfirm = async () => {
     setSaving(true); setErr("");
     try {
-      const { error } = await (supabase as any).rpc("mark_platform_invoice_paid", {
+      const { error } = await supabase.rpc("mark_platform_invoice_paid", {
         p_invoice_id:    invoice.id,
         p_payment_method: method,
+        // The function records p_reference as the EFT reference or Yoco
+        // charge id based on p_payment_method.
         p_reference:     ref || null,
-        eft_reference:   method === "eft" ? ref : null,
-        yoco_charge_id:  method === "yoco_link" ? ref : null,
       });
       if (error) throw error;
       onPaid();
       onClose();
-    } catch (e: any) {
+    } catch (e) {
       setErr(e.message ?? "Failed to mark as paid.");
     } finally {
       setSaving(false);
@@ -723,7 +723,7 @@ function YocoConfigBanner() {
 
   useEffect(() => {
     async function check() {
-      const { data } = await (supabase as any)
+      const { data } = await supabase
         .from("tenant_secrets")
         .select("key")
         .eq("tenant_id", PLATFORM_TENANT_ID)
@@ -812,7 +812,7 @@ function PlatformSubscriptionsTab() {
   const load = useCallback(async () => {
     setLoading(true);
     const [{ data: invData }, { data: tenData }] = await Promise.all([
-      (supabase as any).from("platform_invoices")
+      supabase.from("platform_invoices")
         .select("*, tenants(name)")
         .order("created_at", { ascending: false })
         .limit(200),
@@ -831,7 +831,7 @@ function PlatformSubscriptionsTab() {
     const today = new Date().toISOString().slice(0, 10);
     invoices.forEach(async inv => {
       if (inv.status === "unpaid" && inv.due_date < today) {
-        await (supabase as any).from("platform_invoices").update({ status: "overdue" }).eq("id", inv.id);
+        await supabase.from("platform_invoices").update({ status: "overdue" }).eq("id", inv.id);
       }
     });
   }, [invoices]);
@@ -965,7 +965,7 @@ function PlatformSubscriptionsTab() {
                 {filtered.map((inv, i) => (
                   <tr key={inv.id} style={{ borderBottom: i < filtered.length - 1 ? "1px solid rgba(255,255,255,0.03)" : "none" }}>
                     <td className="px-4 py-3 font-mono text-[10px] text-white/40">{inv.invoice_number}</td>
-                    <td className="px-4 py-3 text-white/60 font-medium">{(inv.tenants as any)?.name ?? inv.tenant_id.slice(0, 8)}</td>
+                    <td className="px-4 py-3 text-white/60 font-medium">{inv.tenants?.name ?? inv.tenant_id.slice(0, 8)}</td>
                     <td className="px-4 py-3 capitalize text-white/40">{inv.plan}</td>
                     <td className="px-4 py-3 font-bold text-white tabular-nums">{toRand(inv.amount_rands)}</td>
                     <td className="px-4 py-3 text-white/35 text-[10px]">{fmtDate(inv.period_start)} – {fmtDate(inv.period_end)}</td>

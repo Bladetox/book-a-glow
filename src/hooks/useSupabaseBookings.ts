@@ -53,12 +53,12 @@ export interface BookingRow {
 
 export function mapBooking(b: any): BookingRow {
   const items = [...(b.items ?? [])].sort(
-    (a: any, z: any) => (a.sort_order ?? 0) - (z.sort_order ?? 0)
+    (a, z) => (a.sort_order ?? 0) - (z.sort_order ?? 0)
   );
 
-  const services = items.map((i: any) => i.service_name).join(", ");
+  const services = items.map((i) => i.service_name).join(", ");
   const totalDuration = items.reduce(
-    (s: number, i: any) => s + (i.duration_minutes || 0), 0
+    (s: number, i) => s + (i.duration_minutes || 0), 0
   );
 
   // Identity resolution — canonical order:
@@ -126,7 +126,7 @@ export function mapBooking(b: any): BookingRow {
     callOutDistanceKm:     Number(b.call_out_distance_km) || 0,
     serviceIds:            b.service_ids            || "",
     serviceDurationMinutes: Number(b.service_duration_minutes) || 0,
-    bookingItems:          items.map((i: any) => ({
+    bookingItems:          items.map((i) => ({
       id:              i.id,
       name:            i.service_name,
       price:           Number(i.price) || 0,
@@ -232,7 +232,7 @@ export function useUpdateBookingStatus() {
         p_new_status: status,
       });
       if (error) throw error;
-      const result = (data as any)?.[0];
+      const result = data?.[0];
       if (result && !result.success) throw new Error(result.message);
     },
     onSuccess: () => {

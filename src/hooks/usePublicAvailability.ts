@@ -54,7 +54,7 @@ export function useMonthAvailability(
     refetchOnWindowFocus: true,
     queryFn: async () => {
       const sid = resolvedStaffId ?? await getStaffId(tenantId);
-      const { data, error } = await supabase.rpc("get_booking_horizon_availability" as any, {
+      const { data, error } = await supabase.rpc("get_booking_horizon_availability", {
         p_staff_id: sid,
         p_duration_minutes: durationMinutes,
       });

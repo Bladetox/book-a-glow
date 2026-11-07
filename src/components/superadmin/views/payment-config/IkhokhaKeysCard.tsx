@@ -70,7 +70,7 @@ export default function IkhokhaKeysCard() {
         upsertSetting(KEY_ENABLED, "true"),
       ]);
       setStatus("done");
-    } catch (e: any) {
+    } catch (e) {
       setStatus("error");
       setErr(e.message ?? "Failed to save keys.");
     }

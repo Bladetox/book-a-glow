@@ -540,7 +540,7 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, holdId, sessio
       if (initErr || !initData?.redirectUrl) throw new Error(initErr?.message ?? "Payment gateway error.");
       window.location.href = initData.redirectUrl;
 
-    } catch (err: any) {
+    } catch (err) {
       if (err?.message === "no services" || err?.message === "missing datetime") return;
       if (err?.code === "23505") {
         toast.error("It looks like this booking already exists.");

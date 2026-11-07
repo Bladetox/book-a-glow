@@ -69,7 +69,7 @@ export default function YocoKeysCard() {
         upsertSecret(KEY_PUBLIC, publicKey.trim()),
       ]);
       setStatus("done");
-    } catch (e: any) {
+    } catch (e) {
       setStatus("error");
       setErr(e.message ?? "Failed to save keys.");
     }

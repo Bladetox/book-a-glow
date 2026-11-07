@@ -535,7 +535,7 @@ export const LoyaltyClientCard = ({
   onToggleSelect, onToggleExpand, onOptimisticUpdate, onUpdated, isoToDisplay,
 }: LoyaltyClientCardProps) => {
   const colour           = avatarColour(row.client_name ?? "?");
-  const resolvedBirthday = (row as any).birthday ?? enrich.birthday ?? null;
+  const resolvedBirthday = row.birthday ?? enrich.birthday ?? null;
 
   // ── Derive Last Visit from enrichment (bookings table source of truth) ──
   const lastVisit = enrich.lastVisitDate ?? row.last_visit_date ?? null;

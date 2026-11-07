@@ -159,7 +159,7 @@ const AdminStock = () => {
       toast.success(editingId ? "Item updated" : "Item added");
       closeModal();
     },
-    onError: (e: any) => toast.error(e.message),
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const remove = useMutation({
@@ -177,7 +177,7 @@ const AdminStock = () => {
       setDeleteItem(null);
       setDeletingId(null);
     },
-    onError: (e: any) => {
+    onError: (e: Error) => {
       setDeletingId(null);
       toast.error(e.message);
     },
@@ -221,7 +221,7 @@ const AdminStock = () => {
 
       return { previous };
     },
-    onError: (e: any, _vars, ctx: any) => {
+    onError: (e: Error, _vars, ctx) => {
       if (ctx?.previous) qc.setQueryData(["stock", tenantId], ctx.previous);
       toast.error(e.message);
     },
@@ -256,7 +256,7 @@ const AdminStock = () => {
       setCsvRows(null);
       toast.success(`${count} items imported`);
     },
-    onError: (e: any) => toast.error(e.message),
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const openAdd = () => {

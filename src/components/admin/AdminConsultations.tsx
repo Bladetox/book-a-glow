@@ -34,7 +34,7 @@ function formatAnswer(item: any): string {
 
 function answeredItems(c: any): any[] {
   const items = c?.answers?.items;
-  return Array.isArray(items) ? items.filter((i: any) => formatAnswer(i) !== "") : [];
+  return Array.isArray(items) ? items.filter((i) => formatAnswer(i) !== "") : [];
 }
 
 function changeEntries(c: any): any[] {
@@ -48,18 +48,18 @@ function exportCSV(rows: any[]) {
     "Pregnancy", "Environmental Exposure", "Physical Factors",
     "Hair Length OK", "Additional Notes", "Consultation Answers", "Change Notes", "Last Updated",
   ];
-  const escape = (v: any) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const escape = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
   const csv = [
     headers.join(","),
-    ...rows.map((c: any) => {
+    ...rows.map((c) => {
       const booking = c.booking;
       const client  = booking?.client;
       const name    = c.guest_name || client?.full_name || booking?.guest_name || "";
       const email   = client?.email       || booking?.guest_email || "";
       const phone   = client?.phone       || booking?.guest_phone || "";
       const services = (booking?.items ?? [])
-        .sort((a: any, b: any) => a.sort_order - b.sort_order)
-        .map((s: any) => `${s.service_name} (R${s.price})`)
+        .sort((a, b) => a.sort_order - b.sort_order)
+        .map((s) => `${s.service_name} (R${s.price})`)
         .join("; ");
       return [
         name, email, phone,
@@ -72,8 +72,8 @@ function exportCSV(rows: any[]) {
         c.health_conditions ?? "", c.pregnancy ?? "",
         c.environmental_exposure ?? "", c.physical_factors ?? "",
         c.hair_length_ok ?? "", c.additional_notes ?? "",
-        answeredItems(c).map((i: any) => `${i.label}: ${formatAnswer(i)}`).join("; "),
-        changeEntries(c).map((e: any) => `${e.date ?? ""}: ${e.note ?? ""}`).join("; "),
+        answeredItems(c).map((i) => `${i.label}: ${formatAnswer(i)}`).join("; "),
+        changeEntries(c).map((e) => `${e.date ?? ""}: ${e.note ?? ""}`).join("; "),
         c.updated_at ? new Date(c.updated_at).toLocaleDateString() : "",
       ].map(escape).join(",");
     }),
@@ -121,13 +121,13 @@ const AdminConsultations = () => {
   });
 
   const filterCount = (f: string) =>
-    consultations.filter((c: any) =>
+    consultations.filter((c) =>
       f === "All" ? true : f === "Form on file" ? c.has_form : !c.has_form
     ).length;
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return consultations.filter((c: any) => {
+    return consultations.filter((c) => {
       const booking = c.booking;
       const client  = booking?.client;
       const name    = (c.guest_name || client?.full_name || booking?.guest_name || "").toLowerCase();
@@ -211,7 +211,7 @@ const AdminConsultations = () => {
         </motion.div>
       ) : (
         <div className="flex flex-col gap-2">
-          {filtered.map((c: any) => {
+          {filtered.map((c) => {
             const isExpanded   = expandedId === c.id;
             const booking      = c.booking;
             const client       = booking?.client;
@@ -223,7 +223,7 @@ const AdminConsultations = () => {
             const changes      = changeEntries(c);
 
             const services: { service_name: string; price: number; sort_order: number }[] =
-              (booking?.items ?? []).sort((a: any, b: any) => a.sort_order - b.sort_order);
+              (booking?.items ?? []).sort((a, b) => a.sort_order - b.sort_order);
 
             const timeLabel    = fmtTime(booking?.start_time);
             const submittedAgo = c.updated_at
@@ -401,7 +401,7 @@ const AdminConsultations = () => {
                           <div className="nexty-inset rounded-xl p-4">
                             <p className="text-[10px] font-semibold tracking-wider uppercase text-white/35 mb-3">Consultation Answers</p>
                             <div className="flex flex-col divide-y divide-white/[0.06]">
-                              {answerItems.map((i: any) => (
+                              {answerItems.map((i) => (
                                 <div key={i.key} className="py-3 first:pt-0 last:pb-0">
                                   <p className="text-[12px] text-white/45 mb-1 leading-snug">{i.label}</p>
                                   <p className="text-sm text-white/85 whitespace-pre-line leading-relaxed font-medium">{formatAnswer(i)}</p>
@@ -428,7 +428,7 @@ const AdminConsultations = () => {
                       <div className="nexty-inset rounded-xl p-4">
                         <p className="text-[10px] font-semibold tracking-wider uppercase text-white/35 mb-3">Changes Reported at Later Visits</p>
                         <div className="flex flex-col divide-y divide-white/[0.06]">
-                          {changes.map((e: any, idx: number) => (
+                          {changes.map((e, idx: number) => (
                             <div key={`${e.booking_id ?? idx}-${idx}`} className="py-2.5 first:pt-0 last:pb-0">
                               <p className="text-[11px] text-white/35 mb-1">{e.date ?? ""}</p>
                               <p className="text-sm text-white/80 whitespace-pre-line leading-relaxed">{e.note}</p>

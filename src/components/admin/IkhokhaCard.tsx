@@ -152,7 +152,7 @@ const IkhokhaCard = ({ settings, onSaved, payshapEnabled, tenantId }: IkhokhaCar
       toast.success("iKhokha credentials saved.");
       onSaved();
       setEditing(false);
-    } catch (err: any) {
+    } catch (err) {
       toast.error(err.message ?? "Failed to save iKhokha credentials.");
     } finally {
       setSaving(false);

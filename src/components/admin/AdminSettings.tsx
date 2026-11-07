@@ -346,13 +346,13 @@ const AdminSettings = () => {
         if (Object.keys(settingsSync).length > 0) {
           upsertSetting.mutate(settingsSync, {
             onSuccess: () => flash(section),
-            onError: (err: any) => toast.error(err?.message ?? "Settings sync failed"),
+            onError: (err: Error) => toast.error(err?.message ?? "Settings sync failed"),
           });
         } else {
           flash(section);
         }
       },
-      onError: (err: any) => toast.error(err?.message ?? "Save failed"),
+      onError: (err: Error) => toast.error(err?.message ?? "Save failed"),
     });
   };
 
@@ -364,7 +364,7 @@ const AdminSettings = () => {
 
     upsertSetting.mutate(updates, {
       onSuccess: () => flash(section),
-      onError: (err: any) => toast.error(err?.message ?? "Save failed"),
+      onError: (err: Error) => toast.error(err?.message ?? "Save failed"),
     });
   };
 
@@ -386,7 +386,7 @@ const AdminSettings = () => {
       { referral_options: JSON.stringify(channels) },
       {
         onSuccess: () => flash("referral"),
-        onError: (err: any) => toast.error(err?.message ?? "Could not save acquisition channels"),
+        onError: (err: Error) => toast.error(err?.message ?? "Could not save acquisition channels"),
       },
     );
   };
@@ -432,9 +432,9 @@ const AdminSettings = () => {
       update("logo_url", urlData.publicUrl);
       updateTenant.mutate({ logo_url: urlData.publicUrl }, {
         onSuccess: () => { flash("logo"); toast.success("Logo uploaded"); },
-        onError: (err: any) => toast.error(err?.message ?? "Logo upload failed"),
+        onError: (err: Error) => toast.error(err?.message ?? "Logo upload failed"),
       });
-    } catch (err: any) {
+    } catch (err) {
       toast.error(err.message ?? "Logo upload failed");
     } finally {
       setLogoUploading(false);
@@ -469,7 +469,7 @@ const AdminSettings = () => {
     const updated = { ...notifPrefs, [key]: !notifPrefs[key] };
     updateTenant.mutate({ notification_preferences: updated } as any, {
       onSuccess: () => flash("notif"),
-      onError: (err: any) => toast.error(err?.message ?? "Save failed"),
+      onError: (err: Error) => toast.error(err?.message ?? "Save failed"),
     });
   };
 
@@ -738,7 +738,7 @@ const AdminSettings = () => {
                   }
                   upsertSetting.mutate(settingFields, {
                     onSuccess: () => saveTenantFields("travel", ["currency"]),
-                    onError: (err: any) => toast.error(err?.message ?? "Save failed"),
+                    onError: (err: Error) => toast.error(err?.message ?? "Save failed"),
                   });
                 }}
                 loading={updateTenant.isPending || upsertSetting.isPending}

@@ -38,7 +38,7 @@ export default function PlatformBillingTestCard() {
       if (data?.error) throw new Error(data.error);
       const result = data?.results?.[0];
       setStatus("done"); setMessage(`Invoice test completed: ${result?.email_status ?? "unknown email status"}. Check ${selected.email}.`);
-    } catch (e: any) { setStatus("error"); setMessage(e.message ?? "The billing test failed."); }
+    } catch (e) { setStatus("error"); setMessage(e.message ?? "The billing test failed."); }
     finally { setSending(false); }
   };
 

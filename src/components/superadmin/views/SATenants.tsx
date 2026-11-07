@@ -415,7 +415,7 @@ function EditModal({ tenant, onClose, onSaved }: { tenant: Tenant; onClose: () =
               <label className="text-[11px] text-white/30 font-medium uppercase tracking-wider">{label}</label>
               <input
                 type={type}
-                value={(form as any)[k]}
+                value={form[k]}
                 onChange={e => setForm(f => ({ ...f, [k]: e.target.value }))}
                 className="w-full bg-white/[0.04] border border-white/[0.07] rounded-xl px-3 py-2.5 text-sm text-white/70 placeholder-white/15 outline-none focus:border-[rgba(0,200,83,0.3)] transition-colors"
               />
