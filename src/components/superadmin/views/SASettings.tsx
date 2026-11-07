@@ -1,3 +1,4 @@
+import type { LucideIcon } from "lucide-react";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { saLog } from "@/lib/saAudit";
@@ -10,7 +11,7 @@ const GlassCard = ({ children, className = "" }: { children: React.ReactNode; cl
   <div className={`bg-white/[0.03] backdrop-blur-sm border border-white/[0.07] rounded-2xl ${className}`}>{children}</div>
 );
 
-const SectionHeader = ({ icon: Icon, title, desc }: { icon: any; title: string; desc: string }) => (
+const SectionHeader = ({ icon: Icon, title, desc }: { icon: LucideIcon; title: string; desc: string }) => (
   <div className="flex items-start gap-3 px-5 py-4 border-b border-white/[0.05]">
     <div className="w-8 h-8 rounded-xl flex items-center justify-center mt-0.5"
       style={{ background: "rgba(0,200,83,0.08)", border: "1px solid rgba(0,200,83,0.18)" }}>

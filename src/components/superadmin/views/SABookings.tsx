@@ -10,6 +10,15 @@ interface TenantStat {
   confirmed: number; pending: number; cancelled: number; complete: number;
   total: number; gmv: number;
 }
+interface FlaggedPayment {
+  id: string;
+  booking_id: string | null;
+  status: string | null;
+  amount: number;
+  created_at: string | null;
+  tenantName: string;
+}
+
 interface PlatformTotals {
   confirmed: number; pending: number; cancelled: number; complete: number;
   total: number; gmv: number;
@@ -39,7 +48,7 @@ const GlassCard = ({ children, className = "" }: { children: React.ReactNode; cl
 export default function SABookings() {
   const [tenantStats, setTenantStats] = useState<TenantStat[]>([]);
   const [totals,      setTotals]      = useState<PlatformTotals | null>(null);
-  const [flagged,     setFlagged]     = useState<any[]>([]);
+  const [flagged,     setFlagged]     = useState<FlaggedPayment[]>([]);
   const [loading,     setLoading]     = useState(true);
   const [lastUpdated, setLastUpdated] = useState("");
   const [rangeDays,   setRangeDays]   = useState(30);
@@ -242,7 +251,9 @@ export default function SABookings() {
                         <td className="px-4 py-3 text-[11px] text-white/40">{p.tenantName}</td>
                         <td className="px-4 py-3 text-red-400 font-mono">{fmt(p.amount)}</td>
                         <td className="px-4 py-3 text-white/30">
-                          {new Date(p.created_at).toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" })}
+                          {p.created_at
+                            ? new Date(p.created_at).toLocaleDateString("en-ZA", { day: "2-digit", month: "short", year: "numeric" })
+                            : "—"}
                         </td>
                       </tr>
                     ))}

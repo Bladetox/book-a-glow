@@ -55,8 +55,8 @@ function phaseLabel(phase: SubmitPhase, cur: string, amount: number, choice: Pay
   }
 }
 
-function friendlyBookingError(err: any): string {
-  const raw: string = err?.message ?? "";
+function friendlyBookingError(err: unknown): string {
+  const raw: string = (err as { message?: string } | null)?.message ?? "";
   if (/time.*already booked|slot.*taken|no longer available|is not available/i.test(raw))
     return "That time slot is no longer available. Please choose a different time.";
   if (/not available|availability/i.test(raw))
@@ -426,10 +426,10 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, holdId, sessio
       p_existing_client_changes: booking.isExistingClient ? (booking.existingClientNotes.trim() || null) : null,
     };
 
-    let { data, error } = await supabase.rpc("create_booking_with_consultation", {
+    const { data, error } = await supabase.rpc("create_booking_with_consultation", {
       ...bookingParams,
       ...consultationParams,
-    } as any);
+    });
 
     if (error) throw error;
     const bookingRow = data?.[0];

@@ -701,7 +701,7 @@ const AdminServices = () => {
         if (Array.isArray(parsed.rules)) {
           setAddonRules(
             parsed.rules.filter(
-              (r: any): r is AddonRule =>
+              (r: unknown): r is AddonRule =>
                 !!r &&
                 typeof r === "object" &&
                 typeof (r as AddonRule).triggerId === "string" &&

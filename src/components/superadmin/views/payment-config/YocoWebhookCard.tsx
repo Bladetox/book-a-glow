@@ -79,7 +79,7 @@ export default function YocoWebhookCard() {
         body: JSON.stringify({ name: "nextslot-platform", url: WEBHOOK_URL }),
       });
       const data: YocoWebhook = await res.json();
-      if (!res.ok) throw new Error((data as any).message ?? `HTTP ${res.status}`);
+      if (!res.ok) throw new Error((data as { message?: string }).message ?? `HTTP ${res.status}`);
       await Promise.all([
         upsertSecret(KEY_WEBHOOK_ID, data.id),
         upsertSecret(KEY_WEBHOOK_SECRET, data.secret),
@@ -104,7 +104,7 @@ export default function YocoWebhookCard() {
       });
       if (!res.ok && res.status !== 404) {
         const data = await res.json().catch(() => ({}));
-        throw new Error((data as any).message ?? `HTTP ${res.status}`);
+        throw new Error((data as { message?: string }).message ?? `HTTP ${res.status}`);
       }
       await Promise.all([deleteSecret(KEY_WEBHOOK_ID), deleteSecret(KEY_WEBHOOK_SECRET)]);
       setWebhookId("");

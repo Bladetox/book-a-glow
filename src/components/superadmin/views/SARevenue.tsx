@@ -64,13 +64,19 @@ const GlassCard = ({ children, className = "", style = {} }: { children: React.R
   </div>
 );
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+interface ChartTooltipProps {
+  active?: boolean;
+  label?: string;
+  payload?: { name?: string; value?: number | string; color?: string }[];
+}
+
+const CustomTooltip = ({ active, payload, label }: ChartTooltipProps) => {
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-[#111] border border-white/[0.1] rounded-xl px-3 py-2 shadow-xl">
       <p className="text-[11px] text-white/40 mb-1">{label}</p>
-      {payload.map((p: any) => (
-        <p key={p.name} className="text-xs font-semibold" style={{ color: p.color }}>{toRand(p.value)}</p>
+      {payload.map((p) => (
+        <p key={p.name} className="text-xs font-semibold" style={{ color: p.color }}>{toRand(Number(p.value ?? 0))}</p>
       ))}
     </div>
   );
@@ -728,7 +734,7 @@ function YocoConfigBanner() {
         .select("key")
         .eq("tenant_id", PLATFORM_TENANT_ID)
         .in("key", ["platform_yoco_secret_key", "platform_yoco_public_key"]);
-      const keys = ((data ?? []) as any[]).map((r) => r.key as string);
+      const keys = (data ?? []).map((r) => r.key);
       setStatus(
         keys.includes("platform_yoco_secret_key") && keys.includes("platform_yoco_public_key")
           ? "configured"

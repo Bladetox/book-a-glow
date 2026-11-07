@@ -15,7 +15,13 @@ const DATA = [
   { month: "Aug", revenue: 28032 },
 ];
 
-const CustomTooltip = ({ active, payload, label, dark = false }: any) => {
+interface ChartTooltipProps {
+  active?: boolean;
+  label?: string;
+  payload?: { name?: string; value?: number | string; color?: string }[];
+}
+
+const CustomTooltip = ({ active, payload, label, dark = false }: ChartTooltipProps & { dark?: boolean }) => {
   if (!active || !payload?.length) return null;
   return (
     <div style={{
@@ -27,7 +33,7 @@ const CustomTooltip = ({ active, payload, label, dark = false }: any) => {
     }}>
       <div style={{ fontSize: 10, color: dark ? "#D9D0C4" : C.faint, marginBottom: 2 }}>{label} 2026</div>
       <div style={{ fontSize: 13, fontWeight: 700, color: dark ? "#FFFFFF" : C.gold }}>
-        R {payload[0].value.toLocaleString()}
+        R {Number(payload[0].value ?? 0).toLocaleString()}
       </div>
     </div>
   );

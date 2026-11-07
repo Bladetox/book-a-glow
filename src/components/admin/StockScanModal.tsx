@@ -62,7 +62,7 @@ function parseInvoiceText(raw: string): ScannedRow[] {
 
     const m1 = lineRe.exec(line);
     if (m1) {
-      const name = m1[1].replace(/[^\w\s().\-]/g, "").trim();
+      const name = m1[1].replace(/[^\w\s().-]/g, "").trim();
       const qty  = parseFloat(m1[2]);
       const cost = parseFloat(m1[3]);
       if (name.length > 2 && cost > 0 && qty > 0) {
@@ -73,7 +73,7 @@ function parseInvoiceText(raw: string): ScannedRow[] {
 
     const m2 = simplePriceRe.exec(line);
     if (m2) {
-      const name = m2[1].replace(/[^\w\s().\-]/g, "").trim();
+      const name = m2[1].replace(/[^\w\s().-]/g, "").trim();
       const cost = parseFloat(m2[2]);
       if (name.length > 2 && cost > 0) {
         results.push({ item_name: name, qty: 1, cost });
@@ -136,7 +136,7 @@ const StockScanModal = ({ tenantId, onClose }: Props) => {
     setProgress(0);
 
     const worker = await createWorker("eng", 1, {
-      logger: (m: any) => {
+      logger: (m: { status: string; progress: number }) => {
         if (m.status === "recognizing text") {
           setProgress(Math.round(m.progress * 100));
         }

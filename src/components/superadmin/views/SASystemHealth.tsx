@@ -9,10 +9,10 @@ const GlassCard = ({ children, className = "" }: { children: React.ReactNode; cl
 );
 
 // Lightweight ping: HEAD request with count=exact returns 0 rows but validates the connection
-async function pingTable(table: string): Promise<{ ok: boolean; ms: number; detail: string }> {
+async function pingTable(table: "tenants" | "profiles" | "bookings" | "payments"): Promise<{ ok: boolean; ms: number; detail: string }> {
   const t0 = performance.now();
   // Use .limit(1) instead of count exact to avoid full sequential scan on large tables
-  const { error } = await (supabase as any).from(table).select("id").limit(1);
+  const { error } = await supabase.from(table).select("id").limit(1);
   const ms = Math.round(performance.now() - t0);
   return { ok: !error, ms, detail: error ? error.message : `${ms}ms` };
 }
@@ -33,7 +33,7 @@ export default function SASystemHealth() {
     setRunning(true);
     setChecks(c => c.map(x => ({ ...x, status: "checking" })));
 
-    const tables: [string, React.ElementType][] = [
+    const tables: [Parameters<typeof pingTable>[0], React.ElementType][] = [
       ["tenants",  Database],
       ["profiles", Database],
       ["bookings", Database],
@@ -67,7 +67,7 @@ export default function SASystemHealth() {
 
     // PostgREST API meta check
     const t1 = performance.now();
-    const { error: restErr } = await (supabase as any).from("tenants").select("id").limit(1);
+    const { error: restErr } = await supabase.from("tenants").select("id").limit(1);
     tableResults.push({
       name: "PostgREST API",
       status: restErr ? "error" : "ok",

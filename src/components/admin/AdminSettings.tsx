@@ -305,7 +305,7 @@ const AdminSettings = () => {
         theme_id: tenant.theme_id ?? "standard",
         custom_domain: tenant.custom_domain ?? "",
         logo_url: tenant.logo_url ?? "",
-        google_review_url: (tenant as any).google_review_url ?? "",
+        google_review_url: tenant.google_review_url ?? "",
       }));
     }
   }, [tenant]);
@@ -457,7 +457,7 @@ const AdminSettings = () => {
     ) : null;
 
   // ── Notification preference helpers ──────────────────────────────────
-  const notifPrefs: Record<string, boolean> = (tenant as any)?.notification_preferences ?? {
+  const notifPrefs: Record<string, boolean> = (tenant?.notification_preferences as Record<string, boolean> | null) ?? {
     new_booking: true,
     deposit_received: true,
     balance_paid: true,
@@ -467,7 +467,7 @@ const AdminSettings = () => {
 
   const toggleNotifPref = (key: string) => {
     const updated = { ...notifPrefs, [key]: !notifPrefs[key] };
-    updateTenant.mutate({ notification_preferences: updated } as any, {
+    updateTenant.mutate({ notification_preferences: updated }, {
       onSuccess: () => flash("notif"),
       onError: (err: Error) => toast.error(err?.message ?? "Save failed"),
     });

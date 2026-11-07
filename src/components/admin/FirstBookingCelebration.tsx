@@ -26,7 +26,7 @@ let confettiLoaded = false;
 
 function loadConfetti(): Promise<void> {
   return new Promise((resolve) => {
-    if (confettiLoaded || (window as any).confetti) {
+    if (confettiLoaded || window.confetti) {
       confettiLoaded = true;
       resolve();
       return;
@@ -47,7 +47,7 @@ function loadConfetti(): Promise<void> {
 async function fireConfetti() {
   await loadConfetti();
 
-  const confetti = (window as any).confetti;
+  const confetti = window.confetti;
   if (!confetti) return;
 
   const count = 220;

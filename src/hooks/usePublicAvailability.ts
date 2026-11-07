@@ -60,11 +60,11 @@ export function useMonthAvailability(
       });
       if (error) throw error;
       const map: Record<string, MonthDateAvailability> = {};
-      (data ?? []).forEach((row: any) => {
+      (data ?? []).forEach((row) => {
         if (!row.date_str) return;
         map[row.date_str] = {
           slots: row.available_slots ?? [],
-          status: row.availability_status ?? "restricted",
+          status: (row.availability_status ?? "restricted") as MonthDateAvailability["status"],
         };
       });
       return map;
@@ -115,16 +115,16 @@ export function useDateSlots(
         p_staff_id:         sid,
         p_date:             date,
         p_duration_minutes: durationMinutes,
-        p_session_token:    sessionToken ?? null,
-      } as any);
+        p_session_token:    sessionToken ?? undefined,
+      });
 
       if (error) throw error;
 
       const now = Date.now();
 
       return (data ?? [])
-        .filter((s: any) => s.is_available)
-        .filter((s: any) => {
+        .filter((s) => s.is_available)
+        .filter((s) => {
           const [hh, mm] = (s.slot_start as string).slice(0, 5).split(":").map(Number);
           // Use local date constructor (year, month, day, hours, minutes) to avoid
           // the UTC-midnight offset that new Date("YYYY-MM-DD") introduces.
@@ -135,7 +135,7 @@ export function useDateSlots(
           // get_available_slots, which pads bookings by min_notice_minutes.
           return slotDate.getTime() >= now;
         })
-        .map((s: any) => (s.slot_start as string).slice(0, 5));
+        .map((s) => s.slot_start.slice(0, 5));
     },
   });
 }

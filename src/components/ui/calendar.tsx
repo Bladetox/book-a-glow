@@ -12,12 +12,13 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
   // clicking an outside day (e.g. "1" trailing into the next month)
   // navigates the visible grid to match the selection, instead of
   // leaving the user looking at the wrong month with no visual cue.
+  // `selected` only exists on some DayPicker modes, so read it loosely.
+  const selected = (props as { selected?: unknown }).selected;
   const [month, setMonth] = React.useState<Date | undefined>(
-    props.month ?? (props as any).selected instanceof Date ? (props as any).selected : undefined
+    props.month ?? (selected instanceof Date ? selected : undefined)
   );
 
   React.useEffect(() => {
-    const selected = (props as any).selected;
     if (selected instanceof Date) {
       setMonth((current) => {
         if (
@@ -30,7 +31,7 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
         return selected;
       });
     }
-  }, [(props as any).selected]);
+  }, [selected]);
 
   return (
     <DayPicker

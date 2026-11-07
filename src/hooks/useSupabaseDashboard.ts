@@ -579,7 +579,7 @@ export function useDashboardData() {
       newClientCount: Math.max(0, keys.size - returning),
       retentionRate: keys.size ? Math.round((returning / keys.size) * 100) : 0,
     };
-  }, [active, allTimeBookings, identityKeys, monthStart]);
+  }, [active, allTimeBookings, identityKeys]);
 
   const leadSourceBreakdown = useMemo(() => {
     const firstByClient = new Map<string, AllTimeBooking>();

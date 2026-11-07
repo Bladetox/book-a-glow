@@ -55,7 +55,7 @@ export function useSlotHold() {
           void supabase.rpc('release_slot_hold', {
             p_hold_id: holdId,
             p_session_token: sessionToken.current,
-          } as any);
+          });
           setState({
             holdId: null, expiresAt: null, secondsLeft: 0, isHolding: false,
             error: 'Your 10-minute slot hold expired. Please choose the time again.',
@@ -87,7 +87,7 @@ export function useSlotHold() {
       p_start_time: params.startTime,
       p_duration_mins: params.durationMins,
       p_session_token: sessionToken.current,
-    } as any);
+    });
 
     if (error || !data?.[0]?.success) {
       const msg = data?.[0]?.message ?? error?.message ?? 'Could not hold slot';
@@ -144,7 +144,7 @@ export function useSlotHold() {
     const { error } = await supabase.rpc('release_slot_hold', {
       p_hold_id: activeHoldId,
       p_session_token: sessionToken.current,
-    } as any);
+    });
     setState({
       holdId: null, expiresAt: null, secondsLeft: 0, isHolding: false,
       error: error ? 'Could not release the temporary slot hold. It will expire automatically.' : null,
@@ -159,7 +159,7 @@ export function useSlotHold() {
       void supabase.rpc('release_slot_hold', {
         p_hold_id: activeHoldId,
         p_session_token: sessionToken.current,
-      } as any);
+      });
       holdIdRef.current = null;
     }
   }, [clearCountdown]);

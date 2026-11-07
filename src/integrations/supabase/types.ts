@@ -1188,6 +1188,24 @@ export type Database = {
           },
         ]
       }
+      internal_cron_secrets: {
+        Row: {
+          name: string
+          secret: string
+          updated_at: string
+        }
+        Insert: {
+          name: string
+          secret: string
+          updated_at?: string
+        }
+        Update: {
+          name?: string
+          secret?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       loyalty_tracker: {
         Row: {
           birthday: string | null

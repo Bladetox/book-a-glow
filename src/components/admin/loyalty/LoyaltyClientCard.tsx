@@ -408,7 +408,7 @@ export const InlineBirthdayEditor = ({
     setSaving(true);
     const { error } = await supabase
       .from("loyalty_tracker")
-      .update({ birthday: (value || null) as any, updated_at: new Date().toISOString() })
+      .update({ birthday: value || null, updated_at: new Date().toISOString() })
       .eq("id", rowId)
       .eq("tenant_id", tenantId);
     setSaving(false);

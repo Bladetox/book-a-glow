@@ -449,14 +449,14 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
           p_duration_minutes: duration,
         });
       })
-      .then((res: any) => {
+      .then((res) => {
         if (cancelled || !res) return;
         const { data, error } = res;
         if (error) { setSlotsLoading(false); return; }
         setAvailableSlots(
           (data ?? [])
-            .filter((s: any) => s.is_available)
-            .map((s: any) => (s.slot_start as string).slice(0, 5))
+            .filter((s) => s.is_available)
+            .map((s) => (s.slot_start as string).slice(0, 5))
         );
         setSlotsLoading(false);
       });
@@ -1441,7 +1441,8 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                   <button
                                     onClick={e => {
                                       e.stopPropagation();
-                                      isEditingInline ? cancelInlineEdit() : startInlineEdit(b);
+                                      if (isEditingInline) cancelInlineEdit();
+                                      else startInlineEdit(b);
                                     }}
                                     className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-white/[0.03] transition-colors"
                                   >

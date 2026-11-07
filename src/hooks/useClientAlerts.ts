@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { subDays, format, parseISO, differenceInCalendarDays } from "date-fns";
-import { buildClientIdentityKeys } from "@/lib/clientIdentity";
+import { buildClientIdentityKeys, type ClientIdentityRow } from "@/lib/clientIdentity";
 
 export interface OverdueLoyaltyClient {
   id: string;
@@ -44,7 +44,7 @@ export function useClientAlerts(tenantIdProp?: string) {
       const ninetyDaysAgo = format(subDays(today, 90), "yyyy-MM-dd");
 
       // 1. Fetch overdue loyalty clients
-      const overdueData: any[] = [];
+      const overdueData: { id: string; client_name: string; phone: string | null; next_due_date: string | null }[] = [];
       const pageSize = 500;
       for (let offset = 0; ; offset += pageSize) {
         const { data, error } = await supabase
@@ -70,7 +70,7 @@ export function useClientAlerts(tenantIdProp?: string) {
 
       // 2. Resolve the latest completed visit and any upcoming appointment per guest.
       // No-shows and cancellations do not count as completed client visits.
-      const rows: any[] = [];
+      const rows: (ClientIdentityRow & { booking_date: string; status: string })[] = [];
       const bookingPageSize = 500;
       for (let offset = 0; ; offset += bookingPageSize) {
         const { data, error } = await supabase
@@ -98,7 +98,7 @@ export function useClientAlerts(tenantIdProp?: string) {
       }>();
       const todayStr = format(today, "yyyy-MM-dd");
 
-      rows.forEach((booking: any) => {
+      rows.forEach((booking) => {
         const key = identityKeys.get(booking.id);
         if (!key) return;
 

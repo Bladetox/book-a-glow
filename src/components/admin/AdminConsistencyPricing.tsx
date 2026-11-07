@@ -184,12 +184,12 @@ export default function AdminConsistencyPricing() {
         .gt("consecutive_count", 0)
         .order("consecutive_count", { ascending: false });
       if (error) throw error;
-      return (data ?? []).map((row: any) => ({
+      return (data ?? []).map((row) => ({
         canonical_client_id: row.canonical_client_id,
         consecutive_count: row.consecutive_count,
         streak_last_booking: row.streak_last_booking,
         is_active: row.is_active,
-        client_name: row.loyalty_tracker?.client_name ?? "Unknown",
+        client_name: (row.loyalty_tracker as { client_name?: string | null } | null)?.client_name ?? "Unknown",
       })) as GuestStatusRow[];
     },
   });

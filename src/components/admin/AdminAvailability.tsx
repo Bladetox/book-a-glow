@@ -268,9 +268,13 @@ const AdminAvailability = () => {
   };
 
   useEffect(() => {
+    // The timer maps are mutated in place, never replaced, so capturing the
+    // objects here still sees every timer scheduled later.
+    const dayTimerMap = dayTimers.current;
+    const dateTimerMap = dateTimers.current;
     return () => {
-      Object.values(dayTimers.current).forEach(clearTimeout);
-      Object.values(dateTimers.current).forEach(clearTimeout);
+      Object.values(dayTimerMap).forEach(clearTimeout);
+      Object.values(dateTimerMap).forEach(clearTimeout);
     };
   }, []);
 

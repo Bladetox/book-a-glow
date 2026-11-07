@@ -75,12 +75,18 @@ function median(nums: number[]): number {
   return s.length % 2 !== 0 ? s[m] : Math.round((s[m - 1] + s[m]) / 2);
 }
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+interface ChartTooltipProps {
+  active?: boolean;
+  label?: string;
+  payload?: { name?: string; value?: number | string; color?: string }[];
+}
+
+const CustomTooltip = ({ active, payload, label }: ChartTooltipProps) => {
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-[#111] border border-white/[0.1] rounded-xl px-3 py-2 shadow-xl">
       <p className="text-[11px] text-white/40 mb-1">{label}</p>
-      {payload.map((p: any) => (
+      {payload.map((p) => (
         <p key={p.name} className="text-xs font-semibold" style={{ color: p.color }}>
           {typeof p.value === "number" ? fmtCurrency(p.value) : p.value}
         </p>
@@ -155,6 +161,7 @@ export default function SAGrowth() {
 
   // ── Monthly MRR trend (6 months cumulative estimate) ──
   const mrrTrend = useMemo(() => {
+    const now = new Date();
     const result = [];
     for (let i = 5; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1);

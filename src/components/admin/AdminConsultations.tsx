@@ -21,7 +21,26 @@ function fmtTime(t?: string | null) {
   return `${hour % 12 || 12}:${m} ${ampm}`;
 }
 
-function formatAnswer(item: any): string {
+interface ConsultationAnswerItem {
+  key?: string;
+  label?: string;
+  answer?: unknown;
+  detail?: unknown;
+}
+
+interface ConsultationChangeEntry {
+  booking_id?: string | null;
+  date?: string | null;
+  note?: string | null;
+}
+
+/** Only the JSON columns these helpers read; the rest comes from the query row. */
+interface ConsultationJsonFields {
+  answers?: unknown;
+  change_log?: unknown;
+}
+
+function formatAnswer(item: ConsultationAnswerItem | null | undefined): string {
   const a = item?.answer;
   let text = "";
   if (a === true) text = "Yes";
@@ -32,23 +51,46 @@ function formatAnswer(item: any): string {
   return text;
 }
 
-function answeredItems(c: any): any[] {
-  const items = c?.answers?.items;
+function answeredItems(c: ConsultationJsonFields | null | undefined): ConsultationAnswerItem[] {
+  const items = (c?.answers as { items?: unknown } | null | undefined)?.items;
   return Array.isArray(items) ? items.filter((i) => formatAnswer(i) !== "") : [];
 }
 
-function changeEntries(c: any): any[] {
-  return Array.isArray(c?.change_log) ? c.change_log : [];
+function changeEntries(c: ConsultationJsonFields | null | undefined): ConsultationChangeEntry[] {
+  return Array.isArray(c?.change_log) ? (c.change_log as ConsultationChangeEntry[]) : [];
 }
 
-function exportCSV(rows: any[]) {
+async function fetchConsultations(tenantId: string) {
+  const { data, error } = await supabase
+    .from("guest_consultations")
+    .select(`
+      *,
+      booking:bookings!guest_consultations_last_booking_id_fkey(
+        booking_date, start_time,
+        guest_name, guest_email, guest_phone,
+        client:profiles!bookings_client_id_fkey(full_name, email, phone),
+        items:booking_items(service_name, price, sort_order)
+      ),
+      firstBooking:bookings!guest_consultations_first_booking_id_fkey(
+        lead_source
+      )
+    `)
+    .eq("tenant_id", tenantId)
+    .order("updated_at", { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+type ConsultationRow = Awaited<ReturnType<typeof fetchConsultations>>[number];
+
+function exportCSV(rows: ConsultationRow[]) {
   const headers = [
     "Name", "Email", "Phone", "Last Visit", "Time", "Form", "Acquisition Channel", "Services",
     "Skin Conditions", "Medications", "Allergies", "Health Conditions",
     "Pregnancy", "Environmental Exposure", "Physical Factors",
     "Hair Length OK", "Additional Notes", "Consultation Answers", "Change Notes", "Last Updated",
   ];
-  const escape = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const escape = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
   const csv = [
     headers.join(","),
     ...rows.map((c) => {
@@ -98,26 +140,7 @@ const AdminConsultations = () => {
 
   const { data: consultations = [], isLoading } = useQuery({
     queryKey: ["consultations", tenantId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("guest_consultations")
-        .select(`
-          *,
-          booking:bookings!guest_consultations_last_booking_id_fkey(
-            booking_date, start_time,
-            guest_name, guest_email, guest_phone,
-            client:profiles!bookings_client_id_fkey(full_name, email, phone),
-            items:booking_items(service_name, price, sort_order)
-          ),
-          firstBooking:bookings!guest_consultations_first_booking_id_fkey(
-            lead_source
-          )
-        `)
-        .eq("tenant_id", tenantId)
-        .order("updated_at", { ascending: false });
-      if (error) throw error;
-      return data ?? [];
-    },
+    queryFn: () => fetchConsultations(tenantId),
   });
 
   const filterCount = (f: string) =>
