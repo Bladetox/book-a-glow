@@ -181,7 +181,7 @@ export const ConsultationFormBuilder = () => {
       });
 
       setQuestions(mappedQuestions);
-    } catch (e: any) {
+    } catch (e) {
       setError(e?.message ?? 'Failed to load consultation settings');
     } finally {
       setLoading(false);
@@ -327,7 +327,7 @@ export const ConsultationFormBuilder = () => {
       await loadData();
       setSaved(true);
       setTimeout(() => setSaved(false), 2500);
-    } catch (e: any) {
+    } catch (e) {
       setError(e?.message ?? 'Failed to save');
     } finally {
       setSaving(false);

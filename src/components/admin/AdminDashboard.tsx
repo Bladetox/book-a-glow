@@ -60,7 +60,9 @@ function getVisibility(storageKey: string): Record<SectionKey, boolean> {
         ALL_SECTIONS.map((s) => [s, parsed[s] !== false])
       ) as Record<SectionKey, boolean>;
     }
-  } catch {}
+  } catch {
+    // Corrupt or unavailable localStorage: fall back to all sections visible.
+  }
   return Object.fromEntries(ALL_SECTIONS.map((s) => [s, true])) as Record<SectionKey, boolean>;
 }
 
@@ -400,7 +402,7 @@ export const AdminDashboardView = ({
   const leadSourceSub = topChannelPct !== null
     ? `${topChannelPct}% of clients with a recorded source`
     : undefined;
-  const operationalAlerts = (data.alerts ?? []).filter((alert: any) =>
+  const operationalAlerts = (data.alerts ?? []).filter((alert) =>
     !String(alert.text ?? "").toLowerCase().includes("stock")
   );
   const leadSourceExtraLines: HealthInfoLine[] = leadSourceBreakdown.map((row) => {
@@ -728,7 +730,7 @@ export const AdminDashboardView = ({
               </div>
             ) : (
               <>
-                {operationalAlerts.map((alert: any, index: number) => (
+                {operationalAlerts.map((alert, index: number) => (
                   <div key={`operational-alert-${index}`} className="flex items-center gap-3 rounded-xl border border-amber-500/[0.12] bg-amber-500/[0.035] p-3.5">
                     <div className="p-1.5 rounded-lg bg-amber-500/10">
                       <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />

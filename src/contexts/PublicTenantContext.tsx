@@ -85,7 +85,7 @@ export function PublicTenantProvider({ children }: { children: ReactNode }) {
             // Don't set notFound — fall back to slug so booking still works
             setState((s) => ({ ...s, loading: false, tenantId: resolution.slug ?? "" }));
           } else {
-            const logoUrl = (data as any).logo_url ?? null;
+            const logoUrl = data.logo_url ?? null;
             setState({
               tenantId: data.id,
               name: data.name,
@@ -111,7 +111,7 @@ export function PublicTenantProvider({ children }: { children: ReactNode }) {
             console.error("[PublicTenantContext] custom domain lookup failed:", error?.message);
             setState((s) => ({ ...s, loading: false, notFound: true }));
           } else {
-            const logoUrl = (data as any).logo_url ?? null;
+            const logoUrl = data.logo_url ?? null;
             setState({
               tenantId: data.id,
               name: data.name,

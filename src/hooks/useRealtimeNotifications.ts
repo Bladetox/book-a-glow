@@ -15,7 +15,7 @@ export interface AppNotification {
 // Plays a soft two-tone chime using Web Audio API — no file needed
 function playNotificationChime() {
   try {
-    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
 
     const playTone = (frequency: number, startTime: number, duration: number, gain: number) => {
       const osc = ctx.createOscillator();

@@ -6,6 +6,76 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+const YOCO_API = "https://payments.yoco.com/api/webhooks";
+
+// Delete all existing webhook subscriptions for this URL on Yoco's side,
+// then register fresh to guarantee we always get a new id + secret.
+async function cleanAndRegister(
+  yocoSecretKey: string,
+  webhookUrl: string,
+  webhookName: string
+): Promise<{ id: string; secret: string } | { error: string; code?: string }> {
+  // 1. List all subscriptions
+  const listRes = await fetch(YOCO_API, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${yocoSecretKey}`,
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (listRes.ok) {
+    const listData = await listRes.json();
+    const subs: { id: string; url: string }[] =
+      listData.subscriptions ?? listData.data ?? listData.webhooks ?? [];
+
+    // 2. Delete every sub that points to our webhook URL
+    const toDelete = subs.filter((s) => s.url === webhookUrl);
+    await Promise.all(
+      toDelete.map((s) =>
+        fetch(`${YOCO_API}/${s.id}`, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${yocoSecretKey}`,
+            "Content-Type": "application/json",
+          },
+        })
+      )
+    );
+    console.log(`Cleaned ${toDelete.length} existing subscription(s) for ${webhookUrl}`);
+  } else {
+    console.warn("Could not list Yoco subscriptions before re-register — proceeding anyway");
+  }
+
+  // 3. Register fresh — only send fields defined in Yoco's OpenAPI spec: name + url
+  const regRes = await fetch(YOCO_API, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${yocoSecretKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      name: webhookName,
+      url: webhookUrl,
+    }),
+  });
+
+  const regData = await regRes.json();
+
+  if (!regRes.ok) {
+    console.error("Yoco registration failed after cleanup:", JSON.stringify(regData));
+    return { error: "Failed to register webhook with Yoco", code: regData?.code };
+  }
+
+  const { id, secret } = regData;
+  if (!id || !secret) {
+    console.error("Yoco did not return id/secret:", JSON.stringify(regData));
+    return { error: "Yoco did not return webhook id/secret" };
+  }
+
+  return { id, secret };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -13,28 +83,8 @@ Deno.serve(async (req) => {
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceKey  = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const anonKey     = Deno.env.get("SUPABASE_ANON_KEY")!;
-    const supabase    = createClient(supabaseUrl, serviceKey);
-
-    // Require a valid authenticated user
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-    const anonClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: { user }, error: authErr } = await anonClient.auth.getUser();
-    if (authErr || !user) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, serviceKey);
 
     const { tenant_id, yoco_secret_key } = await req.json();
 
@@ -45,62 +95,97 @@ Deno.serve(async (req) => {
       );
     }
 
-    // tenant_id in this function is the owner's UUID (used in .eq("owner_id", tenant_id) below).
-    // Verify the authenticated user IS that owner.
-    if (user.id !== tenant_id) {
+    // This function overwrites a tenant's Yoco keys, so the caller must be
+    // that tenant's owner (tenant_id is the owner's user id) or an internal
+    // service-role call such as save-yoco-keys.
+    const authHeader = req.headers.get("Authorization") ?? "";
+    const bearer = authHeader.replace(/^Bearer\s+/i, "");
+    if (!bearer) {
       return new Response(
-        JSON.stringify({ error: "Forbidden" }),
-        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    if (bearer !== serviceKey) {
+      const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
+        global: { headers: { Authorization: authHeader } },
+      });
+      const { data: { user }, error: authErr } = await userClient.auth.getUser();
+      if (authErr || !user) {
+        return new Response(
+          JSON.stringify({ error: "Unauthorized" }),
+          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (user.id !== tenant_id) {
+        return new Response(
+          JSON.stringify({ error: "Forbidden" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    // Skip webhook registration for test/sandbox keys — Yoco does not support it
+    if (yoco_secret_key.startsWith("sk_test_")) {
+      console.log(`Skipping webhook registration for tenant ${tenant_id} — test key`);
+      return new Response(
+        JSON.stringify({
+          success: true,
+          webhook_registered: false,
+          info: "Webhook registration skipped — not supported for Yoco test/sandbox keys.",
+        }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Build the webhook URL pointing back to our yoco-webhook function
-    const webhookUrl = `${supabaseUrl}/functions/v1/yoco-webhook`;
+    // Resolve tenant row by owner_id (tenant_id is the user UUID)
+    const { data: tenantRow, error: tenantErr } = await supabase
+      .from("tenants")
+      .select("id, name")
+      .eq("owner_id", tenant_id)
+      .single();
 
-    // Register webhook with Yoco using the business's own secret key
-    const yocoRes = await fetch("https://payments.yoco.com/api/webhooks", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${yoco_secret_key}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        name: `book-a-glow-${tenant_id}`,
-        url: webhookUrl,
-      }),
-    });
-
-    if (!yocoRes.ok) {
-      const errBody = await yocoRes.json();
-      console.error("Yoco webhook registration failed:", errBody);
+    if (tenantErr || !tenantRow) {
+      console.error("Failed to resolve tenant:", tenantErr);
       return new Response(
-        JSON.stringify({ error: "Failed to register webhook with Yoco", details: errBody }),
-        { status: yocoRes.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "Tenant not found", details: tenantErr }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const yocoData = await yocoRes.json();
-    const { id: yoco_webhook_id, secret: yoco_webhook_secret } = yocoData;
+    // Sanitise webhook name: alphanumeric only, max 40 chars
+    const webhookName = tenantRow.id
+      .replace(/[^a-zA-Z0-9]/g, "")
+      .slice(0, 40);
 
-    if (!yoco_webhook_secret) {
-      console.error("Yoco did not return a webhook secret", yocoData);
+    // FIX: Route to booking-payment-webhook, NOT yoco-webhook.
+    // yoco-webhook handles platform invoice payments only.
+    // booking-payment-webhook handles tenant guest booking payments.
+    const webhookUrl = `${supabaseUrl}/functions/v1/booking-payment-webhook`;
+
+    console.log(`Registering booking webhook for "${tenantRow.name}" (slug: ${tenantRow.id}, name: ${webhookName})`);
+
+    // Clean up any existing subs for this URL and register fresh
+    const result = await cleanAndRegister(yoco_secret_key, webhookUrl, webhookName);
+
+    if ("error" in result) {
       return new Response(
-        JSON.stringify({ error: "Yoco did not return a webhook secret" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: result.error, code: result.code }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Store against the tenant — match by owner_id (UUID) since id is a slug
-    const { data: tenantRow, error: updateErr } = await supabase
+    const { id: yoco_webhook_id, secret: yoco_webhook_secret } = result;
+
+    // Persist webhook id + secret + live key into tenant row
+    const { error: updateErr } = await supabase
       .from("tenants")
       .update({
         yoco_webhook_id,
         yoco_webhook_secret,
         yoco_secret_key,
       })
-      .eq("owner_id", tenant_id)
-      .select("id")
-      .single();
+      .eq("owner_id", tenant_id);
 
     if (updateErr) {
       console.error("Failed to store webhook secret:", updateErr);
@@ -110,22 +195,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Mirror yoco_webhook_secret into app_settings so the UI webhookActive flag resolves correctly
-    const tenantSlug = tenantRow?.id;
-    if (tenantSlug) {
-      const { error: settingsErr } = await supabase
-        .from("app_settings")
-        .upsert(
-          { tenant_id: tenantSlug, key: "yoco_webhook_secret", value: yoco_webhook_secret },
-          { onConflict: "tenant_id,key" }
-        );
-      if (settingsErr) {
-        // Non-fatal — webhook is registered and working; UI will just still show "registering"
-        console.error("Failed to mirror webhook secret to app_settings:", settingsErr);
-      }
-    }
-
-    console.log(`Webhook registered for tenant ${tenant_id}: ${yoco_webhook_id}`);
+    console.log(`Booking webhook registered for "${tenantRow.name}": ${yoco_webhook_id}`);
 
     return new Response(
       JSON.stringify({ success: true, webhook_id: yoco_webhook_id }),

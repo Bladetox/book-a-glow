@@ -78,8 +78,8 @@ table: "bookings",
 filter: `tenant_id=eq.${tenantId}`,
 },
 (payload) => {
-const newStatus = (payload.new as any)?.status;
-const oldStatus = (payload.old as any)?.status;
+const newStatus = (payload.new as { status?: string } | null)?.status;
+const oldStatus = (payload.old as { status?: string } | null)?.status;
 const payshapStatuses = ["payment_claimed", "pending"];
 if (
 payshapStatuses.includes(newStatus) ||
@@ -111,8 +111,8 @@ const { data, error } = await supabase
 if (error) throw error;
 return (data ?? []).map((b) => ({
 ...mapBooking(b),
-payshapClaimedAt: (b as any).payshap_claimed_at as string | null,
-payshapPaymentIntent: (b as any).payshap_payment_intent as string | null,
+payshapClaimedAt: (b as { payshap_claimed_at?: string | null }).payshap_claimed_at ?? null,
+payshapPaymentIntent: (b as { payshap_payment_intent?: string | null }).payshap_payment_intent ?? null,
 }));
 },
 enabled: !!tenantId,
@@ -158,8 +158,8 @@ const balanceDue = Number(bookingData?.balance_due ?? 0);
 // Determine which financial flags to set.
 // If no deposit is configured (depositAmount === 0) OR balanceDue === 0
 // after deposit, the client paid in full via Payshap.
-const intentField = (bookingData as any)?.payshap_payment_intent as string | null;
-const depositAlreadyPaid = (bookingData as any)?.deposit_paid === true;
+const intentField = bookingData?.payshap_payment_intent ?? null;
+const depositAlreadyPaid = bookingData?.deposit_paid === true;
 // NOTE: depositAlreadyPaid covers the final/balance claim for a deposit
 // booking — if the deposit was already marked paid before this claim,
 // this confirmation must be for the remaining balance, so it completes
@@ -182,7 +182,7 @@ const { data: rpcData, error: rpcError } = await supabase.rpc(
 { p_booking_id: bookingId, p_new_status: "confirmed" },
 );
 if (rpcError) throw rpcError;
-const rpcResult = (rpcData as any)?.[0];
+const rpcResult = rpcData?.[0];
 if (rpcResult && !rpcResult.success)
 throw new Error(rpcResult.message ?? "Status update failed");
 
@@ -267,7 +267,7 @@ const { data: tenantRow } = await supabase
 .eq("id", tenantId)
 .single();
 
-const prefs = (tenantRow as any)?.notification_preferences ?? {};
+const prefs = (tenantRow?.notification_preferences ?? {}) as Record<string, boolean>;
 if (prefs["full_payment_received"] !== false) {
 const { error: notifError } = await supabase
 .from("notifications")
@@ -309,9 +309,9 @@ bookingId: string;
 const { data, error } = await supabase.rpc("reject_payshap_booking", {
   p_booking_id: bookingId,
   p_tenant_id: tenantId,
-} as any);
+});
 if (error) throw error;
-const result = (data as any)?.[0];
+const result = data?.[0];
 if (!result?.success) throw new Error(result?.message ?? "Could not reject PayShap claim.");
 },
 onSuccess: () => {

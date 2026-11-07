@@ -31,6 +31,16 @@ interface StockItem {
   notes: string | null;
 }
 
+/** Editable stock fields; total_cost is a generated column and never sent. */
+interface StockItemInput {
+  item_name: string;
+  stock_on_hand: number;
+  opening_stock: number;
+  reorder_level: number;
+  cost: number;
+  notes: string | null;
+}
+
 type Tab = "stock" | "consumption";
 type ActionType = "use" | "restock";
 
@@ -91,7 +101,7 @@ const AdminStock = () => {
   const [actionType, setActionType] = useState<ActionType>("use");
   const [selectedQty, setSelectedQty] = useState<number | null>(null);
   const [customQty, setCustomQty] = useState("");
-  const [csvRows, setCsvRows] = useState<any[] | null>(null);
+  const [csvRows, setCsvRows] = useState<Record<string, string>[] | null>(null);
   // FIX (Miller's Law): single unified alert banner, collapsed by default
   const [alertsExpanded, setAlertsExpanded] = useState(false);
   const [form, setForm] = useState({
@@ -141,9 +151,8 @@ const AdminStock = () => {
   }, [items]);
 
   const upsert = useMutation({
-    mutationFn: async (item: any) => {
-      const { total_cost: _drop, ...safe } = item;
-      const payload = { ...safe, tenant_id: tenantId };
+    mutationFn: async (item: StockItemInput) => {
+      const payload = { ...item, tenant_id: tenantId };
       if (editingId) {
         const { error } = await supabase.from("stock_inventory").update(payload).eq("id", editingId);
         if (error) throw error;
@@ -159,7 +168,7 @@ const AdminStock = () => {
       toast.success(editingId ? "Item updated" : "Item added");
       closeModal();
     },
-    onError: (e: any) => toast.error(e.message),
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const remove = useMutation({
@@ -177,7 +186,7 @@ const AdminStock = () => {
       setDeleteItem(null);
       setDeletingId(null);
     },
-    onError: (e: any) => {
+    onError: (e: Error) => {
       setDeletingId(null);
       toast.error(e.message);
     },
@@ -221,7 +230,7 @@ const AdminStock = () => {
 
       return { previous };
     },
-    onError: (e: any, _vars, ctx: any) => {
+    onError: (e: Error, _vars, ctx) => {
       if (ctx?.previous) qc.setQueryData(["stock", tenantId], ctx.previous);
       toast.error(e.message);
     },
@@ -256,7 +265,7 @@ const AdminStock = () => {
       setCsvRows(null);
       toast.success(`${count} items imported`);
     },
-    onError: (e: any) => toast.error(e.message),
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const openAdd = () => {
@@ -307,7 +316,7 @@ const AdminStock = () => {
       const parsed = rows
         .map(row => {
           const vals = row.split(",");
-          return keys.reduce((acc: any, k, i) => { acc[k] = vals[i]?.trim() ?? ""; return acc; }, {});
+          return keys.reduce<Record<string, string>>((acc, k, i) => { acc[k] = vals[i]?.trim() ?? ""; return acc; }, {});
         })
         .filter(r => r.item_name);
       setCsvRows(parsed);

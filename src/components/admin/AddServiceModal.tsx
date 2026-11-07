@@ -136,7 +136,7 @@ const AddServiceModal = ({
 
       setSelectedId(null);
       onAdded();
-    } catch (e: any) {
+    } catch (e) {
       toast.error(e.message || "Failed to add service");
     } finally {
       setSubmitting(false);
@@ -185,7 +185,7 @@ const AddServiceModal = ({
       setLocalItems(prev => prev.filter(i => i.id !== item.id));
 
       onAdded();
-    } catch (e: any) {
+    } catch (e) {
       toast.error(e.message || "Failed to remove service");
     } finally {
       setRemovingId(null);

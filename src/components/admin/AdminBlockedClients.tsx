@@ -36,7 +36,7 @@ const AdminBlockedClients = () => {
         .order("created_at", { ascending: false });
       if (error) throw error;
       setBlockedClients((data as BlockedClientRow[]) ?? []);
-    } catch (e: any) {
+    } catch (e) {
       toast.error(e.message || "Failed to load blocked clients");
     } finally {
       setBlockedLoading(false);

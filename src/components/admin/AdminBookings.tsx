@@ -449,14 +449,14 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
           p_duration_minutes: duration,
         });
       })
-      .then((res: any) => {
+      .then((res) => {
         if (cancelled || !res) return;
         const { data, error } = res;
         if (error) { setSlotsLoading(false); return; }
         setAvailableSlots(
           (data ?? [])
-            .filter((s: any) => s.is_available)
-            .map((s: any) => (s.slot_start as string).slice(0, 5))
+            .filter((s) => s.is_available)
+            .map((s) => (s.slot_start as string).slice(0, 5))
         );
         setSlotsLoading(false);
       });
@@ -497,7 +497,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
     try {
       await updateStatus.mutateAsync({ bookingId, status });
       toast.success(`Status updated to ${status}`);
-    } catch (e: any) {
+    } catch (e) {
       toast.error(e.message || "Failed to update status");
     }
   };
@@ -517,7 +517,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
       setReschedulingBooking(null);
       setRescheduleDate(undefined);
       setRescheduleTime(null);
-    } catch (e: any) {
+    } catch (e) {
       toast.error(e.message || "Failed to reschedule");
     }
   };
@@ -527,7 +527,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
       await deleteBooking.mutateAsync(id);
       toast.success("Booking deleted");
       if (expandedId === id) setExpandedId(null);
-    } catch (e: any) {
+    } catch (e) {
       toast.error(e.message || "Failed to delete");
     }
   };
@@ -552,7 +552,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
       toast.success(
         `Call-out fee waived. Revised balance: R${Number(result?.balance_due ?? Math.max(0, b.balance - b.callOutFee)).toFixed(2)}.`
       );
-    } catch (e: any) {
+    } catch (e) {
       toast.error(e.message || "Unable to waive call-out fee");
     } finally {
       setWaivingCallOutId(null);
@@ -579,7 +579,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
       toast.success(
         `Call-out fee restored (R${Number(result?.restored_amount ?? 0).toFixed(2)}). Revised balance: R${Number(result?.balance_due ?? b.balance).toFixed(2)}.`
       );
-    } catch (e: any) {
+    } catch (e) {
       toast.error(e.message || "Unable to restore call-out fee");
     } finally {
       setRestoringCallOutId(null);
@@ -616,7 +616,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
       toast.success("Booking updated");
       setEditingInlineId(null);
       setEditDraft({});
-    } catch (e: any) {
+    } catch (e) {
       toast.error(e.message || "Failed to save");
     }
   };
@@ -678,7 +678,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
       });
       if (emailErr) console.warn("Email send warning:", emailErr.message);
       toast.success(`Balance request sent to ${clientEmail}`);
-    } catch (e: any) {
+    } catch (e) {
       toast.error(e.message || "Failed to send balance request");
     } finally {
       setRequestingBalanceId(null);
@@ -763,7 +763,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
         "_blank",
         "noopener,noreferrer",
       );
-    } catch (err: any) {
+    } catch (err) {
       toast.error(err.message || "Failed to generate payment link");
     } finally {
       setSendingWhatsAppBalanceId(null);
@@ -808,13 +808,13 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
               balance_settled: true,
             },
           });
-        } catch (emailErr: any) {
+        } catch (emailErr) {
           console.warn("service_thank_you email dispatch failed:", emailErr?.message);
         }
       }
 
       toast.success(`${b.client}'s booking marked as paid and serviced`);
-    } catch (e: any) {
+    } catch (e) {
       toast.error(e.message || "Failed to mark as paid");
     } finally {
       setMarkingPaidId(null);
@@ -840,11 +840,11 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
           await supabase.functions.invoke("send-booking-email", {
             body: { booking_id: b.id, tenant_id: b.tenantId, email_type: "service_thank_you" },
           });
-        } catch (emailErr: any) {
+        } catch (emailErr) {
           console.warn("service_thank_you email dispatch failed:", emailErr?.message);
         }
       }
-    } catch (e: any) {
+    } catch (e) {
       toast.error(e.message || "Failed to mark as serviced");
     } finally {
       setMarkingServicedId(null);
@@ -1441,7 +1441,8 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                   <button
                                     onClick={e => {
                                       e.stopPropagation();
-                                      isEditingInline ? cancelInlineEdit() : startInlineEdit(b);
+                                      if (isEditingInline) cancelInlineEdit();
+                                      else startInlineEdit(b);
                                     }}
                                     className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-white/[0.03] transition-colors"
                                   >

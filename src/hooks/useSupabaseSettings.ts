@@ -77,26 +77,9 @@ const ALLOWED_APP_SETTING_KEYS = [
 ] as const;
 
 // ─── Tenant fields safe to expose to the client ───────────────────────────────
-const SAFE_TENANT_FIELDS = [
-  "id",
-  "name",
-  "email",
-  "phone",
-  "address",
-  "logo_url",
-  "theme_id",
-  "currency",
-  "is_active",
-  "custom_domain",
-  "allow_overrun",
-  "min_notice_hours",
-  "max_advance_days",
-  "travel_buffer_minutes",
-  "notification_preferences",
-  "google_review_url",
-  "created_at",
-  "updated_at",
-].join(", ");
+// Kept as a single literal so supabase-js can infer the row type.
+const SAFE_TENANT_FIELDS =
+  "id, name, email, phone, address, logo_url, theme_id, currency, is_active, custom_domain, allow_overrun, min_notice_hours, max_advance_days, travel_buffer_minutes, notification_preferences, google_review_url, created_at, updated_at";
 
 // ─── Tenant fields the admin UI is allowed to update ─────────────────────────
 const SAFE_UPDATE_KEYS = new Set([

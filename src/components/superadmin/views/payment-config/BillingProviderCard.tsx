@@ -56,7 +56,7 @@ export default function BillingProviderCard() {
       await updateBillingProvider(next);
       setBillingProvider(next);
       setStatus("done");
-    } catch (e: any) {
+    } catch (e) {
       setStatus("error");
       setErr(e.message ?? "Failed to switch provider.");
     }

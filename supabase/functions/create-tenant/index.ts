@@ -689,6 +689,13 @@ Deno.serve(async (req) => {
       throw new Error(`user_roles: ${roleErr.message}`);
     }
 
+    // FIX: Upsert conflict target changed from "email" to "id".
+    // Matching on email was unsafe — if a stale/duplicate profiles row already
+    // existed with this email but a different id, Postgres would attempt to
+    // UPDATE that row's id to the new user's id, which can violate the FK to
+    // auth.users and throw (triggering a full rollback), or silently leave a
+    // profiles row whose id no longer matches the authenticated user. "id" is
+    // the value we actually know is correct and unique per auth session.
     const { error: profileErr } = await admin
       .from("profiles")
       .upsert(
@@ -702,7 +709,7 @@ Deno.serve(async (req) => {
           tenant_id: tenantId,
           role: "admin",
         },
-        { onConflict: "email" }
+        { onConflict: "id" }
       );
 
     if (profileErr) {

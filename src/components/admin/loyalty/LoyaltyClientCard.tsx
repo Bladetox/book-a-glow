@@ -408,7 +408,7 @@ export const InlineBirthdayEditor = ({
     setSaving(true);
     const { error } = await supabase
       .from("loyalty_tracker")
-      .update({ birthday: (value || null) as any, updated_at: new Date().toISOString() })
+      .update({ birthday: value || null, updated_at: new Date().toISOString() })
       .eq("id", rowId)
       .eq("tenant_id", tenantId);
     setSaving(false);
@@ -535,7 +535,7 @@ export const LoyaltyClientCard = ({
   onToggleSelect, onToggleExpand, onOptimisticUpdate, onUpdated, isoToDisplay,
 }: LoyaltyClientCardProps) => {
   const colour           = avatarColour(row.client_name ?? "?");
-  const resolvedBirthday = (row as any).birthday ?? enrich.birthday ?? null;
+  const resolvedBirthday = row.birthday ?? enrich.birthday ?? null;
 
   // ── Derive Last Visit from enrichment (bookings table source of truth) ──
   const lastVisit = enrich.lastVisitDate ?? row.last_visit_date ?? null;

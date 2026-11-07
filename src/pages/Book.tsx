@@ -261,9 +261,10 @@ const Index = () => {
           data-booking-scroll
           className={`flex-1 min-h-0 ${step === 0 ? "overflow-hidden" : "overflow-y-auto scrollbar-hide"}`}
         >
+          {/* Reserve the measured fixed bottom bar height so the Services list can scroll fully clear of it. */}
           <div
             className={`w-full max-w-md mx-auto px-4 pt-4 ${step === 0 ? "h-full min-h-0 flex flex-col" : ""}`}
-            style={{ paddingBottom: step === 0 ? "16px" : "calc(var(--bottom-bar-height, 80px) + 16px)" }}
+            style={{ paddingBottom: "calc(var(--bottom-bar-height, 80px) + 16px)" }}
           >
             <AnimatePresence mode="wait" custom={direction}>
               <motion.div
@@ -273,7 +274,7 @@ const Index = () => {
                 initial="enter"
                 animate="center"
                 exit="exit"
-                className={step === 0 ? "h-full min-h-0 flex flex-col" : undefined}
+                className={step === 0 ? "flex-1 min-h-0 flex flex-col" : undefined}
               >
                 {step === 0 && (
                   <ServicesStep
@@ -326,7 +327,7 @@ const Index = () => {
               </motion.div>
             </AnimatePresence>
 
-            <p className="flex-shrink-0 text-[9px] text-muted-foreground/40 tracking-[0.12em] text-center mt-6 pb-2">
+            <p className="flex-shrink-0 text-[8px] text-muted-foreground/40 tracking-[0.08em] text-center mt-2 pb-1">
               {"Powered by "}
               <a
                 href="https://nextslot.co.za"

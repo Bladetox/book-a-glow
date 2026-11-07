@@ -1,3 +1,4 @@
+import type { LucideIcon } from "lucide-react";
 import { Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 
 // ─── Shared UI primitives used across all Payment Configuration cards ───────
@@ -5,7 +6,7 @@ export const GlassCard = ({ children, className = "" }: { children: React.ReactN
   <div className={`bg-white/[0.03] backdrop-blur-sm border border-white/[0.07] rounded-2xl ${className}`}>{children}</div>
 );
 
-export const SectionHeader = ({ icon: Icon, title, desc }: { icon: any; title: string; desc: string }) => (
+export const SectionHeader = ({ icon: Icon, title, desc }: { icon: LucideIcon; title: string; desc: string }) => (
   <div className="flex items-start gap-3 px-5 py-4 border-b border-white/[0.05]">
     <div
       className="w-8 h-8 rounded-xl flex items-center justify-center mt-0.5 shrink-0"

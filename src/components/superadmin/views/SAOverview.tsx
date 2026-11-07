@@ -38,8 +38,8 @@ export default function SAOverview() {
       if (bt.error)  errs.push(`Bookings today: ${bt.error.message}`);
       if (st.error)  errs.push(`Staff: ${st.error.message}`);
 
-      const gmv = (pay.data ?? []).reduce((s: number, p: any) => s + (p.amount ?? 0), 0);
-      const uniqueStaff = new Set((st.data ?? []).map((r: any) => r.staff_id)).size;
+      const gmv = (pay.data ?? []).reduce((s: number, p) => s + (p.amount ?? 0), 0);
+      const uniqueStaff = new Set((st.data ?? []).map((r) => r.staff_id)).size;
 
       setErrors(errs);
       setStats({

@@ -626,11 +626,12 @@ const TimeGrid = ({
 }) => {
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  const firstDayKey = days[0]?.toDateString();
   useEffect(() => {
     if (!scrollRef.current) return;
     const offset = (8 - GRID_START) * HOUR_PX;
     scrollRef.current.scrollTop = offset;
-  }, [days[0]?.toDateString()]);
+  }, [firstDayKey]);
 
   const hours = Array.from({ length: GRID_END - GRID_START }, (_, i) => GRID_START + i);
 

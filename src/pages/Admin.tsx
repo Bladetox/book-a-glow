@@ -1,3 +1,4 @@
+import type { Session } from "@supabase/supabase-js";
 import { useState, useEffect, lazy, Suspense, Component } from "react";
 import { MotionConfig } from "framer-motion";
 import "@/styles/admin-glass.css";
@@ -44,8 +45,8 @@ class AdminErrorBoundary extends Component<
     super(props);
     this.state = { hasError: false, message: "" };
   }
-  static getDerivedStateFromError(error: any) {
-    return { hasError: true, message: error?.message || "Unknown error" };
+  static getDerivedStateFromError(error: unknown) {
+    return { hasError: true, message: (error as Error | null)?.message || "Unknown error" };
   }
   render() {
     if (this.state.hasError) {
@@ -310,7 +311,7 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
 
 const Admin = () => {
   useShellBackground("#000000");
-  const [session, setSession] = useState<any>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

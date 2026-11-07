@@ -8,8 +8,72 @@ import {
   eachDayOfInterval, parseISO, getDay,
 } from "date-fns";
 
+// ─── row shapes (match the select lists below) ──────────────────────────────
+interface BookingItemRow {
+  service_name: string | null;
+  price: number | null;
+  duration_minutes?: number | null;
+  sort_order: number | null;
+  quantity: number | null;
+}
+
+interface ClientNameFields {
+  client_name?: string | null;
+  guest_name?: string | null;
+  client?: { full_name?: string | null } | null;
+}
+
+interface DashboardBooking extends ClientNameFields {
+  id: string;
+  client_id: string | null;
+  canonical_client_id: string | null;
+  booking_date: string;
+  start_time: string;
+  end_time: string | null;
+  status: string | null;
+  total_amount: number | null;
+  balance_due: number | null;
+  full_payment_received: boolean | null;
+  final_payment_paid: boolean | null;
+  client_email: string | null;
+  client_phone: string | null;
+  guest_email: string | null;
+  guest_phone: string | null;
+  items: BookingItemRow[] | null;
+}
+
+interface AllTimeBooking extends ClientNameFields {
+  id: string;
+  booking_date: string | null;
+  created_at: string | null;
+  status: string | null;
+  total_amount: number | null;
+  lead_source: string | null;
+  client_id: string | null;
+  canonical_client_id: string | null;
+  client_email: string | null;
+  client_phone: string | null;
+  guest_email: string | null;
+  guest_phone: string | null;
+  items: BookingItemRow[] | null;
+}
+
+interface PaymentRow { id: string; amount: number | null; created_at: string | null; payment_type: string | null }
+interface StockRow { id: string; item_name: string; stock_on_hand: number | null; reorder_level: number | null }
+interface StaffProfileRow { id: string; full_name: string | null; role: string | null }
+interface AvailabilityRow {
+  id: string;
+  staff_id: string;
+  day_of_week: number;
+  day_enabled: boolean | null;
+  slot_start_time: string | null;
+  slot_end_time: string | null;
+  is_available: boolean | null;
+  specific_date: string | null;
+}
+
 // ─── helpers ────────────────────────────────────────────────────────────────
-function resolveClientName(b: any): string {
+function resolveClientName(b: ClientNameFields): string {
   return b.client_name || b.guest_name || b.client?.full_name || "Unknown";
 }
 
@@ -18,13 +82,15 @@ function isClientTypeLabel(src: string): boolean {
   return CLIENT_TYPE_LABELS.includes(src.toLowerCase().trim());
 }
 
-async function fetchAllPages(queryForRange: (from: number, to: number) => any): Promise<any[]> {
+type PageResponse = PromiseLike<{ data: unknown[] | null; error: unknown }>;
+
+async function fetchAllPages<T>(queryForRange: (from: number, to: number) => PageResponse): Promise<T[]> {
   const pageSize = 500;
-  const rows: any[] = [];
+  const rows: T[] = [];
   for (let offset = 0; ; offset += pageSize) {
     const { data, error } = await queryForRange(offset, offset + pageSize - 1);
     if (error) throw error;
-    rows.push(...(data ?? []));
+    rows.push(...((data ?? []) as T[]));
     if (!data || data.length < pageSize) break;
   }
   return rows;
@@ -33,15 +99,15 @@ async function fetchAllPages(queryForRange: (from: number, to: number) => any): 
 const HEAT_DAYS  = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const DOW_TO_IDX: Record<number, number> = { 1: 0, 2: 1, 3: 2, 4: 3, 5: 4, 6: 5, 0: 6 };
 
-function buildHeatSlots(availRows: any[]): { label: string; hourStart: number }[] {
-  const enabledRows = availRows.filter((row: any) =>
+function buildHeatSlots(availRows: AvailabilityRow[]): { label: string; hourStart: number }[] {
+  const enabledRows = availRows.filter((row) =>
     row.day_enabled === true && row.is_available === true && row.slot_start_time && row.slot_end_time
   );
-  const starts = enabledRows.map((row: any) => {
+  const starts = enabledRows.map((row) => {
     const [hours, mins] = row.slot_start_time.split(":").map(Number);
     return hours + (mins || 0) / 60;
   }).filter(Number.isFinite);
-  const ends = enabledRows.map((row: any) => {
+  const ends = enabledRows.map((row) => {
     const [hours, mins] = row.slot_end_time.split(":").map(Number);
     return hours + (mins || 0) / 60;
   }).filter(Number.isFinite);
@@ -64,21 +130,21 @@ function buildHeatSlots(availRows: any[]): { label: string; hourStart: number }[
  * (staff, date) wins wholesale over that day's recurring day_of_week row.
  */
 function resolveAvailabilityForRange(
-  availabilityRows: any[],
+  availabilityRows: AvailabilityRow[],
   staffIds: string[],
   rangeStart: string,
   rangeEnd: string,
-): any[] {
+): AvailabilityRow[] {
   const rangeDays = eachDayOfInterval({
     start: parseISO(rangeStart),
     end:   parseISO(rangeEnd),
   });
 
-  const resolved: any[] = [];
+  const resolved: AvailabilityRow[] = [];
 
   staffIds.forEach((staffId) => {
     const staffRows = availabilityRows.filter(
-      (row: any) => row.staff_id === staffId,
+      (row) => row.staff_id === staffId,
     );
 
     rangeDays.forEach((day) => {
@@ -86,14 +152,14 @@ function resolveAvailabilityForRange(
       const dow  = getDay(day);
 
       const dateOverrides = staffRows.filter(
-        (row: any) => row.specific_date === date,
+        (row) => row.specific_date === date,
       );
 
       const rows =
         dateOverrides.length > 0
           ? dateOverrides
           : staffRows.filter(
-              (row: any) =>
+              (row) =>
                 row.specific_date === null &&
                 row.day_of_week === dow,
             );
@@ -108,14 +174,14 @@ function resolveAvailabilityForRange(
 const STAFF_ROLES = ["owner", "admin", "staff"] as const;
 
 function buildTopServices(
-  bookingRows: any[],
+  bookingRows: { status: string | null; items: BookingItemRow[] | null }[],
   limit = 5,
 ): { name: string; count: number; revenue: number }[] {
   const svcMap = new Map<string, { count: number; revenue: number }>();
   // No-shows still represent a booking demand event and reserved capacity.
-  bookingRows.filter((b: any) => b.status !== "cancelled").forEach((b: any) => {
+  bookingRows.filter((b) => b.status !== "cancelled").forEach((b) => {
     const perBooking = new Map<string, number>();
-    [...(b.items ?? [])].sort((a: any, z: any) => (a.sort_order ?? 0) - (z.sort_order ?? 0)).forEach((i: any) => {
+    [...(b.items ?? [])].sort((a, z) => (a.sort_order ?? 0) - (z.sort_order ?? 0)).forEach((i) => {
       const name = String(i.service_name ?? "").trim();
       if (!name) return;
       perBooking.set(name, (perBooking.get(name) ?? 0) + Number(i.price ?? 0) * Math.max(1, Number(i.quantity ?? 1)));
@@ -203,7 +269,7 @@ export function useDashboardData() {
   const { data: bookings = [], isLoading: l1 } = useQuery({
     queryKey:  ["dash-bookings", tenantId, monthStart],
     staleTime: 3 * 60 * 1000,
-    queryFn: async () => fetchAllPages((from, to) => supabase
+    queryFn: async () => fetchAllPages<DashboardBooking>((from, to) => supabase
       .from("bookings")
       .select(`
         id, client_id, canonical_client_id, staff_id, booking_date, start_time, end_time,
@@ -228,7 +294,7 @@ export function useDashboardData() {
   const { data: allPayments = [], isLoading: l3 } = useQuery({
     queryKey:  ["dash-payments", tenantId, fetchFromDate, todayStr],
     staleTime: 3 * 60 * 1000,
-    queryFn: async () => fetchAllPages((from, to) => supabase
+    queryFn: async () => fetchAllPages<PaymentRow>((from, to) => supabase
       .from("payments")
       .select("id, amount, created_at, payment_type")
       .eq("tenant_id", tenantId)
@@ -244,7 +310,7 @@ export function useDashboardData() {
   const { data: stockItems = [] } = useQuery({
     queryKey: ["dash-stock", tenantId],
     staleTime: 5 * 60 * 1000,
-    queryFn: async () => fetchAllPages((from, to) => supabase
+    queryFn: async () => fetchAllPages<StockRow>((from, to) => supabase
       .from("stock_inventory")
       .select("id, item_name, stock_on_hand, reorder_level")
       .eq("tenant_id", tenantId)
@@ -254,7 +320,7 @@ export function useDashboardData() {
   });
 
   const lowStockItems = useMemo(
-    () => stockItems.filter((item: any) =>
+    () => stockItems.filter((item) =>
       Number(item.stock_on_hand ?? 0) <= Number(item.reorder_level ?? 5)
     ),
     [stockItems],
@@ -264,7 +330,7 @@ export function useDashboardData() {
   const { data: staffProfiles = [], isLoading: l4 } = useQuery({
     queryKey:  ["dash-staff-profiles", tenantId],
     staleTime: 10 * 60 * 1000,
-    queryFn: async () => fetchAllPages((from, to) => supabase
+    queryFn: async () => fetchAllPages<StaffProfileRow>((from, to) => supabase
       .from("profiles")
       .select("id, full_name, role")
       .eq("tenant_id", tenantId)
@@ -274,13 +340,13 @@ export function useDashboardData() {
   });
 
   // 6. Staff availability
-  const staffIds = useMemo(() => staffProfiles.map((s: any) => s.id), [staffProfiles]);
+  const staffIds = useMemo(() => staffProfiles.map((s) => s.id), [staffProfiles]);
 
   const { data: availabilityRows = [], isLoading: l5 } = useQuery({
     queryKey:  ["dash-availability", tenantId, monthStart],
     staleTime: 5 * 60 * 1000,
     enabled:   staffIds.length > 0,
-    queryFn: async () => fetchAllPages((from, to) => supabase
+    queryFn: async () => fetchAllPages<AvailabilityRow>((from, to) => supabase
       .from("staff_availability")
       .select("id, staff_id, day_of_week, day_enabled, slot_start_time, slot_end_time, is_available, specific_date")
       .eq("tenant_id", tenantId)
@@ -295,7 +361,7 @@ export function useDashboardData() {
     staleTime: 5 * 60 * 1000,
     queryFn: async () => {
       const pageSize = 500;
-      const rows: any[] = [];
+      const rows: AllTimeBooking[] = [];
       for (let offset = 0; ; offset += pageSize) {
         const { data, error } = await supabase.from("bookings").select(`
           id, booking_date, created_at, status, total_amount, lead_source,
@@ -307,7 +373,7 @@ export function useDashboardData() {
           .order("id", { ascending: true })
           .range(offset, offset + pageSize - 1);
         if (error) throw error;
-        rows.push(...(data ?? []));
+        rows.push(...((data ?? []) as unknown as AllTimeBooking[]));
         if (!data || data.length < pageSize) break;
       }
       return rows;
@@ -319,7 +385,7 @@ export function useDashboardData() {
 
   // ─── payment slices ──────────────────────────────────────────────────────
   const thisMonthPayments = useMemo(
-    () => allPayments.filter((p: any) => {
+    () => allPayments.filter((p) => {
       const d = (p.created_at ? format(new Date(p.created_at), "yyyy-MM-dd") : "");
       return d >= monthStart && d <= monthEnd;
     }),
@@ -327,7 +393,7 @@ export function useDashboardData() {
   );
 
   const prevMonthPayments = useMemo(
-    () => allPayments.filter((p: any) => {
+    () => allPayments.filter((p) => {
       const d = p.created_at ? format(new Date(p.created_at), "yyyy-MM-dd") : "";
       return d >= prevStart && d <= prevEnd;
     }),
@@ -335,7 +401,7 @@ export function useDashboardData() {
   );
 
   const prevMonthComparablePayments = useMemo(
-    () => allPayments.filter((p: any) => {
+    () => allPayments.filter((p) => {
       const d = p.created_at ? format(new Date(p.created_at), "yyyy-MM-dd") : "";
       return d >= prevStart && d <= prevMonthComparableEnd;
     }),
@@ -344,48 +410,48 @@ export function useDashboardData() {
 
   // ─── revenue totals ───────────────────────────────────────────────────────
   const monthRevenue = useMemo(
-    () => thisMonthPayments.reduce((s: number, p: any) => s + Number(p.amount ?? 0), 0),
+    () => thisMonthPayments.reduce((s: number, p) => s + Number(p.amount ?? 0), 0),
     [thisMonthPayments],
   );
 
   const prevMonthRevenue = useMemo(
-    () => prevMonthPayments.reduce((s: number, p: any) => s + Number(p.amount ?? 0), 0),
+    () => prevMonthPayments.reduce((s: number, p) => s + Number(p.amount ?? 0), 0),
     [prevMonthPayments],
   );
 
   const prevMonthComparableRevenue = useMemo(
-    () => prevMonthComparablePayments.reduce((s: number, p: any) => s + Number(p.amount ?? 0), 0),
+    () => prevMonthComparablePayments.reduce((s: number, p) => s + Number(p.amount ?? 0), 0),
     [prevMonthComparablePayments],
   );
 
   const todayRevenue = useMemo(
     () => allPayments
-      .filter((p: any) => (p.created_at ? format(new Date(p.created_at), "yyyy-MM-dd") : "") === todayStr)
-      .reduce((s: number, p: any) => s + Number(p.amount ?? 0), 0),
+      .filter((p) => (p.created_at ? format(new Date(p.created_at), "yyyy-MM-dd") : "") === todayStr)
+      .reduce((s: number, p) => s + Number(p.amount ?? 0), 0),
     [allPayments, todayStr],
   );
 
   // ─── booking splits ───────────────────────────────────────────────────────
   const todayBookings = useMemo(
-    () => bookings.filter((b: any) => b.booking_date === todayStr),
+    () => bookings.filter((b) => b.booking_date === todayStr),
     [bookings, todayStr],
   );
 
   // No-shows occupied a reserved slot, however they are not delivered appointments.
   const booked = useMemo(
-    () => bookings.filter((b: any) => b.status !== "cancelled"),
+    () => bookings.filter((b) => b.status !== "cancelled"),
     [bookings],
   );
   const active = useMemo(
-    () => bookings.filter((b: any) => b.status !== "cancelled" && b.status !== "no_show"),
+    () => bookings.filter((b) => b.status !== "cancelled" && b.status !== "no_show"),
     [bookings],
   );
   const cancelledBookings = useMemo(
-    () => bookings.filter((b: any) => b.status === "cancelled"),
+    () => bookings.filter((b) => b.status === "cancelled"),
     [bookings],
   );
   const noShowBookings = useMemo(
-    () => bookings.filter((b: any) => b.status === "no_show"),
+    () => bookings.filter((b) => b.status === "no_show"),
     [bookings],
   );
   const lostBookings = useMemo(
@@ -398,16 +464,16 @@ export function useDashboardData() {
 
   const upcoming = useMemo(
     () => todayBookings
-      .filter((b: any) => b.status !== "cancelled" && b.status !== "no_show")
-      .filter((b: any) => {
+      .filter((b) => b.status !== "cancelled" && b.status !== "no_show")
+      .filter((b) => {
         const [h, m] = (b.start_time || "00:00").split(":").map(Number);
         return h * 60 + m > nowMins;
       })
-      .sort((a: any, b: any) => a.start_time.localeCompare(b.start_time)),
+      .sort((a, b) => a.start_time.localeCompare(b.start_time)),
     [todayBookings, nowMins],
   );
 
-  const nextAppt = upcoming[0] as any;
+  const nextAppt = upcoming[0];
 
   // ─── top services (this month) ────────────────────────────────────────────
   const topServices = useMemo(
@@ -424,7 +490,7 @@ export function useDashboardData() {
   // ─── revenue trend: actual cash receipts only ────────────────────────────
   const revenueTrend = useMemo(() => {
     const paymentsMap: Record<string, number> = {};
-    allPayments.forEach((p: any) => {
+    allPayments.forEach((p) => {
       const date = (p.created_at ? format(new Date(p.created_at), "yyyy-MM-dd") : "");
       if (date >= trendStartDate && date <= todayStr) {
         paymentsMap[date] = (paymentsMap[date] || 0) + Number(p.amount ?? 0);
@@ -453,7 +519,7 @@ export function useDashboardData() {
   const heatmap = useMemo(() => {
     const heatSlots = buildHeatSlots(heatmapAvailabilityRows);
     const idx: Record<string, number> = {};
-    booked.forEach((b: any) => {
+    booked.forEach((b) => {
       const dow  = DOW_TO_IDX[new Date(b.booking_date + "T00:00:00").getDay()];
       const hour = parseInt((b.start_time || "0").split(":")[0]);
       if (dow === undefined) return;
@@ -482,7 +548,7 @@ export function useDashboardData() {
 
   const { clientKeySet, returningCount, retentionRate, newClientCount } = useMemo(() => {
     const firstCompletedVisitByClient = new Map<string, string>();
-    allTimeBookings.forEach((b: any) => {
+    allTimeBookings.forEach((b) => {
       if (b.status !== "completed") return;
       const key = identityKeys.get(b.id);
       if (!key || !b.booking_date) return;
@@ -493,7 +559,7 @@ export function useDashboardData() {
     });
 
     const latestMonthBookingDate = new Map<string, string>();
-    active.forEach((b: any) => {
+    active.forEach((b) => {
       const key = identityKeys.get(b.id);
       if (!key) return;
       const date = String(b.booking_date ?? "");
@@ -513,11 +579,11 @@ export function useDashboardData() {
       newClientCount: Math.max(0, keys.size - returning),
       retentionRate: keys.size ? Math.round((returning / keys.size) * 100) : 0,
     };
-  }, [active, allTimeBookings, identityKeys, monthStart]);
+  }, [active, allTimeBookings, identityKeys]);
 
   const leadSourceBreakdown = useMemo(() => {
-    const firstByClient = new Map<string, any>();
-    allTimeBookings.forEach((b: any) => {
+    const firstByClient = new Map<string, AllTimeBooking>();
+    allTimeBookings.forEach((b) => {
       const key = identityKeys.get(b.id);
       if (!key) return;
       const previous = firstByClient.get(key);
@@ -529,7 +595,7 @@ export function useDashboardData() {
       }
     });
     const map = new Map<string, number>();
-    firstByClient.forEach((first: any) => {
+    firstByClient.forEach((first) => {
       const source = String(first.lead_source ?? "").trim();
       const channel = !source || isClientTypeLabel(source) ? "Not recorded" : source;
       map.set(channel, (map.get(channel) || 0) + 1);
@@ -551,7 +617,7 @@ export function useDashboardData() {
     };
     type StaffCapacity = { recurring: Map<number, number>; overrides: Map<string, number> };
     const index = new Map<string, StaffCapacity>();
-    availabilityRows.forEach((row: any) => {
+    availabilityRows.forEach((row) => {
       if (!index.has(row.staff_id)) index.set(row.staff_id, { recurring: new Map(), overrides: new Map() });
       const staff = index.get(row.staff_id)!;
       const enabled = row.day_enabled === true && row.is_available === true;
@@ -575,7 +641,7 @@ export function useDashboardData() {
       });
     });
     if (availableMinutes <= 0) return null;
-    const bookedMinutes = booked.reduce((sum: number, b: any) => {
+    const bookedMinutes = booked.reduce((sum: number, b) => {
       const start = toMinutes(b.start_time), end = toMinutes(b.end_time);
       if (start === null || end === null) return sum;
       return sum + Math.max(0, end >= start ? end - start : 1440 - start + end);
@@ -587,7 +653,7 @@ export function useDashboardData() {
   type Alert = { text: string; type: "warning" | "info" | "danger" };
   const alerts = useMemo(() => {
     const list: Alert[] = [];
-    const outstandingPayments = bookings.filter((b: any) =>
+    const outstandingPayments = bookings.filter((b) =>
       b.status !== "cancelled" &&
       Number(b.balance_due ?? 0) > 0 &&
       b.full_payment_received !== true &&
@@ -599,7 +665,7 @@ export function useDashboardData() {
       list.push({ text: `${cancelledBookings.length} cancellation${cancelledBookings.length > 1 ? "s" : ""} this month`, type: "info" });
     if (noShowBookings.length > 0)
       list.push({ text: `${noShowBookings.length} no-show${noShowBookings.length > 1 ? "s" : ""} this month`, type: "warning" });
-    lowStockItems.forEach((s: any) => {
+    lowStockItems.forEach((s) => {
       const reorderLevel = Math.max(1, Number(s.reorder_level ?? 5));
       const criticalLevel = Math.min(2, reorderLevel);
       const critical = Number(s.stock_on_hand ?? 0) <= criticalLevel;
@@ -623,7 +689,7 @@ export function useDashboardData() {
       lastMonthToDate: prevMonthComparableRevenue,
     },
     today: {
-      appointments: todayBookings.filter((b: any) => b.status !== "cancelled" && b.status !== "no_show").length,
+      appointments: todayBookings.filter((b) => b.status !== "cancelled" && b.status !== "no_show").length,
       remaining:    upcoming.length,
       nextAppointment: nextAppt
         ? `${(nextAppt.start_time || "").slice(0, 5)} - ${resolveClientName(nextAppt)}`
@@ -634,12 +700,12 @@ export function useDashboardData() {
       staffLoading,
       avgBasket:
         active.length > 0
-          ? Math.round(active.reduce((sum: number, b: any) => sum + Number(b.total_amount ?? 0), 0) / active.length)
+          ? Math.round(active.reduce((sum: number, b) => sum + Number(b.total_amount ?? 0), 0) / active.length)
           : 0,
       totalAppointments: active.length,
       cancellationRate:
         bookings.length > 0 ? Math.round((cancelledBookings.length / bookings.length) * 100) : 0,
-      revenueLost: lostBookings.reduce((s: number, b: any) => s + Number(b.total_amount ?? 0), 0),
+      revenueLost: lostBookings.reduce((s: number, b) => s + Number(b.total_amount ?? 0), 0),
     },
     clients: {
       total:      clientKeySet.size,
@@ -652,20 +718,20 @@ export function useDashboardData() {
     allTimeTopServices,
     alerts,
     todayAppointments: todayBookings
-      .filter((b: any) => b.status !== "cancelled" && b.status !== "no_show")
-      .sort((a: any, b: any) => a.start_time.localeCompare(b.start_time))
-      .map((b: any) => ({
+      .filter((b) => b.status !== "cancelled" && b.status !== "no_show")
+      .sort((a, b) => a.start_time.localeCompare(b.start_time))
+      .map((b) => ({
         id:      b.id,
         time:    (b.start_time || "").slice(0, 5),
         client:  resolveClientName(b),
         service: [...(b.items ?? [])]
-          .sort((a: any, z: any) => (a.sort_order ?? 0) - (z.sort_order ?? 0))
-          .map((i: any) => i.service_name)
+          .sort((a, z) => (a.sort_order ?? 0) - (z.sort_order ?? 0))
+          .map((i) => i.service_name)
           .join(", ") || "none",
         status:  b.status as "confirmed" | "pending" | "complete" | "completed" | "cancelled",
         balance: Number(b.balance_due ?? 0),
       })),
-    stockAlerts: lowStockItems.map((s: any) => {
+    stockAlerts: lowStockItems.map((s) => {
       const reorderLevel = Math.max(1, Number(s.reorder_level ?? 5));
       const criticalLevel = Math.min(2, reorderLevel);
       return {

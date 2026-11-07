@@ -6,7 +6,19 @@
  * tokens include the guest's first name so family members sharing an email
  * or phone number are not automatically merged.
  */
-export function buildClientIdentityKeys(rows: any[]): Map<string, string | null> {
+export interface ClientIdentityRow {
+  id: string;
+  canonical_client_id?: string | null;
+  client_id?: string | null;
+  client_name?: string | null;
+  guest_name?: string | null;
+  client_email?: string | null;
+  guest_email?: string | null;
+  client_phone?: string | null;
+  guest_phone?: string | null;
+}
+
+export function buildClientIdentityKeys(rows: ClientIdentityRow[]): Map<string, string | null> {
   const parent = new Map<string, string>();
 
   const normalizePhone = (value: unknown): string => {
@@ -16,7 +28,7 @@ export function buildClientIdentityKeys(rows: any[]): Map<string, string | null>
       : digits;
   };
 
-  const tokensFor = (booking: any): string[] => {
+  const tokensFor = (booking: ClientIdentityRow): string[] => {
     const tokens: string[] = [];
     if (booking.canonical_client_id) tokens.push(`canonical:${booking.canonical_client_id}`);
     if (booking.client_id) tokens.push(`client:${booking.client_id}`);
@@ -73,7 +85,7 @@ export function buildClientIdentityKeys(rows: any[]): Map<string, string | null>
   };
 
   const tokensByBookingId = new Map<string, string[]>();
-  rows.forEach((booking: any) => {
+  rows.forEach((booking) => {
     const tokens = tokensFor(booking);
     tokensByBookingId.set(booking.id, tokens);
     tokens.forEach(find);
@@ -83,7 +95,7 @@ export function buildClientIdentityKeys(rows: any[]): Map<string, string | null>
   });
 
   const result = new Map<string, string | null>();
-  rows.forEach((booking: any) => {
+  rows.forEach((booking) => {
     const tokens = tokensByBookingId.get(booking.id) ?? [];
     result.set(booking.id, tokens.length > 0 ? find(tokens[0]) : null);
   });

@@ -1,14 +1,16 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { saLog } from "@/lib/saAudit";
+import type { Json } from "@/integrations/supabase/types";
 import { Radio, RefreshCw, Loader2, CheckCircle2, XCircle, Clock, AlertTriangle, RotateCcw } from "lucide-react";
 
 interface WebhookEvent {
   id: string; event_type: string | null; status: string | null;
-  payload: any; error_message: string | null;
+  payload: Json; error_message: string | null;
   created_at: string | null; processed_at: string | null;
   tenant_id: string | null;
 }
+const MAX_ATTEMPTS = 5;
 interface TenantMap { [id: string]: string; }
 
 const GlassCard = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
@@ -28,8 +30,8 @@ export default function SAWebhookQueue() {
   const load = async () => {
     setLoading(true);
     const [{ data: evts }, { data: tenants }] = await Promise.all([
-      supabase.from("webhook_events")
-        .select("id, event_type, status, payload, error_message, created_at, processed_at, tenant_id")
+      supabase.from("webhook_queue")
+        .select("id, event_type, processed, retry_count, payload, error_message, created_at, processed_at, tenant_id")
         .order("created_at", { ascending: false })
         .limit(500),
       supabase.from("tenants").select("id, name"),
@@ -37,20 +39,25 @@ export default function SAWebhookQueue() {
     const tMap: TenantMap = {};
     for (const t of tenants ?? []) tMap[t.id] = t.name ?? t.id.slice(0, 8);
     setTenantMap(tMap);
-    setEvents(evts ?? []);
+    // webhook_queue has no status column: derive it the way the queue
+    // processor treats rows (get_next_webhook gives up after 5 attempts).
+    setEvents((evts ?? []).map(({ processed, retry_count, ...row }) => ({
+      ...row,
+      status: processed ? "processed" : (retry_count ?? 0) >= MAX_ATTEMPTS ? "failed" : "pending",
+    })));
     setLoading(false);
   };
 
   useEffect(() => { load(); }, []);
 
-  // Stub retry: mark event back to pending so the worker picks it up
+  // Retry: reset the row so the queue processor picks it up again
   const handleRetry = async (e: WebhookEvent) => {
     setRetrying(e.id);
-    await supabase.from("webhook_events")
-      .update({ status: "pending", error_message: null, processed_at: null })
+    await supabase.from("webhook_queue")
+      .update({ processed: false, retry_count: 0, error_message: null, processed_at: null, processing_started_at: null })
       .eq("id", e.id);
     // Log action to audit log
-    await saLog("webhook.retry", "webhook_events", e.id, e.event_type ?? "unknown", { previous_status: e.status });
+    await saLog("webhook.retry", "webhook_queue", e.id, e.event_type ?? "unknown", { previous_status: e.status });
     setRetrying(null);
     load();
   };

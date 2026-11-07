@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
     // Fetch the booking first to check current status
     const { data: booking, error: fetchErr } = await supabase
       .from("bookings")
-      .select("id, status, tenant_id, client_name, guest_name, booking_date, start_time")
+      .select("id, status, client_name, guest_name, booking_date, start_time")
       .eq("id", booking_id)
       .single();
 
@@ -106,17 +106,18 @@ Deno.serve(async (req) => {
     const clientName = booking.client_name || booking.guest_name || "Client";
     console.log("confirm-booking: confirmed", booking_id, clientName);
 
-    // Fire the client confirmation email (non-blocking — page response is not delayed)
-    supabase.functions.invoke("send-booking-email", {
-      body: {
-        booking_id,
-        tenant_id:  booking.tenant_id,
-        email_type: "booking_confirmed",
+    // Dispatch confirmation email — fire-and-forget, does not block the HTML response
+    fetch(`${supabaseUrl}/functions/v1/send-booking-email`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${serviceKey}`,
       },
-    }).then(({ error }) => {
-      if (error) console.warn("confirm-booking: send-booking-email warning", error.message);
-      else console.log("confirm-booking: booking_confirmed email dispatched for", booking_id);
-    });
+      body: JSON.stringify({
+        booking_id,
+        email_type: "booking_confirmed",
+      }),
+    }).catch((e) => console.error("confirm-booking: email dispatch failed", booking_id, e));
 
     return new Response(
       htmlPage(

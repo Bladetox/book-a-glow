@@ -51,7 +51,7 @@ const BlockClientModal = ({
       toast.success(`${clientName || "Client"} has been blocked`);
       onSuccess(true);
       onClose();
-    } catch (e: any) {
+    } catch (e) {
       toast.error(e.message || "Failed to block client");
     } finally {
       setLoading(false);
@@ -70,7 +70,7 @@ const BlockClientModal = ({
       toast.success(`${clientName || "Client"} has been unblocked`);
       onSuccess(false);
       onClose();
-    } catch (e: any) {
+    } catch (e) {
       toast.error(e.message || "Failed to unblock client");
     } finally {
       setLoading(false);

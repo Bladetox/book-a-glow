@@ -20,22 +20,10 @@ jobs:
         with:
           version: latest
 
+      # Deploys every function under supabase/functions so production always
+      # matches main. Per-function verify_jwt comes from supabase/config.toml.
+      # Any failure fails the job: a green run must mean production is in sync.
       - name: Deploy edge functions
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-        run: |
-          echo "=== Deploying places-autocomplete ==="
-          supabase functions deploy places-autocomplete --project-ref kjibbbuceipnialfgflt --no-verify-jwt --debug || echo "FAILED: places-autocomplete"
-          echo "=== Deploying send-booking-email ==="
-          supabase functions deploy send-booking-email --project-ref kjibbbuceipnialfgflt --no-verify-jwt --debug || echo "FAILED: send-booking-email"
-          echo "=== Deploying yoco-checkout ==="
-          supabase functions deploy yoco-checkout --project-ref kjibbbuceipnialfgflt --no-verify-jwt --debug || echo "FAILED: yoco-checkout"
-          echo "=== Deploying yoco-webhook ==="
-          supabase functions deploy yoco-webhook --project-ref kjibbbuceipnialfgflt --no-verify-jwt --debug || echo "FAILED: yoco-webhook"
-          echo "=== Deploying register-yoco-webhook ==="
-          supabase functions deploy register-yoco-webhook --project-ref kjibbbuceipnialfgflt --debug || echo "FAILED: register-yoco-webhook"
-          echo "=== Deploying gcal-backfill ==="
-          supabase functions deploy gcal-backfill --project-ref kjibbbuceipnialfgflt --no-verify-jwt --debug || echo "FAILED: gcal-backfill"
-          echo "=== Deploying update-gcal-event ==="
-          supabase functions deploy update-gcal-event --project-ref kjibbbuceipnialfgflt --no-verify-jwt --debug || echo "FAILED: update-gcal-event"
-          echo "=== All deploy attempts complete ==="
+        run: supabase functions deploy --project-ref kjibbbuceipnialfgflt

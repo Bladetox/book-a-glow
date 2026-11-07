@@ -65,11 +65,15 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 // ── Data access ──────────────────────────────────────────────────────────────
 
-async function fetchAll(table: string, tenantId: string): Promise<Row[]> {
+type ExportTable = "bookings" | "guest_consultations" | "blocked_clients" | "client_occasions";
+
+async function fetchAll(table: ExportTable, tenantId: string): Promise<Row[]> {
   const rows: Row[] = [];
   for (let from = 0; ; from += PAGE_SIZE) {
-    const { data, error } = await (supabase as any)
-      .from(table)
+    // Cast to one member of the union: the four tables share the columns used
+    // here, and a union of table names is too wide for the client generics.
+    const { data, error } = await supabase
+      .from(table as "bookings")
       .select("*")
       .eq("tenant_id", tenantId)
       .order("created_at", { ascending: true })

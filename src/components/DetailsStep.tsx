@@ -470,7 +470,7 @@ useEffect(() => {
 
       if (cancelled) return;
 
-      const bt = (tenantRow as any)?.business_type as BusinessType | null;
+      const bt = tenantRow?.business_type as BusinessType | null;
       const fallback =
         bt && defaultConsultationQuestions[bt]
           ? defaultConsultationQuestions[bt]
@@ -486,7 +486,7 @@ useEffect(() => {
             .eq("id", tenantId)
             .single();
           if (cancelled) return;
-          const fallbackType = (fallbackTenantRow as any)?.business_type as BusinessType | null;
+          const fallbackType = fallbackTenantRow?.business_type as BusinessType | null;
           setConsultationQuestions(
             fallbackType && defaultConsultationQuestions[fallbackType]
               ? defaultConsultationQuestions[fallbackType]

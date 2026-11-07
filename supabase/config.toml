@@ -1,16 +1,152 @@
 project_id = "kjibbbuceipnialfgflt"
 
+# verify_jwt mirrors each function as deployed in production. Functions with
+# verify_jwt = false do their own auth (webhook signatures, cron secrets, or
+# explicit user checks) or are intentionally public.
+
+[functions.activate-tenant]
+verify_jwt = false
+
+[functions.add-booking-service]
+verify_jwt = false
+
+[functions.backfill-gcal-events]
+verify_jwt = false
+
+[functions.booking-payment-webhook]
+verify_jwt = false
+
+[functions.broadcast-email]
+verify_jwt = true
+
+[functions.check-guest-blocked]
+verify_jwt = false
+
+[functions.confirm-booking]
+verify_jwt = false
+
+[functions.create-calendar-event]
+verify_jwt = false
+
 [functions.create-tenant]
+verify_jwt = true
+
+[functions.delete-gcal-event]
 verify_jwt = false
 
-[functions.yoco-checkout]
+[functions.export-nextslot-phenome]
 verify_jwt = false
 
-[functions.yoco-webhook]
+[functions.fetch-google-reviews]
+verify_jwt = false
+
+[functions.gcal-backfill]
+verify_jwt = false
+
+[functions.get-or-create-client]
+verify_jwt = false
+
+[functions.gmb-auth-callback]
+verify_jwt = false
+
+[functions.google-calendar-callback]
+verify_jwt = false
+
+[functions.ikhokha-checkout]
+verify_jwt = false
+
+[functions.ikhokha-webhook]
+verify_jwt = false
+
+[functions.initiate-deposit-checkout]
+verify_jwt = false
+
+[functions.manifest]
+verify_jwt = false
+
+[functions.payfast-checkout]
+verify_jwt = true
+
+[functions.payfast-itn]
+verify_jwt = false
+
+[functions.places-autocomplete]
+verify_jwt = false
+
+[functions.platform-billing-checkout]
+verify_jwt = true
+
+[functions.platform-billing-webhook]
+verify_jwt = false
+
+[functions.platform-monthly-billing]
+verify_jwt = true
+
+[functions.platform-monthly-billing-test]
+verify_jwt = true
+
+[functions.platform-payment-webhook]
+verify_jwt = false
+
+[functions.process-webhook-queue]
+verify_jwt = false
+
+[functions.register-custom-domain]
+verify_jwt = false
+
+[functions.register-yoco-webhook]
+verify_jwt = false
+
+[functions.reply-to-review]
+verify_jwt = true
+
+[functions.save-ikhokha-keys]
+verify_jwt = true
+
+[functions.save-payfast-keys]
+verify_jwt = true
+
+[functions.save-pending-onboarding]
+verify_jwt = true
+
+[functions.save-secret]
+verify_jwt = true
+
+[functions.save-tenant-secret]
+verify_jwt = true
+
+[functions.save-yoco-keys]
+verify_jwt = true
+
+[functions.send-billing-receipt]
 verify_jwt = false
 
 [functions.send-booking-email]
 verify_jwt = false
 
-[functions.places-autocomplete]
+[functions.send-email]
+verify_jwt = false
+
+[functions.send-superadmin-otp]
+verify_jwt = true
+
+[functions.tmp-logo-upload]
+verify_jwt = false
+
+[functions.update-gcal-event]
+verify_jwt = false
+
+[functions.yoco-balance]
+verify_jwt = true
+
+[functions.yoco-checkout]
+verify_jwt = false
+
+[functions.yoco-manage-webhook]
+verify_jwt = false
+
+[functions.yoco-payment-lookup]
+verify_jwt = false
+
+[functions.yoco-webhook]
 verify_jwt = false
