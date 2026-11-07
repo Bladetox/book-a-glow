@@ -317,7 +317,7 @@ function rise(el, t, a, dur = .5, dist = 60) {
 const tagWords = "Booking software for independent service businesses.".split(" ");
 $("#s2tag").innerHTML = tagWords.map(w => `<span class="w">${w}</span>`).join(" ");
 
-function render(t) {
+function renderBase(t) {
   for (const id in W) $("#" + id).style.opacity = sceneOpacity(t, W[id]);
 
   // ── 1. Hook ──
@@ -449,10 +449,15 @@ function render(t) {
     rise($("#s7foot"), t, 19.1, .4, 20);
   }
 }
-window.render = render;
+// Length is set with ?d=<seconds> (default 20). The timeline above is authored
+// in 20-second time; longer cuts play the same choreography proportionally slower.
+const DURATION = +(new URLSearchParams(location.search).get("d") || 20);
+const STRETCH = DURATION / 20;
+window.DURATION = DURATION;
+window.render = t => renderBase(t / STRETCH);
 window.ready = document.fonts.ready.then(() => Promise.all(
   Array.from(document.images).map(i => i.complete ? 1 : new Promise(r => { i.onload = i.onerror = r; }))));
-render(0);
+renderBase(0);
 </script>
 </body>
 </html>

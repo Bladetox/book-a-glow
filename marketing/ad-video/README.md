@@ -1,9 +1,12 @@
-# NextSlot 20-second ad
+# NextSlot ad (20s and 30s cuts)
 
 A vertical (1080×1920, 30 fps) motion-graphics ad aimed at independent service
 providers, for Reels, TikTok, YouTube Shorts and WhatsApp Status.
 
 ## Storyboard
+
+Times are for the 20-second cut. The 30-second cut (`out/nextslot-ad-30s.mp4`)
+plays the same scenes 1.5× slower, so each scene holds 50% longer.
 
 | Time | Scene | Message |
 |---|---|---|
@@ -23,10 +26,17 @@ are illustrative.
 ## Build
 
 ```bash
-python3 music.py           # out/music.wav: original synthesized soundtrack and SFX
-node render.cjs stills 1 8.8 19.8   # optional: review stills in out/
-node render.cjs video      # out/nextslot-ad.mp4 (H.264 + AAC, loudness -14 LUFS)
+python3 music.py                       # out/music.wav: original synthesized soundtrack and SFX
+node render.cjs stills 1 8.8 19.8      # optional: review stills in out/
+node render.cjs video                  # out/nextslot-ad.mp4 (20s, H.264 + AAC, -14 LUFS)
+
+python3 music.py 30                    # out/music-30s.wav
+DURATION=30 node render.cjs video      # out/nextslot-ad-30s.mp4
 ```
+
+Any length works (for example `DURATION=25`). The choreography in `ad.html` is
+written on a 20-second timeline and stretched proportionally. The music keeps
+a real 120 BPM while its cues move with the scenes.
 
 Requires Playwright with Chromium, ffmpeg and numpy. Each frame is rendered
 deterministically by `render(t)` in `ad.html`, so the output is identical on

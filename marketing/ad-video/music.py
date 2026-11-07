@@ -1,13 +1,21 @@
-"""Synthesises the ad's original soundtrack + sound effects -> out/music.wav (20 s, 44.1 kHz stereo).
+"""Synthesises the ad's original soundtrack + sound effects.
 
-Cue times match the animation timeline in ad.html.
+    python3 music.py        -> out/music.wav      (20 s)
+    python3 music.py 30     -> out/music-30s.wav  (30 s)
+
+Cue times below are written on the 20-second timeline of ad.html and scaled
+by S for longer cuts; the groove keeps a real 120 BPM at any length.
 """
 import os
 import wave
 
+import sys
+
 import numpy as np
 
-SR, DUR = 44100, 20.0
+SR = 44100
+DUR = float(sys.argv[1]) if len(sys.argv) > 1 else 20.0
+S = DUR / 20.0          # timeline stretch
 N = int(SR * DUR)
 rng = np.random.default_rng(7)
 L = np.zeros(N)
@@ -19,7 +27,8 @@ def t_axis(sec):
 
 
 def add(sig, at, gain=1.0, pan=0.0):
-    i = int(at * SR)
+    """Place a sound at `at` seconds on the 20-second timeline (scaled by S)."""
+    i = int(at * S * SR)
     if i >= N:
         return
     sig = sig[: N - i] * gain
@@ -108,7 +117,7 @@ def bass(f, dur):
 
 
 # ── 0–3.3 s: tense intro under the DM chaos ──
-t = t_axis(3.4)
+t = t_axis(3.4 * S)
 drone = (np.sin(2 * np.pi * 55 * t) + 0.5 * np.sin(2 * np.pi * 82.4 * t)) * env(len(t), 0.4, 0.3)
 add(drone, 0, 0.18)
 for i in range(13):                       # ticking clock
@@ -119,7 +128,7 @@ add(thud(), 2.45, 0.9)                    # NO-SHOW stamp
 add(whoosh(0.5), 2.95, 0.5)               # into the wipe
 
 # ── 3.35 s onwards: warm groove, 120 BPM ──
-start, beat = 3.35, 0.5
+start, beat = 3.35, 0.5 / S          # beat in timeline units = 0.5 s real
 prog = [[60, 64, 67, 71], [55, 59, 62, 67], [57, 60, 64, 67], [53, 57, 60, 64]]   # Cmaj7 G Am F
 roots = [36, 43, 45, 41]
 bar = 0
@@ -136,7 +145,7 @@ while tt < 19.3:
         add(hat(0.7), bt + beat / 2, 0.16, pan=0.25)
         if b in (1, 3):
             add(hat(0.9, 18), bt, 0.10, pan=-0.2)   # soft snare-ish noise
-    tt += 2.0
+    tt += 4 * beat
     bar += 1
 
 add(thud(), 3.35, 0.5)                    # reveal impact
@@ -153,19 +162,20 @@ for i in range(4):                        # photo cuts
     add(hat(1.0, 25), 16.0 + i * 0.5, 0.18)
 for k, m in enumerate((72, 76, 79, 84)):  # CTA arpeggio
     add(bell(note(m), 1.4), 18.8 + k * 0.07, 0.2)
-add(pad([note(m) for m in (48, 60, 64, 67, 72)], 1.6), 19.3, 0.12)   # final chord rings out
+add(pad([note(m) for m in (48, 60, 64, 67, 72)], 1.6 * S), 19.3, 0.12)   # final chord rings out
 
 # ── master ──
 mix = np.stack([L, R], axis=1)
 fade = np.ones(N)
-fade[int(19.2 * SR):] = np.linspace(1, 0, N - int(19.2 * SR)) ** 1.5
+fade[int(19.2 * S * SR):] = np.linspace(1, 0, N - int(19.2 * S * SR)) ** 1.5
 mix *= fade[:, None]
 mix = np.tanh(mix * 1.4) / np.tanh(1.4)  # gentle glue
 mix *= 0.89 / np.max(np.abs(mix))        # peak ≈ -1 dBFS
 os.makedirs("out", exist_ok=True)
-with wave.open("out/music.wav", "wb") as w:
+name = "out/music.wav" if DUR == 20 else f"out/music-{int(DUR)}s.wav"
+with wave.open(name, "wb") as w:
     w.setnchannels(2)
     w.setsampwidth(2)
     w.setframerate(SR)
     w.writeframes((mix * 32767).astype("<i2").tobytes())
-print("wrote out/music.wav", mix.shape[0] / SR, "s")
+print("wrote", name, mix.shape[0] / SR, "s")
