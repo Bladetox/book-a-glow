@@ -5,6 +5,11 @@
 - Every schema change is applied to production (Supabase MCP `apply_migration`)
   and committed under `supabase/migrations/`. `apply_migration` assigns its own
   version timestamp, so rename the repo file to the applied version afterwards.
+- If `apply_migration` times out waiting for an approval that never arrives,
+  don't keep retrying: give the user the SQL to run in the Supabase SQL Editor,
+  then insert the row into `supabase_migrations.schema_migrations` yourself
+  (version = current UTC `YYYYMMDDHH24MISS`, plus the name) and commit the file
+  under that version.
 - Check sync: sorted versions from `supabase/migrations/*.sql` must equal
   `select version from supabase_migrations.schema_migrations order by 1`.
 - Edge functions in `supabase/functions/` must match what is deployed. There is
