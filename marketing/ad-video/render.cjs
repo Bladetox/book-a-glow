@@ -37,7 +37,7 @@ const OUT = path.join(__dirname, "out");
       "-f", "image2pipe", "-framerate", String(FPS), "-i", "-",
       "-i", path.join(OUT, `music${SUFFIX}.wav`),
       "-c:v", "libx264", "-preset", "slow", "-crf", "18", "-pix_fmt", "yuv420p", "-profile:v", "high",
-      "-af", "loudnorm=I=-14:TP=-1.5:LRA=11", "-ar", "44100", "-c:a", "aac", "-b:a", "192k", "-shortest", "-movflags", "+faststart",
+      "-af", "loudnorm=I=-14:TP=-1.5:LRA=11,alimiter=limit=0.84:level=disabled", "-ar", "44100", "-c:a", "aac", "-b:a", "192k", "-shortest", "-movflags", "+faststart",
       path.join(OUT, `nextslot-ad${SUFFIX}.mp4`),
     ], { stdio: ["pipe", "inherit", "inherit"] });
     for (let i = 0; i < FPS * DURATION; i++) {
