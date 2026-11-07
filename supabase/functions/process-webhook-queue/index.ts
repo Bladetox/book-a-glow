@@ -4,8 +4,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 // dispatches to the appropriate edge function. We do NOT require a JWT
 // (verify_jwt: false) because pg_cron cannot send one, but we protect
 // the endpoint with a secret header shared with the cron job. The secret
-// lives in Vault (process_webhook_queue_secret) and there is deliberately
-// no fallback value: a missing secret must fail closed.
+// lives in public.internal_cron_secrets (service-role only) and there is
+// deliberately no fallback value: a missing secret must fail closed.
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -34,10 +34,12 @@ Deno.serve(async (req) => {
     });
 
     // Only allow internal callers that know the cron secret.
-    const { data: vaultSecret } = await supabase.rpc("get_vault_secret", {
-      secret_name: "process_webhook_queue_secret",
-    });
-    const expectedSecret = Deno.env.get("PROCESS_WEBHOOK_QUEUE_SECRET") || (typeof vaultSecret === "string" ? vaultSecret : "");
+    const { data: secretRow } = await supabase
+      .from("internal_cron_secrets")
+      .select("secret")
+      .eq("name", "process_webhook_queue")
+      .maybeSingle();
+    const expectedSecret = Deno.env.get("PROCESS_WEBHOOK_QUEUE_SECRET") || secretRow?.secret || "";
     const headerSecret = req.headers.get("x-cron-secret");
     if (!expectedSecret || !headerSecret || headerSecret !== expectedSecret) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
