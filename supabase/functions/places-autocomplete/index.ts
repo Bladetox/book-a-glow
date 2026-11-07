@@ -25,8 +25,12 @@ Deno.serve(async (req) => {
     const sub = reqOrigin.match(/https?:\/\/([^.]+)\.nextslot\.co\.za/);
     if (sub) tenantId = sub[1];
 
-    // Fetch API key — app_settings first, then Vault if sentinel, then env fallback
-    let apiKey: string | null = null;
+    // API key: the tenant's own key (plain value in app_settings, or stored
+    // encrypted via save-secret and read with get_tenant_secret), else the
+    // platform key. The vault schema is not exposed over REST, so it must be
+    // read through the get_tenant_secret RPC, never .from('vault.…').
+    const platformKey = Deno.env.get('GOOGLE_PLACES_API_KEY') ?? null;
+    let tenantKey: string | null = null;
     if (tenantId) {
       const { data } = await supabase
         .from('app_settings')
@@ -38,21 +42,32 @@ Deno.serve(async (req) => {
       const rawValue = data?.value ?? null;
 
       if (rawValue && rawValue !== 'vault:configured') {
-        // Plain value stored directly
-        apiKey = rawValue;
+        tenantKey = rawValue;
       } else if (rawValue === 'vault:configured') {
-        // Key has been migrated to Vault — resolve from decrypted_secrets view
-        const { data: vaultData, error: vaultErr } = await supabase
-          .from('vault.decrypted_secrets')
-          .select('decrypted_secret')
-          .eq('name', `${tenantId}:google_maps_api_key`)
-          .maybeSingle();
-        if (!vaultErr && vaultData?.decrypted_secret) {
-          apiKey = vaultData.decrypted_secret;
-        }
+        const { data: secret, error: secretErr } = await supabase.rpc('get_tenant_secret', {
+          p_tenant_id: tenantId,
+          p_key: 'google_maps_api_key',
+        });
+        if (secretErr) console.warn('get_tenant_secret failed for google_maps_api_key:', secretErr.message);
+        else if (typeof secret === 'string' && secret !== '') tenantKey = secret;
       }
     }
-    if (!apiKey) apiKey = Deno.env.get('GOOGLE_PLACES_API_KEY') ?? null;
+    const apiKey = tenantKey ?? platformKey;
+
+    // If the tenant's key is rejected by Google (restricted, disabled billing,
+    // revoked), retry once with the platform key so address lookup keeps working.
+    const callGoogle = async (url: string, params: URLSearchParams) => {
+      const res = await fetch(`${url}?${params}`);
+      const json = await res.json();
+      if (tenantKey && platformKey && tenantKey !== platformKey &&
+          (json?.status === 'REQUEST_DENIED' || json?.status === 'OVER_QUERY_LIMIT')) {
+        console.warn(`Tenant Google key rejected for ${tenantId} (${json.status}); using platform key`);
+        params.set('key', platformKey);
+        const retry = await fetch(`${url}?${params}`);
+        return await retry.json();
+      }
+      return json;
+    };
 
     if (!apiKey) {
       return new Response(
@@ -70,8 +85,7 @@ Deno.serve(async (req) => {
         units: 'metric',
         region: 'za',
       });
-      const dmRes = await fetch(`https://maps.googleapis.com/maps/api/distancematrix/json?${dmParams}`);
-      const dmData = await dmRes.json();
+      const dmData = await callGoogle('https://maps.googleapis.com/maps/api/distancematrix/json', dmParams);
       const element = dmData?.rows?.[0]?.elements?.[0];
       if (element?.status === 'OK') {
         const distanceKm = Math.round((element.distance.value / 1000) * 10) / 10;
@@ -103,10 +117,7 @@ Deno.serve(async (req) => {
       types: 'address',
     });
 
-    const acRes = await fetch(
-      `https://maps.googleapis.com/maps/api/place/autocomplete/json?${acParams}`
-    );
-    const acData = await acRes.json();
+    const acData = await callGoogle('https://maps.googleapis.com/maps/api/place/autocomplete/json', acParams);
 
     if (acData.status !== 'OK' && acData.status !== 'ZERO_RESULTS') {
       console.error('Places API error:', acData.status, acData.error_message);
