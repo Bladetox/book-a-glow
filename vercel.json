@@ -197,7 +197,7 @@
       ]
     },
     {
-      "source": "/((?!demo/admin-embed).*)",
+      "source": "/(.*)",
       "headers": [
         {
           "key": "X-Frame-Options",
@@ -220,36 +220,21 @@
           "value": "camera=(), microphone=(), geolocation=()"
         }
       ]
-    },
-    {
-      "source": "/demo/admin-embed",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "no-cache, must-revalidate"
-        },
-        {
-          "key": "Content-Security-Policy",
-          "value": "frame-ancestors 'self' https://nextslot.co.za https://www.nextslot.co.za"
-        },
-        {
-          "key": "X-Robots-Tag",
-          "value": "noindex, nofollow"
-        },
-        {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        },
-        {
-          "key": "Referrer-Policy",
-          "value": "strict-origin-when-cross-origin"
-        }
-      ]
     }
   ],
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "cleanUrls": true,
   "redirects": [
+    {
+      "source": "/demo/admin-embed",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/demo",
+      "destination": "/",
+      "permanent": true
+    },
     {
       "source": "/signup",
       "destination": "/onboarding",

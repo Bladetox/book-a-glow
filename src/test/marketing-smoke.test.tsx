@@ -1,11 +1,11 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent, within } from "@testing-library/react";
+import { render } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import About from "@/pages/About";
 import CaseStudy from "@/pages/CaseStudy";
 import Resources from "@/pages/Resources";
-import Demo from "@/pages/Demo";
-import BookingAppPreview from "@/components/site/BookingAppPreview";
+import OnlineBookingSoftware from "@/pages/OnlineBookingSoftware";
+import SiteHeader from "@/components/site/SiteHeader";
 
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: { auth: { getSession: async () => ({ data: { session: null } }), onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } }) }, from: () => ({ select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: null }) }) }) }) },
@@ -14,7 +14,7 @@ vi.mock("@/integrations/supabase/client", () => ({
 const wrap = (ui: React.ReactElement, path = "/") => render(<MemoryRouter initialEntries={[path]}>{ui}</MemoryRouter>);
 
 describe("marketing pages render", () => {
-  it.each([["About", <About />], ["CaseStudy", <CaseStudy />], ["Resources", <Resources />], ["Demo", <Demo />]])("%s has exactly one h1", (_n, el) => {
+  it.each([["About", <About />], ["CaseStudy", <CaseStudy />], ["Resources", <Resources />], ["OnlineBookingSoftware", <OnlineBookingSoftware />]])("%s has exactly one h1", (_n, el) => {
     const { container } = wrap(el as React.ReactElement);
     expect(container.querySelectorAll("h1").length).toBe(1);
   });
@@ -24,21 +24,18 @@ describe("marketing pages render", () => {
   });
 });
 
-describe("booking preview mirrors live flow", () => {
-  it("requires a referral, steps through to confirmation", () => {
-    wrap(<BookingAppPreview />);
-    fireEvent.click(screen.getByText(/Book Your Appointment/i));
-    expect(screen.getByText(/Please select an option/i)).toBeTruthy();
-    fireEvent.click(screen.getByText("Instagram"));
-    fireEvent.click(screen.getByText(/Book Your Appointment/i));
-    expect(screen.getByText("Select a service")).toBeTruthy();
-    const next = screen.getByText("Next") as HTMLButtonElement;
-    expect(next.disabled).toBe(true);
-    fireEvent.click(screen.getByLabelText("Add one Bridal Glam"));
-    fireEvent.click(screen.getByLabelText("Add one Bridal Glam"));
-    expect(screen.getByText("2 selected")).toBeTruthy();
-    fireEvent.click(screen.getByText("Next"));
-    expect(screen.getByText(/Choose date/i)).toBeTruthy();
+describe("retired demo route is absent from marketing navigation", () => {
+  it("does not expose /demo in desktop or mobile navigation", () => {
+    const { container } = wrap(<SiteHeader />);
+    expect(container.querySelector('a[href="/demo"]')).toBeNull();
+  });
+});
+
+describe("SEO landing page CTA", () => {
+  it("offers pricing instead of a demo walkthrough", () => {
+    const { container } = wrap(<OnlineBookingSoftware />);
+    expect(container.querySelector('a[href="/demo"]')).toBeNull();
+    expect([...container.querySelectorAll("a")].some(a => a.getAttribute("href") === "/pricing" && a.textContent?.includes("View pricing"))).toBe(true);
   });
 });
 
@@ -48,20 +45,6 @@ describe("mobile About + nav + hero CTA", () => {
     const { container } = wrap(<About />);
     const grids = [...container.querySelectorAll<HTMLElement>("div")].filter(d => d.style.gridTemplateColumns.includes("340px"));
     expect(grids.length).toBe(0);
-  });
-});
-
-import DemoAdminEmbed from "@/pages/DemoAdminEmbed";
-
-describe("demo admin embed uses the real dashboard", () => {
-  it("renders the real shell and dashboard sections from sample data", async () => {
-    const { container } = wrap(<DemoAdminEmbed />);
-    expect(screen.getAllByText("Studio M").length).toBeGreaterThan(0);
-    expect(container.textContent).toContain("Collected This Month");
-    expect(container.textContent).toContain("Today's Schedule");
-    expect(container.textContent).toContain("Signature Facial");
-    // no hook-backed widgets in demo mode
-    expect(container.textContent).not.toContain("Loading…");
   });
 });
 

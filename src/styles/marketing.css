@@ -183,11 +183,6 @@
 .seo-landing__final-cta h2 { max-width: 700px; margin: 0 auto 16px; color: #000; font: 800 clamp(2rem, 3.5vw, 3.5rem)/1.1 'Montserrat', sans-serif; letter-spacing: -0.02em; }
 .seo-landing__final-cta p { max-width: 560px; margin: 0 auto 32px; color: #51483D; font: 400 15px/1.7 'Inter', sans-serif; }
 
-.demo-tab-switcher { display: inline-flex; gap: 0; padding: 0; border: 1px solid rgba(126, 96, 58, 0.24); border-radius: 12px; overflow: hidden; background: transparent; }
-.demo-tab-button { display: flex; align-items: center; gap: 8px; padding: 12px 24px; border: 0; border-right: 1px solid rgba(126, 96, 58, 0.24); background: transparent; color: #51483D; font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; transition: background-color 0.2s ease, color 0.2s ease; }
-.demo-tab-button:last-child { border-right: 0; }
-.demo-tab-button.is-active { background: #000000; color: #FFFFFF; }
-.demo-tab-button:hover:not(.is-active) { background: rgba(126, 96, 58, 0.08); color: #000000; }
 .pricing-plan-cta { width: 100%; }
 .pricing-faq-trigger { display: flex; align-items: center; justify-content: space-between; gap: 16px; width: 100%; box-sizing: border-box; padding: 18px 20px; border: 0; background: transparent; text-align: left; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 600; color: #000; transition: color 0.2s ease; }
 .pricing-faq-trigger:hover { color: #94672F; }
@@ -245,9 +240,6 @@
   .marketing-cta-actions { flex-direction: column; width: 100%; }
   .marketing-cta-actions > .marketing-cta { width: 100%; }
   .marketing-cta { max-width: 100%; white-space: normal; }
-  .demo-tab-switcher { display: flex; flex-direction: column; width: 100%; }
-  .demo-tab-button { border-right: 0; border-bottom: 1px solid rgba(126, 96, 58, 0.24); justify-content: center; }
-  .demo-tab-button:last-child { border-bottom: 0; }
   .marketing-homepage .speech-bubble { padding: 16px; }
   .marketing-homepage .speech-bubble__message { font-size: 12px; }
 }
@@ -287,7 +279,6 @@
 
 .marketing-cta, .marketing-cta--secondary { border-radius: 10px; }
 #how-nextslot-works { scroll-margin-top: 64px; }
-.demo-tab-button { border-radius: 0; }
 
 .about-approach { display: grid; grid-template-columns: minmax(0, 1fr); gap: 40px; align-items: center; }
 .about-approach > * { min-width: 0; }
@@ -314,34 +305,6 @@ html.marketing-page::-webkit-scrollbar, html.marketing-page *::-webkit-scrollbar
 @media (max-width: 767px) { 
   .pricing-faq-trigger { padding: 16px; } 
   .pricing-faq-answer { padding: 0 16px 18px !important; } 
-}
-
-.demo-tab-panel { animation: demoPanelIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) both; }
-@keyframes demoPanelIn {
-  from { opacity: 0; transform: translateY(10px) scale(0.995); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
-.demo-stage { border-radius: 20px; transition: background 0.4s ease; background: transparent; }
-.demo-stage--dashboard { background: radial-gradient(circle at 50% 0%, rgba(126, 96, 58, 0.06), transparent 62%); }
-.demo-stage--booking { background: radial-gradient(circle at 50% 0%, rgba(184, 139, 82, 0.12), transparent 62%); }
-.demo-progress { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; max-width: 560px; margin: 0 auto; color: #74695C; font: 600 11px/1.4 'Inter', sans-serif; letter-spacing: 0.1em; text-transform: uppercase; }
-.demo-progress__step { color: #74695C; }
-.demo-progress__step.is-current { color: #94672F; }
-.demo-progress__sep { color: rgba(126, 96, 58, 0.4); }
-.demo-tab-button.is-active { animation: demoTabActive 0.35s ease both; }
-@keyframes demoTabActive { from { background: rgba(0, 0, 0, 0.82); } to { background: #000000; } }
-.demo-tab-button svg { transition: transform 0.25s ease; }
-.demo-tab-button.is-active svg { transform: translateY(-1px); }
-
-@media (prefers-reduced-motion: reduce) {
-  .demo-tab-panel, .demo-tab-button.is-active { animation: none; }
-  .demo-stage { transition: none; }
-  .demo-tab-button svg { transition: none; }
-}
-
-@media (max-width: 767px) {
-  .demo-stage { border-radius: 16px; }
-  .demo-progress { font-size: 10px; gap: 6px; }
 }
 
 .home-audience {

@@ -490,8 +490,8 @@
     ],
     "related": [
       [
-        "See the demo",
-        "/demo"
+        "PhenomeBeauty case study",
+        "/case-study/phenomebeauty"
       ],
       [
         "Business growth",
@@ -552,8 +552,8 @@
         "/business-management-software"
       ],
       [
-        "See the demo",
-        "/demo"
+        "Business growth",
+        "/business-growth"
       ]
     ]
   },
@@ -609,61 +609,6 @@
       [
         "Business growth",
         "/business-growth"
-      ]
-    ]
-  },
-  "/demo": {
-    "sections": [
-      [
-        "See the client side.",
-        "The booking experience is designed around the client completing the booking without needing an account. Services, availability, appointment details and payment steps are brought into one flow.",
-        [
-          "Service selection",
-          "Availability",
-          "Appointment details",
-          "Payment and deposit flow"
-        ]
-      ],
-      [
-        "Then see the business side.",
-        "The admin dashboard brings the information created by bookings into view. Explore revenue, booking activity, clients, operational information and the areas that need attention.",
-        [
-          "Business dashboard",
-          "Revenue views",
-          "Booking activity",
-          "Client management",
-          "Operational tools"
-        ]
-      ],
-      [
-        "The two sides are connected.",
-        "The point of the system is not to create a prettier booking page. The booking creates operational data that the business can use, and that data can feed the dashboard and Nexty insights.",
-        [
-          "Bookings create client history",
-          "Payments update booking status",
-          "Activity feeds business reporting",
-          "Nexty looks for useful patterns"
-        ]
-      ]
-    ],
-    "fit": [
-      "You want to see the product before starting a trial.",
-      "You want to understand both the client and owner experience.",
-      "You are replacing manual booking administration.",
-      "You want more than a booking link."
-    ],
-    "related": [
-      [
-        "Start for free",
-        "/onboarding"
-      ],
-      [
-        "Pricing",
-        "/pricing"
-      ],
-      [
-        "Business management software",
-        "/business-management-software"
       ]
     ]
   }

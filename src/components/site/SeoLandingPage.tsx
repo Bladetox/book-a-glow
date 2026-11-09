@@ -34,8 +34,8 @@ const SeoLandingPage = ({ path }: { path:string }) => {
             <p style={{fontFamily:FONT_BODY,fontSize:"clamp(16px,1.8vw,20px)",lineHeight:1.7,color:C.muted,maxWidth:680,margin:0}}>{data.intro}</p>
             <div className="seo-landing__hero-actions">
               <PrimaryCTA to="/onboarding">Start for free</PrimaryCTA>
-              <PrimaryCTA to="/demo">
-                See how it works <ArrowRight className="marketing-cta__arrow" aria-hidden="true" />
+              <PrimaryCTA to="/pricing">
+                View pricing <ArrowRight className="marketing-cta__arrow" aria-hidden="true" />
               </PrimaryCTA>
             </div>
           </div>

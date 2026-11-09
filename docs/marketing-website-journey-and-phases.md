@@ -87,8 +87,7 @@ The homepage should be the simplest complete version of this story. Visitors sho
 
 Use the existing pages as supporting depth, not as competing destinations:
 
-- **Homepage:** the complete, concise journey.
-- **How it works (/demo):** a deeper product explanation for visitors who need it.
+- **Homepage:** the complete product explanation and decision journey, including the client booking experience. No separate demo walkthrough is required.
 - **Case Study (/case-study/phenomebeauty):** fuller evidence and the customer's story.
 - **Pricing (/pricing):** clear plan comparison and signup routes.
 - **About (/about):** the people, purpose and context behind NextSlot.

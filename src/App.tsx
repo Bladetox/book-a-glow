@@ -13,7 +13,6 @@ import { usePageSEO } from "@/hooks/usePageSEO";
 
 const Index            = lazy(() => import("./pages/Index"));
 const About            = lazy(() => import("./pages/About"));
-const DemoAdminEmbed   = lazy(() => import("./pages/DemoAdminEmbed"));
 const Resources        = lazy(() => import("./pages/Resources"));
 const Book             = lazy(() => import("./pages/Book"));
 const Pricing          = lazy(() => import("./pages/Pricing"));
@@ -28,7 +27,6 @@ const NotFound         = lazy(() => import("./pages/NotFound"));
 const TenantNotFound   = lazy(() => import("./pages/TenantNotFound"));
 const PaymentSuccess   = lazy(() => import("./pages/PaymentSuccess"));
 const BillingSuccess   = lazy(() => import("./pages/BillingSuccess"));
-const Demo             = lazy(() => import("./pages/Demo"));
 const CaseStudy         = lazy(() => import("./pages/CaseStudy"));
 const OnlineBookingSoftware = lazy(() => import("./pages/OnlineBookingSoftware"));
 const BusinessManagementSoftware = lazy(() => import("./pages/BusinessManagementSoftware"));
@@ -108,8 +106,6 @@ const MarketingRoutes = () => (
         <Route path="/business-growth" element={<><SEO path="/business-growth" /><BusinessGrowth /></>} />
         <Route path="/admin" element={<Navigate to="/login" replace />} />
         <Route path="/superadmin" element={<><SEO path="/superadmin" /><SuperAdmin /></>} />
-        <Route path="/demo" element={<><SEO path="/demo" /><Demo /></>} />
-        <Route path="/demo/admin-embed" element={<DemoAdminEmbed />} />
         <Route path="/case-study/phenomebeauty" element={<><SEO path="/case-study/phenomebeauty" /><CaseStudy /></>} />
         <Route path="/reset-password" element={<><SEO path="/reset-password" /><ResetPassword /></>} />
         <Route path="/payment" element={<><SEO path="/payment" /><PublicTenantProvider><PaymentSuccess /></PublicTenantProvider></>} />

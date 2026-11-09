@@ -39,16 +39,6 @@
     "intro": "Explore practical guidance for independent service businesses that want to spend less time managing admin and more time understanding what is actually happening in the business.",
     "schema": "page"
   },
-  "/demo": {
-    "title": "See NextSlot in Action | Online Booking & Business Management",
-    "description": "Explore a working NextSlot demo, including the business dashboard, booking experience, calendar, client management and the tools around every appointment.",
-    "indexable": true,
-    "lastmod": "2026-10-04",
-    "eyebrow": "See NextSlot in action",
-    "h1": "See the system behind the booking.",
-    "intro": "Explore the client booking experience and the business dashboard side by side. The demo uses fictional data, but the workflows show how NextSlot fits together.",
-    "schema": "page"
-  },
   "/online-booking-software": {
     "title": "Online Booking Software for Service Businesses | NextSlot",
     "description": "Online booking software for independent service businesses. Let clients book available services, collect deposits and manage appointments without relying on messages.",

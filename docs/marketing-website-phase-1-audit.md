@@ -6,6 +6,8 @@
 **Status:** Baseline findings documented; visual/browser QA remains to be completed  
 **Scope:** Marketing and SEO experience only. No product, booking, tenant, payment, authentication, or admin behaviour changes.
 
+**Decision update (2026-11-09):** The dedicated `/demo` page has since been retired. The homepage now owns the primary product explanation, and legacy demo URLs permanently redirect to the homepage. The findings below are retained as a historical baseline and describe the site at the time of the original audit.
+
 ## Executive summary
 
 The current marketing site already has a strong foundation: a distinctive warm-light visual system, a concise hero, the Record / Understand / Grow narrative, product visuals, a PhenomeBeauty case-study preview, and clear signup/contact actions.
