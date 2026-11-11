@@ -1,0 +1,158 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>NextSlot ad · I · Origin story</title>
+<link rel="stylesheet" href="ad-core.css">
+<link rel="stylesheet" href="ad-kit.css">
+<style>
+/* Facts, quote and figures in this ad come from the PhenomeBeauty case study on the marketing site. */
+.portrait { position: absolute; left: 50%; top: 610px; width: 420px; height: 420px; margin-left: -210px; border-radius: 50%;
+  background: url(assets/Shu-meez-Phenomebeauty.webp) center / cover; border: 10px solid var(--gold); box-shadow: 0 40px 80px rgba(0,0,0,.5); }
+.who-name { top: 1085px; font-family: Montserrat; font-weight: 800; font-size: 68px; color: #F5F0E7; }
+.who-role { top: 1178px; font-size: 36px; color: rgba(245,240,231,.6); font-weight: 500; }
+.forher { top: 1340px; font-size: 76px; color: #F5F0E7; padding: 0 70px; }
+.forher span { color: var(--gold); }
+
+.before-tag { top: 215px; font-size: 30px; font-weight: 700; letter-spacing: .2em; color: var(--gold); }
+.st { position: absolute; left: 90px; right: 90px; padding-left: 44px; border-left: 8px solid var(--gold); color: #F5F0E7;
+  font-family: Montserrat; font-weight: 800; font-size: 70px; line-height: 1.1; letter-spacing: -0.02em; opacity: 0; }
+.job { top: 1465px; font-family: Montserrat; font-weight: 700; font-size: 54px; color: var(--gold); padding: 0 80px; }
+
+.qmark { position: absolute; left: 80px; top: 170px; font-family: Montserrat; font-weight: 800; font-size: 380px; line-height: 1; color: var(--gold); opacity: .55; }
+.quote { position: absolute; left: 90px; right: 90px; top: 480px; font-family: Montserrat; font-weight: 800; font-size: 106px; line-height: 1.12; letter-spacing: -0.02em; }
+.quote .w { display: inline-block; }
+.by { position: absolute; left: 90px; top: 1130px; display: flex; align-items: center; gap: 34px; }
+.by .pic { width: 150px; height: 150px; border-radius: 50%; background: url(assets/Shu-meez-Phenomebeauty.webp) center / cover; border: 6px solid var(--gold); flex: none; }
+.by b { display: block; font-family: Montserrat; font-weight: 800; font-size: 50px; }
+.by span { font-size: 34px; color: var(--muted); }
+
+.fig-tag { top: 235px; font-size: 28px; font-weight: 700; letter-spacing: .18em; color: var(--muted); }
+.fig { top: 300px; font-family: Montserrat; font-weight: 800; font-size: 220px; letter-spacing: -0.04em; color: var(--bronze); line-height: 1; }
+.fig-sub { top: 550px; font-size: 48px; font-weight: 600; color: var(--ink2); }
+.found { top: 760px; }
+.found li { list-style: none; position: relative; padding: 20px 0 20px 54px; font-size: 39px; line-height: 1.32; opacity: 0; }
+.found li:before { content: ""; position: absolute; left: 6px; top: 38px; width: 18px; height: 18px; border-radius: 50%; background: var(--gold); }
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+
+  <!-- 1. Hook: where NextSlot came from -->
+  <div class="scene dark" id="s1">
+    <div class="center h k-hook" id="s1h" style="top:190px">NextSlot wasn't built <span>in a boardroom.</span></div>
+    <div class="portrait" id="portrait"></div>
+    <div class="center who-name" id="wname">Shu-meez</div>
+    <div class="center who-role" id="wrole">Owner, PhenomeBeauty · Cape Town</div>
+    <div class="center h forher" id="forher">It was built for <span>her studio.</span></div>
+  </div>
+
+  <!-- 2. Before -->
+  <div class="scene dark" id="s2">
+    <div class="center before-tag" id="btag">BEFORE NEXTSLOT</div>
+    <div class="st" style="top:380px">Bookings on WhatsApp, at all hours.</div>
+    <div class="st" style="top:640px">Waiting on proof of payment.</div>
+    <div class="st" style="top:900px">A form, a spreadsheet and a calendar to keep in sync.</div>
+    <div class="center job" id="job">A job on top of the actual job.</div>
+  </div>
+
+  <div id="wipe"></div>
+  <div class="scene c-reveal" id="s3"></div>
+
+  <!-- 4. Her words -->
+  <div class="scene" id="s4">
+    <div class="qmark" id="qmark">“</div>
+    <div class="quote" id="quote"></div>
+    <div class="by" id="by"><div class="pic"></div><div><b>Shu-meez</b><span>Owner, PhenomeBeauty · Cape Town</span></div></div>
+  </div>
+
+  <!-- 5. The numbers -->
+  <div class="scene" id="s5">
+    <div class="center fig-tag" id="figtag">FACILITATED THROUGH NEXTSLOT</div>
+    <div class="center fig" id="fig">R0</div>
+    <div class="center fig-sub" id="figsub">over 90 days at PhenomeBeauty</div>
+    <div class="k-dark found" id="found">
+      <div class="k-eyebrow">What the data showed</div>
+      <ul style="margin-top:14px">
+        <li>Most new clients came from TikTok, not Instagram or WhatsApp as assumed.</li>
+        <li>Some services made far more per hour than others.</li>
+        <li>Clients who hadn't rebooked in a month surfaced automatically.</li>
+      </ul>
+    </div>
+    <div class="k-note" style="top:1690px">One business's results. Yours will differ.</div>
+  </div>
+
+  <div class="scene c-who" id="s6"></div>
+  <div class="scene c-cta" id="s7"></div>
+</div>
+
+<script src="ad-core.js"></script>
+<script>
+mount("#s3", C.reveal({ tag: "So we built the system she needed." }));
+mount("#s6", C.who({ headline: "If you run a service business in South Africa, <span>this was built for you.</span>" }));
+$("#who-h").style.fontSize = "70px";
+mount("#s7", C.cta());
+
+// Her quote, exactly as published on the marketing site.
+const QUOTE = [["For", 0], ["the", 0], ["first", 0], ["time,", 0], ["business", 0], ["felt", 0], ["like", 0], ["it", 0], ["was", 0], ["running", 1], ["itself.”", 1]];
+$("#quote").innerHTML = QUOTE.map(([w, hi]) => `<span class="w${hi ? " bronze" : ""}">${w}</span>`).join(" ");
+
+defineAd({
+  windows: { s1: [0, 3.3], s2: [3.25, 6.6], s3: [6.5, 9.2], s4: [9.1, 12.3], s5: [12.2, 15.9], s6: [15.8, 18.05], s7: [17.95, 20.1] },
+  render(t) {
+    // ── Hook: the person it was built for ──
+    if (t < 3.5) {
+      rise($("#s1h"), t, .1, .55);
+      const pp = back(prog(t, .5, 1.0));
+      $("#portrait").style.opacity = cl(prog(t, .5, .7));
+      $("#portrait").style.transform = `scale(${lerp(.6, 1, pp) + prog(t, 1, 3.3) * .03})`;
+      rise($("#wname"), t, .95, .4, 30);
+      rise($("#wrole"), t, 1.1, .4, 30);
+      rise($("#forher"), t, 1.9, .5, 50);
+    }
+
+    // ── Before NextSlot ──
+    const u = t - 3.25;
+    if (u > -.1 && u < 3.5) {
+      const out = eio(prog(u, 3.0, 3.35));
+      $("#btag").style.opacity = cl(prog(u, .15, .4)) * (1 - out);
+      $$("#s2 .st").forEach((s, i) => {
+        const a = .3 + i * .62, p = eo(prog(u, a, a + .45));
+        s.style.opacity = p * (1 - out);
+        s.style.transform = `translateX(${(1 - p) * -70}px)`;
+      });
+      rise($("#job"), u, 2.2, .45, 40);
+      $("#job").style.opacity *= 1 - out;
+    }
+    R.wipe(t, 6.3);
+    R.reveal(t, 6.5, "#s3");
+
+    // ── Her words ──
+    const v = t - 9.1;
+    if (v > -.15 && v < 3.35) {
+      pop($("#qmark"), v, .1, .4, .5);
+      $("#qmark").style.opacity = cl(prog(v, .1, .3)) * .55;
+      $$("#quote .w").forEach((w, i) => rise(w, v, .35 + i * .1, .4, 36));
+      rise($("#by"), v, 1.7, .45, 40);
+    }
+
+    // ── The numbers ──
+    const w = t - 12.2;
+    if (w > -.15 && w < 3.85) {
+      $("#figtag").style.opacity = cl(prog(w, .15, .4));
+      const fp = back(prog(w, .2, .6));
+      $("#fig").style.opacity = cl(prog(w, .2, .35));
+      $("#fig").style.transform = `scale(${lerp(.8, 1, fp)})`;
+      $("#fig").textContent = zar(63851 * eo(prog(w, .3, 1.5)));
+      rise($("#figsub"), w, .7, .4, 30);
+      const dp = eo(prog(w, 1.3, 1.75));
+      $("#found").style.opacity = dp; $("#found").style.transform = `translateY(${(1 - dp) * 120}px)`;
+      $$("#found li").forEach((li, i) => rise(li, w, 1.6 + i * .32, .4, 26));
+    }
+    R.who(t, 15.8, "#s6");
+    R.cta(t, 17.95);
+  },
+});
+</script>
+</body>
+</html>

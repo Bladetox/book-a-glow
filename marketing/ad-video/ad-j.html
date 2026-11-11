@@ -1,0 +1,201 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>NextSlot ad · J · December rush (seasonal)</title>
+<link rel="stylesheet" href="ad-core.css">
+<link rel="stylesheet" href="ad-kit.css">
+<style>
+/* ── Hook: December fills up ── */
+.spark { position: absolute; width: 8px; height: 8px; border-radius: 50%; background: var(--gold); }
+.cal { position: absolute; left: 70px; right: 70px; border-radius: 44px; padding: 40px 36px 36px; }
+.cal .head { display: flex; justify-content: space-between; align-items: center; font-size: 30px; font-weight: 700; letter-spacing: .16em; }
+.cal .head b { letter-spacing: 0; font-family: Montserrat; font-weight: 800; font-size: 38px; }
+.cal .dow, .cal .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 12px; }
+.cal .dow { margin: 26px 0 14px; text-align: center; font-size: 24px; font-weight: 700; }
+.cal .cell { position: relative; border-radius: 20px; overflow: hidden; }
+.cal .cell i { position: absolute; left: 14px; top: 10px; font-style: normal; font-size: 28px; font-weight: 700; z-index: 2; }
+.cal .cell em { position: absolute; left: 0; right: 0; bottom: 14px; text-align: center; font-style: normal; font-size: 21px; font-weight: 800; letter-spacing: .06em; z-index: 2; opacity: 0; }
+#cal1 { top: 400px; background: rgba(255,255,255,.06); border: 2px solid rgba(255,255,255,.09); color: #F5F0E7; }
+#cal1 .head { color: var(--gold); }
+#cal1 .head b { color: #F5F0E7; }
+#cal1 .dow { color: rgba(245,240,231,.4); }
+#cal1 .cell { height: 128px; background: rgba(255,255,255,.05); }
+#cal1 .cell u { position: absolute; left: 0; right: 0; bottom: 0; background: rgba(212,165,116,.55); }
+.ready { top: 1420px; font-size: 92px; color: #F5F0E7; }
+.ready span { color: var(--gold); }
+
+/* ── One slot, one client ── */
+.duo { position: absolute; left: 70px; right: 70px; top: 690px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+.who2 { border-radius: 40px; background: #fff; padding: 36px 32px 34px; box-shadow: 0 20px 50px rgba(80,55,25,.12); }
+.who2 .p { display: flex; align-items: center; gap: 20px; font-size: 34px; font-weight: 700; }
+.who2 .p .k-avatar { width: 70px; height: 70px; font-size: 30px; }
+.who2 .d { font-size: 24px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--bronze); margin: 26px 0 16px; }
+.who2 .t { position: relative; padding: 26px 0; margin-bottom: 14px; border-radius: 22px; border: 3px solid #EFE7DB; text-align: center; font-size: 40px; font-weight: 700; }
+.who2 .t.sel { background: var(--bronze); border-color: var(--bronze); color: #fff; }
+.who2 .t.gone { background: #F6F1EA; color: #C9BFB1; text-decoration: line-through; }
+.who2 .hold { height: 76px; margin-top: 6px; border-radius: 20px; background: #FFF1DC; color: #7A4F17; font-size: 27px; font-weight: 700; display: flex; align-items: center; justify-content: center; opacity: 0; }
+.who2 .taken { position: absolute; right: -10px; top: -18px; padding: 6px 16px; border-radius: 14px; background: var(--red); color: #fff; font-size: 22px; font-weight: 700; text-decoration: none; opacity: 0; }
+.nodouble { position: absolute; left: 50%; top: 1530px; padding: 28px 56px; border-radius: 60px; background: var(--green); color: #fff; font-family: Montserrat; font-weight: 800; font-size: 46px; white-space: nowrap; opacity: 0; }
+
+/* ── Days off ── */
+#cal2 { top: 590px; background: #fff; box-shadow: 0 24px 60px rgba(80,55,25,.13); color: var(--ink); }
+#cal2 .head { color: var(--bronze); }
+#cal2 .dow { color: var(--muted); }
+#cal2 .cell { height: 108px; background: #F8F3EB; }
+#cal2 .cell.off { background: var(--ink); color: #F5F0E7; }
+#cal2 .cell.off em { opacity: 1; color: var(--gold); bottom: 12px; font-size: 19px; }
+.tenmin { position: absolute; left: 50%; top: 1480px; padding: 30px 48px; border-radius: 60px; background: var(--ink); color: #fff; font-size: 40px; font-weight: 700; white-space: nowrap; opacity: 0; }
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+
+  <!-- 1. Hook -->
+  <div class="scene dark" id="s1">
+    <div id="sparks"></div>
+    <div class="center h k-hook" id="s1h" style="top:150px;font-size:112px">December is <span>coming.</span></div>
+    <div class="cal" id="cal1"></div>
+    <div class="center h ready" id="ready">Is your diary <span>ready?</span></div>
+    <div class="k-note" style="top:1770px">Illustrative</div>
+  </div>
+
+  <div id="wipe"></div>
+  <div class="scene c-reveal" id="s2"></div>
+  <div class="scene c-phone" id="s3"></div>
+
+  <!-- 4. One slot, one client -->
+  <div class="scene" id="s4">
+    <div class="center caption" style="top:170px" id="s4cap">
+      <div class="h" style="font-size:104px">One slot.<br><span class="bronze">One client.</span></div>
+      <p style="padding:0 110px">Live availability and slot holds prevent double-bookings.</p>
+    </div>
+    <div class="duo" id="duo">
+      <div class="who2" id="wa"><div class="p"><div class="k-avatar">T</div>Thandi</div><div class="d">Sat 19 Dec</div>
+        <div class="t" data-k="a1030">10:30</div><div class="t">12:00</div><div class="t">15:00</div><div class="hold" id="holda">⏱ Slot held · 10:00</div></div>
+      <div class="who2" id="wb"><div class="p"><div class="k-avatar">L</div>Lerato</div><div class="d">Sat 19 Dec</div>
+        <div class="t" data-k="b1030">10:30<span class="taken" id="taken">Just taken</span></div><div class="t" data-k="b1200">12:00</div><div class="t">15:00</div><div class="hold" id="holdb">⏱ Slot held · 10:00</div></div>
+    </div>
+    <div class="nodouble" id="nodouble">✓ No double-bookings</div>
+    <div class="k-tap" id="tap4"></div>
+  </div>
+
+  <!-- 5. Days off -->
+  <div class="scene" id="s5">
+    <div class="center caption" style="top:170px" id="s5cap">
+      <div class="h" style="font-size:100px">Days off?<br><span class="bronze">Blocked in a tap.</span></div>
+    </div>
+    <div class="cal" id="cal2"></div>
+    <div class="tenmin" id="tenmin">Your booking page is 10 minutes away.</div>
+    <div class="k-tap" id="tap5"></div>
+    <div class="k-note" style="top:1650px">Closed days don't show to clients.</div>
+  </div>
+
+  <div class="scene c-who" id="s6"></div>
+  <div class="scene c-cta" id="s7"></div>
+</div>
+
+<script src="ad-core.js"></script>
+<script>
+mount("#s2", C.reveal({ tag: "Take every festive booking, without the chaos." }));
+mount("#s3", C.phone({ title: 'Open for bookings <span class="bronze">24/7.</span>', sub: "Clients book and pay while your hands are full.",
+  days: [["Thu", 17], ["Fri", 18], ["Sat", 19], ["Sun", 20]] }));
+mount("#s6", C.who({ headline: "Be ready <span>before the rush.</span>" }));
+mount("#s7", C.cta());
+
+// December 2026 starts on a Tuesday (Monday-first grid → one leading blank).
+const calendar = label => `
+  <div class="head"><span>DECEMBER 2026</span>${label}</div>
+  <div class="dow">${"MTWTFSS".split("").map(d => `<span>${d}</span>`).join("")}</div>
+  <div class="grid"><span></span>${Array.from({ length: 31 }, (_, i) => `<div class="cell" data-d="${i + 1}"><i>${i + 1}</i><u></u><em></em></div>`).join("")}</div>`;
+$("#cal1").innerHTML = calendar('<b id="bk">0 bookings</b>');
+$("#cal2").innerHTML = calendar("");
+
+// Deterministic sparkle field and per-day fill order.
+let seed = 23;
+const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+$("#sparks").innerHTML = Array.from({ length: 28 }, () =>
+  `<div class="spark" data-p="${(rnd() * 6).toFixed(2)}" data-s="${(1.5 + rnd() * 3).toFixed(2)}" style="left:${(rnd() * 1040 + 20).toFixed(0)}px;top:${(rnd() * 1880 + 20).toFixed(0)}px"></div>`).join("");
+const DAYS = $$("#cal1 .cell").map(c => {
+  const d = +c.dataset.d, col = d % 7;            // Dec 1 is a Tuesday: col 4 = Fri, 5 = Sat (d % 7)
+  const holiday = d === 16 || d === 25 || d === 26;   // quiet in the hook; blocked off later in the ad
+  const weekend = !holiday && (col === 4 || col === 5);
+  return { c, weekend, at: (weekend ? .45 : .8) + rnd() * 1.3, level: holiday ? .12 : weekend ? 1 : .35 + rnd() * .5 };
+});
+const centre = el => { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; };
+const OFF = [[16, .9], [25, 1.35], [26, 1.75]];    // public holidays blocked in the days-off scene
+
+defineAd({
+  windows: { s1: [0, 3.3], s2: [3.25, 6.0], s3: [5.9, 10.05], s4: [9.95, 13.05], s5: [12.95, 16.0], s6: [15.9, 18.05], s7: [17.95, 20.1] },
+  render(t) {
+    // ── Hook: the month fills while you watch ──
+    if (t < 3.6) {
+      const out = eio(prog(t, 2.95, 3.3)), fade = 1 - out;
+      rise($("#s1h"), t, .1, .5);
+      $("#s1h").style.opacity *= fade;
+      $$("#sparks .spark").forEach(s => { s.style.opacity = (.12 + .3 * (1 + Math.sin(t * +s.dataset.s + +s.dataset.p)) / 2) * fade; });
+      const cp = eo(prog(t, .25, .7));
+      $("#cal1").style.opacity = cp * fade;
+      $("#cal1").style.transform = `translateY(${(1 - cp) * 90 + out * 60}px)`;
+      $("#cal1").style.filter = `blur(${out * 8}px)`;
+      let total = 0;
+      DAYS.forEach(({ c, weekend, at, level }) => {
+        const p = eo(prog(t, at, at + .5)) * level;
+        total += p * 6;
+        const full = weekend && p > .97;
+        c.querySelector("u").style.height = (p * 100) + "%";
+        c.querySelector("u").style.background = full ? "rgba(224,83,63,.8)" : "";
+        c.querySelector("em").textContent = "FULL";
+        c.querySelector("em").style.opacity = full ? 1 : 0;
+      });
+      $("#bk").textContent = Math.round(total) + " bookings";
+      const rp = back(prog(t, 2.2, 2.55));
+      $("#ready").style.opacity = cl(prog(t, 2.2, 2.35)) * fade;
+      $("#ready").style.transform = `scale(${lerp(.7, 1, rp)})`;
+    }
+    R.wipe(t, 3.05);
+    R.reveal(t, 3.25, "#s2");
+    R.phone(t, 5.9);
+
+    // ── Two clients, one slot ──
+    const u = t - 9.95;
+    if (u > -.15 && u < 3.3) {
+      rise($("#s4cap"), u, .1, .5, 50);
+      rise($("#wa"), u, .35, .45, 70);
+      rise($("#wb"), u, .5, .45, 70);
+      const aSel = u > 1.0, bGone = u > 1.25, bSel = u > 2.05;
+      $('[data-k="a1030"]').classList.toggle("sel", aSel);
+      $('[data-k="b1030"]').classList.toggle("gone", bGone);
+      pop($("#taken"), u, 1.25, .3, .5);
+      $('[data-k="b1200"]').classList.toggle("sel", bSel);
+      pop($("#holda"), u, 1.05, .3, .8);
+      pop($("#holdb"), u, 2.1, .3, .8);
+      pop($("#nodouble"), u, 2.4, .4, .6, "translateX(-50%)");
+      const [ax, ay] = centre($('[data-k="a1030"]')), [bx, by] = centre($('[data-k="b1200"]'));
+      if (!tapFx($("#tap4"), u, .9, ax, ay) && !tapFx($("#tap4"), u, 1.95, bx, by)) $("#tap4").style.opacity = 0;
+    }
+
+    // ── Block the days off ──
+    const v = t - 12.95;
+    if (v > -.15 && v < 3.3) {
+      rise($("#s5cap"), v, .1, .5, 50);
+      const cp = eo(prog(v, .3, .75));
+      $("#cal2").style.opacity = cp; $("#cal2").style.transform = `translateY(${(1 - cp) * 110}px)`;
+      let tapped = false;
+      OFF.forEach(([d, at]) => {
+        const cell = $(`#cal2 .cell[data-d="${d}"]`);
+        cell.classList.toggle("off", v > at + .1);
+        cell.querySelector("em").textContent = "Closed";
+        cell.style.transform = `scale(${1 + Math.sin(prog(v, at + .1, at + .4) * Math.PI) * .12})`;
+        if (!tapped) { const [x, y] = centre(cell); tapped = tapFx($("#tap5"), v, at, x, y); }
+      });
+      if (!tapped) $("#tap5").style.opacity = 0;
+      pop($("#tenmin"), v, 2.2, .4, .6, "translateX(-50%)");
+    }
+    R.who(t, 15.9, "#s6");
+    R.cta(t, 17.95);
+  },
+});
+</script>
+</body>
+</html>

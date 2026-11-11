@@ -32,6 +32,35 @@ const brandMark = () =>
 const tick = (size = 56) =>
   `<svg width="${size}" height="${size}" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 
+// Default "who it's for" montage: [photo, chip label].
+const WHO_DEFAULT = [
+  ["beautician.jpg", "Beauty &amp; Wellness"],
+  ["barber.jpg", "Barbers"],
+  ["tools-tattoo-artist-at-work.webp", "Tattoo Artists"],
+  ["professional-photographer-at-work.webp", "Photographers"],
+];
+
+// ── small animation helpers used by the variant pages ────────────────────────
+// Pop an element in with a slight overshoot.
+function pop(el, u, a, dur = .35, from = .7, extra = "") {
+  const p = back(prog(u, a, a + dur));
+  el.style.opacity = cl(prog(u, a, a + dur * .45));
+  el.style.transform = `${extra} scale(${lerp(from, 1, p)})`;
+}
+// Tap ripple at (x, y) inside the ripple element's positioned parent.
+function tapFx(el, u, at, x, y) {
+  const p = prog(u, at, at + .35);
+  if (p > 0 && p < 1) {
+    el.style.left = x + "px"; el.style.top = y + "px";
+    el.style.opacity = 1 - p; el.style.transform = `scale(${lerp(.5, 1.6, p)})`;
+    return true;
+  }
+  return false;
+}
+// First n characters of text for a typing effect (p from 0 to 1).
+const typed = (text, p) => text.slice(0, Math.round(text.length * cl(p)));
+const zar = n => "R" + Math.round(n).toLocaleString("en-ZA").replace(/[\u00a0\u202f,]/g, " ");
+
 // ── markup builders ───────────────────────────────────────────────────────────
 const C = {
   reveal: ({ tag, offer = "" }) => `
@@ -39,7 +68,7 @@ const C = {
     <div class="center h tag" id="rv-tag">${tag.split(" ").map(w => `<span class="w">${w}</span>`).join(" ")}</div>
     ${offer ? `<div class="offer" id="rv-offer">${offer}</div>` : ""}`,
 
-  phone: ({ title, sub }) => `
+  phone: ({ title, sub, days = [["Thu", 13], ["Fri", 14], ["Sat", 15], ["Sun", 16]], dayName = "Saturday" }) => `
     <div class="center caption" id="ph-cap"><div class="h">${title}</div><p>${sub}</p></div>
     <div class="phone" id="phone">
       <div class="screen">
@@ -58,12 +87,9 @@ const C = {
         <div id="p2" style="position:absolute;left:0;right:0;top:330px;">
           <div class="step-label">Pick a time</div>
           <div class="days">
-            <div class="day"><i>Thu</i><b>13</b></div>
-            <div class="day"><i>Fri</i><b>14</b></div>
-            <div class="day" id="day3"><i>Sat</i><b>15</b></div>
-            <div class="day"><i>Sun</i><b>16</b></div>
+            ${days.map(([d, n], i) => `<div class="day"${i === 2 ? ' id="day3"' : ""}><i>${d}</i><b>${n}</b></div>`).join("\n            ")}
           </div>
-          <div class="step-label" style="margin-top:30px">Saturday</div>
+          <div class="step-label" style="margin-top:30px">${dayName}</div>
           <div class="times">
             <div class="time gone">09:00</div>
             <div class="time" id="t1030">10:30</div>
@@ -78,7 +104,7 @@ const C = {
         <div class="done" id="done">
           <div class="check"><svg width="110" height="110" viewBox="0 0 24 24"><path id="tick" d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="24" stroke-dashoffset="24"/></svg></div>
           <h3>You're booked!</h3>
-          <p>Lash Lift &amp; Tint<br>Sat 15 · 10:30</p>
+          <p>Lash Lift &amp; Tint<br>${days[2][0]} ${days[2][1]} · 10:30</p>
         </div>
         <div class="tap" id="tap"></div>
       </div>
@@ -124,22 +150,16 @@ const C = {
       <p>Tuesday is your slowest day. A targeted offer to your clients could fill those gaps.</p>
     </div>`,
 
-  who: ({ headline }) => `
-    <div class="photo" style="background-image:url(assets/beautician.jpg)"></div>
-    <div class="photo" style="background-image:url(assets/barber.jpg)"></div>
-    <div class="photo" style="background-image:url(assets/tools-tattoo-artist-at-work.webp)"></div>
-    <div class="photo" style="background-image:url(assets/professional-photographer-at-work.webp)"></div>
+  who: ({ headline, items = WHO_DEFAULT }) => `
+    ${items.map(([img]) => `<div class="photo" style="background-image:url(assets/${img})"></div>`).join("\n    ")}
     <div class="shade"></div>
     <div class="center h" id="who-h">${headline}</div>
-    <div class="chip">Beauty &amp; Wellness</div>
-    <div class="chip">Barbers</div>
-    <div class="chip">Tattoo Artists</div>
-    <div class="chip">Photographers</div>`,
+    ${items.map(([, label]) => `<div class="chip">${label}</div>`).join("\n    ")}`,
 
-  cta: () => `
+  cta: ({ sub = "<b>Free trial · No payment required</b><br>Plans from R99/month" } = {}) => `
     <div class="brand" id="cta-brand">${brandMark()}</div>
     <div class="center h cta" id="cta-h">Start <span class="bronze">free</span> today.</div>
-    <div class="center sub" id="cta-sub"><b>Free trial · No payment required</b><br>Plans from R99/month</div>
+    <div class="center sub" id="cta-sub">${sub}</div>
     <div class="btn" id="btn">nextslot<span>.co.za</span></div>
     <div class="center foot" id="cta-foot">Proudly made in Cape Town 🇿🇦</div>`,
 };

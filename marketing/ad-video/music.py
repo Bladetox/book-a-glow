@@ -2,7 +2,7 @@
 
     python3 music.py           -> out/music.wav        (variant A, 20 s)
     python3 music.py 30        -> out/music-30s.wav    (variant A, 30 s)
-    python3 music.py b 30      -> out/music-b-30s.wav  (variant B, 30 s; also c, d)
+    python3 music.py b 30      -> out/music-b-30s.wav  (variant B, 30 s; variants a to j)
 
 Cue times below are written on the 20-second timeline of ad.html and scaled
 by S for longer cuts; the groove keeps a real 120 BPM at any length.
@@ -261,8 +261,163 @@ elif VARIANT == "d":
     photo_cuts(15.9)
     outro()
 
+elif VARIANT == "e":
+    # ── E · Proof of payment: a waiting-room tick, a heavier beat each time the day changes ──
+    t = t_axis(3.4 * S)
+    drone = (np.sin(2 * np.pi * 51.9 * t) + 0.5 * np.sin(2 * np.pi * 77.8 * t)) * env(len(t), 0.4, 0.3)
+    add(drone, 0, 0.18)
+    for i in range(13):
+        add(hat(0.5, 70), 0.1 + i * 0.25, 0.3, pan=0.3 if i % 2 else -0.3)
+    for at in (1.15, 2.0):                    # day 2, day 3
+        add(thud(), at, 0.55)
+    for i, at in enumerate((0.7, 1.45, 2.2)):  # messages
+        add(pop(640 + i * 60), at, 0.3, pan=(-0.4, 0.4)[i % 2])
+    add(whoosh(0.5), 2.95, 0.5)
+    groove(3.35)
+    add(thud(), 3.35, 0.5)
+    add(bell(note(84)), 3.4, 0.18)
+    transitions(SCENES)
+    add(bell(note(88), 0.7), 5.9 + 0.5, 0.2)   # bank notification
+    add(bell(note(93), 0.8), 5.9 + 0.59, 0.18)
+    add(click(), 5.9 + 1.6, 0.45)             # "I have checked"
+    add(click(), 5.9 + 2.6, 0.45)             # confirm
+    for k, m in enumerate((76, 79, 84)):
+        add(bell(note(m), 1.0), 5.9 + 2.8 + k * 0.08, 0.2)
+    add(bell(note(88), 0.8), 9.95 + 1.47, 0.16)    # deposit toast
+    add(click(), 12.75 + 1.45, 0.45)          # request balance
+    for k, m in enumerate((79, 84, 88)):      # paid in full
+        add(bell(note(m), 0.9), 12.75 + 2.2 + k * 0.08, 0.18)
+    photo_cuts(15.9)
+    outro()
+
+elif VARIANT == "f":
+    # ── F · Call-out pros: an engine hum rising along the route, a dull hit on "R0" ──
+    t = t_axis(3.4 * S)
+    f = 48 + 22 * np.clip(t / (2.4 * S), 0, 1)
+    ph = 2 * np.pi * np.cumsum(f) / SR
+    add((np.sin(ph) + 0.4 * np.sin(2 * ph)) * env(len(t), 0.3, 0.3), 0, 0.2)
+    for i in range(9):                        # odometer
+        add(hat(0.5, 60), 0.45 + i * 0.2, 0.22, pan=0.3 if i % 2 else -0.3)
+    add(thud(), 2.3, 0.85)
+    add(whoosh(0.5), 2.95, 0.5)
+    groove(3.35)
+    add(thud(), 3.35, 0.5)
+    add(bell(note(84)), 3.4, 0.18)
+    transitions((5.9, 9.95, 12.95, 15.9, 17.95))
+    for i in range(8):                        # typing the address
+        add(click(), 5.9 + 0.62 + i * 0.105, 0.13)
+    add(click(), 5.9 + 1.7, 0.45)             # pick the suggestion
+    add(bell(note(84), 0.8), 5.9 + 2.0, 0.14)
+    add(bell(note(88), 0.9), 5.9 + 3.3, 0.16)      # total lands
+    for at in (0.9, 1.9, 2.1):                # toggles
+        add(click(), 9.95 + at, 0.38)
+    add(pop(520), 12.95 + 1.15, 0.3)          # low-margin flag
+    add(bell(note(81), 0.8), 12.95 + 1.52, 0.16)   # Nexty card
+    photo_cuts(15.9)
+    outro()
+
+elif VARIANT == "g":
+    # ── G · Quiet regulars: a wistful pad and a slow clock as the weeks pass ──
+    add(pad([note(m) for m in (45, 52, 57, 60)], 3.4 * S), 0, 0.10)
+    for i, m in enumerate((72, 69, 64)):      # each client appears, falling
+        add(bell(note(m), 1.2), 0.42 + i * 0.22, 0.10)
+    for i in range(7):                        # weeks ticking by
+        add(hat(0.5, 50), 0.9 + i * 0.24, 0.2, pan=0.3 if i % 2 else -0.3)
+    add(thud(), 2.25, 0.5)
+    add(whoosh(0.5), 2.95, 0.45)
+    groove(3.35)
+    add(thud(), 3.35, 0.45)
+    add(bell(note(84)), 3.4, 0.18)
+    transitions((5.9, 9.95, 13.55, 15.9, 17.95))
+    for i in range(5):                        # client rows
+        add(pop(700 + i * 60), 5.9 + 0.8 + i * 0.2, 0.2, pan=(-0.3, 0.3)[i % 2])
+    add(click(), 9.95 + 0.85, 0.45)           # WhatsApp button
+    for i in range(10):                       # message types itself
+        add(click(), 9.95 + 1.3 + i * 0.115, 0.1)
+    add(click(), 9.95 + 2.75, 0.45)           # open in WhatsApp
+    add(bell(note(91), 0.6), 9.95 + 2.9, 0.16)     # sent
+    add(bell(note(96), 0.7), 9.95 + 2.98, 0.14)
+    for k, m in enumerate((76, 79, 84)):      # overdue → on track
+        add(bell(note(m), 1.0), 13.55 + 1.05 + k * 0.08, 0.2)
+    photo_cuts(15.9)
+    outro()
+
+elif VARIANT == "h":
+    # ── H · Link in bio: DM pings arriving faster and faster ──
+    add(pad([note(m) for m in (48, 55, 60, 64)], 3.4 * S), 0, 0.07)
+    for i, at in enumerate((0.9, 1.25, 1.55, 1.8, 2.0, 2.18, 2.34, 2.48, 2.6)):
+        add(bell(note(88 + (i % 3) * 2), 0.4), at, 0.12, pan=(-0.4, 0.4)[i % 2])
+    add(thud(), 1.5, 0.5)                     # "DM to book" called out
+    add(thud(), 1.9, 0.6)
+    add(whoosh(0.5), 2.95, 0.5)
+    groove(3.35)
+    add(thud(), 3.35, 0.5)
+    add(bell(note(84)), 3.4, 0.18)
+    transitions(SCENES)
+    for at in (1.55, 2.75):                   # theme switches
+        add(click(), 5.9 + at - 0.12, 0.4)
+        add(whoosh(0.3), 5.9 + at, 0.2)
+    add(pop(880), 9.95 + 0.4, 0.3)            # the link
+    for i in range(4):                        # places it goes
+        add(pop(740 + i * 70), 9.95 + 0.8 + i * 0.14, 0.22, pan=(-0.3, 0.3)[i % 2])
+    add(bell(note(84), 0.8), 9.95 + 1.6, 0.14)
+    for i, m in enumerate((76, 79, 84)):      # three ticks
+        add(bell(note(m), 0.7), 12.75 + 0.9 + i * 0.42, 0.14)
+    photo_cuts(15.9)
+    outro()
+
+elif VARIANT == "i":
+    # ── I · Origin story: a quiet, human opening; the groove starts when NextSlot arrives ──
+    add(pad([note(m) for m in (45, 52, 57, 60, 64)], 3.5 * S), 0, 0.10)
+    add(pad([note(m) for m in (41, 48, 53, 57, 60)], 3.4 * S), 3.25, 0.10)
+    for at, m in ((0.5, 76), (0.95, 72), (1.9, 69), (2.3, 76)):
+        add(bell(note(m), 1.6), at, 0.12)
+    for i in range(3):                        # each "before" statement
+        add(thud(), 3.25 + 0.3 + i * 0.62, 0.4)
+    add(bell(note(64), 1.4), 3.25 + 2.2, 0.12)
+    add(whoosh(0.5), 6.2, 0.5)
+    groove(6.6)
+    add(thud(), 6.6, 0.5)
+    add(bell(note(84)), 6.65, 0.18)
+    transitions((9.1, 12.2, 15.8, 17.95))
+    for i, m in enumerate((72, 76, 79, 84)):  # her words
+        add(bell(note(m), 1.0), 9.1 + 0.4 + i * 0.3, 0.09)
+    for i in range(10):                       # figure counts up
+        add(hat(0.6, 60), 12.2 + 0.3 + i * 0.12, 0.12)
+    add(bell(note(88), 1.0), 12.2 + 1.5, 0.18)
+    for i in range(3):
+        add(pop(720 + i * 70), 12.2 + 1.6 + i * 0.32, 0.2)
+    photo_cuts(15.8)
+    outro()
+
+elif VARIANT == "j":
+    # ── J · December rush: a bright jingle, pops as the month fills ──
+    add(pad([note(m) for m in (48, 55, 60, 64, 67)], 3.4 * S), 0, 0.08)
+    for i in range(22):                       # sleigh-bell shimmer
+        add(hat(0.8, 30), 0.3 + i * 0.125, 0.09 + 0.05 * (i % 2), pan=0.35 if i % 2 else -0.35)
+        add(bell(note(96 + (i % 2) * 4), 0.25), 0.3 + i * 0.125, 0.025)
+    for i in range(12):                       # days filling
+        add(pop(700 + (i * 37) % 400), 0.5 + i * 0.16, 0.13, pan=(-0.3, 0.3)[i % 2])
+    add(thud(), 2.2, 0.6)
+    add(whoosh(0.5), 2.95, 0.5)
+    groove(3.35)
+    add(thud(), 3.35, 0.5)
+    add(bell(note(84)), 3.4, 0.18)
+    transitions((5.9, 9.95, 12.95, 15.9, 17.95))
+    phone_flow(5.9)
+    add(click(), 9.95 + 0.9, 0.45)            # Thandi takes 10:30
+    add(pop(300), 9.95 + 1.25, 0.3)           # gone for Lerato
+    add(click(), 9.95 + 1.95, 0.45)           # she takes 12:00
+    for k, m in enumerate((76, 79, 84)):
+        add(bell(note(m), 1.0), 9.95 + 2.4 + k * 0.08, 0.2)
+    for at in (0.9, 1.35, 1.75):              # days blocked
+        add(click(), 12.95 + at, 0.45)
+    add(bell(note(84), 0.9), 12.95 + 2.2, 0.16)
+    photo_cuts(15.9)
+    outro()
+
 else:
-    sys.exit(f"unknown variant {VARIANT!r}; use a, b, c or d")
+    sys.exit(f"unknown variant {VARIANT!r}; use a to j")
 
 # ── master ──
 mix = np.stack([L, R], axis=1)

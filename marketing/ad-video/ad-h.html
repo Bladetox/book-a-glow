@@ -1,0 +1,217 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>NextSlot ad · H · Link in bio</title>
+<link rel="stylesheet" href="ad-core.css">
+<link rel="stylesheet" href="ad-kit.css">
+<style>
+/* ── Hook: a premium profile with "DM to book" ── */
+.profile { position: absolute; left: 100px; right: 100px; top: 430px; padding: 50px 50px 46px; border-radius: 56px; background: #fff; color: var(--ink);
+  box-shadow: 0 40px 90px rgba(0,0,0,.45); }
+.profile .top { display: flex; align-items: center; gap: 44px; }
+.profile .pic { width: 190px; height: 190px; border-radius: 50%; flex: none; background: url(assets/beautician.jpg) 50% 20% / cover; border: 6px solid var(--gold); }
+.profile .stats { display: flex; gap: 40px; flex: 1; justify-content: space-around; text-align: center; font-size: 26px; color: var(--muted); }
+.profile .stats b { display: block; font-family: Montserrat; font-weight: 800; font-size: 44px; color: var(--ink); }
+.profile .k-name { margin-top: 30px; font-size: 46px; }
+.profile .bio { font-size: 36px; line-height: 1.55; margin-top: 10px; }
+.profile .bio span { display: inline-block; padding: 0 14px; margin-left: -14px; border-radius: 14px; }
+.profile .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 34px; }
+.profile .grid div { height: 250px; border-radius: 22px; background: url(assets/beautician.jpg) 50% 20% / cover; }
+.dm { position: absolute; right: 60px; top: 404px; width: 116px; height: 116px; border-radius: 50%; background: var(--ink); display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 16px 34px rgba(0,0,0,.4); }
+.dm b { position: absolute; right: -14px; top: -14px; min-width: 62px; height: 62px; padding: 0 14px; border-radius: 31px; background: var(--red); color: #fff;
+  font-family: Montserrat; font-weight: 800; font-size: 32px; display: flex; align-items: center; justify-content: center; }
+.line2 { top: 1470px; font-size: 80px; color: #F5F0E7; padding: 0 70px; }
+.line2 span { color: var(--red); }
+
+/* ── Themes inside the phone ── */
+.chips { position: absolute; left: 0; right: 0; top: 392px; display: flex; justify-content: center; gap: 16px; }
+.chips .k-pill { font-size: 30px; padding: 12px 30px; background: #fff; color: var(--ink2); }
+.chips .k-pill.sel { background: var(--ink); color: #fff; }
+.th { position: absolute; inset: 0; background: var(--bg); color: var(--fg); }
+.th .biz .avatar { background: var(--pri); }
+.th .biz .url { color: var(--fg); opacity: .6; }
+.th .step-label { color: var(--acc); }
+.th .svc { background: var(--card); border-color: rgba(128,128,128,.16); }
+.th .svc span { color: var(--fg); opacity: .6; }
+.th .book { position: absolute; left: 32px; right: 32px; bottom: 54px; padding: 34px 0; border-radius: 32px; background: var(--pri); color: #fff;
+  text-align: center; font-size: 34px; font-weight: 700; }
+
+/* ── One link everywhere ── */
+.link { position: absolute; left: 50%; top: 570px; padding: 38px 54px; border-radius: 70px; background: var(--ink); color: #F5F0E7;
+  font-family: Montserrat; font-weight: 800; font-size: 46px; white-space: nowrap; box-shadow: 0 26px 56px rgba(30,20,10,.28); }
+.link span { color: var(--gold); }
+.places { position: absolute; left: 80px; right: 80px; top: 800px; display: grid; grid-template-columns: 1fr 1fr; gap: 26px; }
+.places div { padding: 40px 0; border-radius: 36px; background: #fff; text-align: center; font-size: 40px; font-weight: 700; box-shadow: 0 14px 34px rgba(80,55,25,.09); opacity: 0; }
+.domain b { display: block; font-family: Montserrat; font-weight: 800; font-size: 54px; margin-top: 20px; letter-spacing: -0.02em; }
+
+/* ── No app, no sign-up ── */
+.easy { position: absolute; left: 80px; right: 80px; top: 640px; }
+.easy .it { display: flex; align-items: center; gap: 36px; padding: 44px 46px; margin-bottom: 28px; border-radius: 42px; background: #fff; box-shadow: 0 16px 40px rgba(80,55,25,.10); opacity: 0; }
+.easy .it b { display: block; font-size: 44px; }
+.easy .it span { font-size: 31px; color: var(--muted); }
+.easy .k-check { width: 100px; height: 100px; }
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+
+  <!-- 1. Hook -->
+  <div class="scene dark" id="s1">
+    <div class="center h k-hook" id="s1h" style="top:150px">Your work looks <span>premium.</span></div>
+    <div class="profile" id="profile">
+      <div class="top"><div class="pic"></div><div class="stats"><div><b>128</b>posts</div><div><b>4 312</b>followers</div><div><b>310</b>following</div></div></div>
+      <div class="k-name">Glow Studio</div>
+      <div class="bio">Lashes · Brows · Nails 💅<br>📍 Cape Town<br><span id="dmline">DM to book 📩</span></div>
+      <div class="grid"><div></div><div style="background-position:15% 55%;background-size:230%"></div><div style="background-position:85% 35%;background-size:260%"></div></div>
+    </div>
+    <div class="dm" id="dm"><svg width="56" height="56" viewBox="0 0 24 24"><path d="M21 3L3 10.5l7 2.5 2.5 7z M10 13l11-10" fill="none" stroke="#F5F0E7" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/></svg><b id="dmcount">3</b></div>
+    <div class="center h line2" id="line2"><span>“DM to book”</span> doesn't.</div>
+  </div>
+
+  <div id="wipe"></div>
+  <div class="scene c-reveal" id="s2"></div>
+
+  <!-- 3. Themes -->
+  <div class="scene" id="s3">
+    <div class="center caption" style="top:150px" id="s3cap">
+      <div class="h" style="font-size:84px">Your logo. <span class="bronze">Your look.</span></div>
+    </div>
+    <div class="chips" id="chips"><span class="k-pill">Lash Tech</span><span class="k-pill">Barber</span><span class="k-pill">Beautician</span></div>
+    <div class="phone" id="hphone">
+      <div class="screen">
+        <div id="themes"></div>
+        <div class="notch"></div>
+      </div>
+    </div>
+    <div class="k-tap" id="tap3"></div>
+  </div>
+
+  <!-- 4. One link everywhere -->
+  <div class="scene" id="s4">
+    <div class="center caption" style="top:190px" id="s4cap">
+      <div class="h" style="font-size:104px">One link, <span class="bronze">everywhere.</span></div>
+    </div>
+    <div class="link" id="link">🔗 glowstudio<span>.nextslot.co.za</span></div>
+    <div class="places" id="places"><div>Instagram bio</div><div>TikTok bio</div><div>WhatsApp status</div><div>Facebook page</div></div>
+    <div class="k-card domain" style="top:1230px" id="domain">
+      <div class="k-row"><span class="k-eyebrow">Or use your own domain</span><span class="k-pill amber">Professional plan</span></div>
+      <b>book.glowstudio.co.za</b>
+    </div>
+  </div>
+
+  <!-- 5. No app, no sign-up -->
+  <div class="scene" id="s5">
+    <div class="center caption" style="top:170px" id="s5cap">
+      <div class="h" style="font-size:108px">No app.<br><span class="bronze">No sign-up.</span></div>
+      <p>Clients tap your link and book.</p>
+    </div>
+    <div class="easy" id="easy">
+      <div class="it"><div class="k-check"><svg width="58" height="58" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="24" stroke-dashoffset="24"/></svg></div><div><b>No app to download</b><span>Opens in any browser</span></div></div>
+      <div class="it"><div class="k-check"><svg width="58" height="58" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="24" stroke-dashoffset="24"/></svg></div><div><b>No account or password</b><span>Guests book with just their details</span></div></div>
+      <div class="it"><div class="k-check"><svg width="58" height="58" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="24" stroke-dashoffset="24"/></svg></div><div><b>Confirmation by email</b><span>Sent when the booking is confirmed</span></div></div>
+    </div>
+  </div>
+
+  <div class="scene c-who" id="s6"></div>
+  <div class="scene c-cta" id="s7"></div>
+</div>
+
+<script src="ad-core.js"></script>
+<script>
+mount("#s2", C.reveal({ tag: "A booking page as polished as your work." }));
+mount("#s6", C.who({ headline: "Built for <span>independent</span> pros like you." }));
+mount("#s7", C.cta());
+
+// Three of NextSlot's real booking-page themes (colours from src/data/themes.ts).
+const THEMES = [
+  { vars: "--bg:hsl(345 45% 90%);--fg:hsl(340 25% 10%);--pri:hsl(340 50% 32%);--acc:hsl(270 45% 48%);--card:hsl(345 55% 96%)",
+    name: "Lash Atelier", url: "lashatelier.nextslot.co.za", svcs: [["Classic Full Set", "120 min", "R650"], ["Lash Fill", "60 min", "R350"], ["Lash Lift &amp; Tint", "60 min", "R450"]] },
+  { vars: "--bg:hsl(210 15% 15%);--fg:hsl(210 10% 92%);--pri:hsl(0 65% 50%);--acc:hsl(25 55% 60%);--card:hsl(210 15% 21%)",
+    name: "Fade Lab", url: "fadelab.nextslot.co.za", svcs: [["Skin Fade", "45 min", "R180"], ["Beard Trim", "20 min", "R90"], ["Cut &amp; Style", "60 min", "R220"]] },
+  { vars: "--bg:hsl(88 35% 90%);--fg:hsl(150 30% 10%);--pri:hsl(148 40% 30%);--acc:hsl(160 50% 32%);--card:hsl(88 45% 96%)",
+    name: "Calm Skin Studio", url: "calmskin.nextslot.co.za", svcs: [["Signature Facial", "60 min", "R550"], ["Back Massage", "45 min", "R400"], ["Brow Shape", "30 min", "R180"]] },
+];
+$("#themes").innerHTML = THEMES.map(th => `
+  <div class="th" style="${th.vars}">
+    <div class="biz"><div class="avatar">${th.name[0]}</div><div class="name">${th.name}</div><div class="url">${th.url}</div></div>
+    <div class="step-label">Choose a service</div>
+    ${th.svcs.map(([n, d, p]) => `<div class="svc"><div><b>${n}</b><span>${d}</span></div><div class="pr">${p}</div></div>`).join("")}
+    <div class="book">Book now</div>
+  </div>`).join("");
+const SWITCH = [0, 1.55, 2.75];            // when each theme takes over (scene time)
+
+defineAd({
+  windows: { s1: [0, 3.3], s2: [3.25, 6.0], s3: [5.9, 10.05], s4: [9.95, 12.85], s5: [12.75, 16.0], s6: [15.9, 18.05], s7: [17.95, 20.1] },
+  render(t) {
+    // ── Hook: great profile, clumsy booking ──
+    if (t < 3.6) {
+      const out = eio(prog(t, 2.95, 3.3)), fade = 1 - out;
+      rise($("#s1h"), t, .1, .5);
+      $("#s1h").style.opacity *= fade;
+      const pp = back(prog(t, .3, .75));
+      $("#profile").style.opacity = cl(prog(t, .3, .45)) * fade;
+      $("#profile").style.transform = `translateY(${(1 - pp) * 90 + out * 60}px) scale(${lerp(.92, 1, pp)})`;
+      $("#profile").style.filter = `blur(${out * 8}px)`;
+      const hot = eo(prog(t, 1.5, 1.8));
+      $("#dmline").style.background = `rgba(224,83,63,${hot * .16})`;
+      $("#dmline").style.color = hot > .5 ? "#C2402D" : "";
+      $("#dmline").style.fontWeight = hot > .5 ? 700 : 400;
+      $("#dmline").style.transform = `translateX(${Math.sin(prog(t, 1.5, 2.0) * Math.PI * 6) * (1 - prog(t, 1.5, 2.0)) * 10}px)`;
+      const count = Math.round(lerp(3, 43, eio(prog(t, .9, 2.7))));
+      $("#dmcount").textContent = count;
+      pop($("#dm"), t, .7, .35, .4);
+      $("#dm").style.opacity *= fade;
+      $("#dm").style.transform += ` rotate(${Math.sin(t * 22) * prog(t, .9, 2.7) * (t < 2.7 ? 5 : 0)}deg)`;
+      const lp = back(prog(t, 1.9, 2.3));
+      $("#line2").style.opacity = cl(prog(t, 1.9, 2.05)) * fade;
+      $("#line2").style.transform = `translateY(${(1 - lp) * 50}px)`;
+    }
+    R.wipe(t, 3.05);
+    R.reveal(t, 3.25, "#s2");
+
+    // ── Themes ──
+    const u = t - 5.9;
+    if (u > -.15 && u < 4.3) {
+      rise($("#s3cap"), u, .1, .5, 50);
+      const ph = eo(prog(u, .15, .75));
+      $("#hphone").style.transform = `translateY(${(1 - ph) * 500}px)`;
+      const active = u >= SWITCH[2] ? 2 : u >= SWITCH[1] ? 1 : 0;
+      $$("#chips .k-pill").forEach((c, i) => { pop(c, u, .4 + i * .08, .3, .6); c.classList.toggle("sel", i === active); });
+      $$("#themes .th").forEach((th, i) => {
+        // each new theme sweeps up over the previous one
+        const p = i === 0 ? 1 : eio(prog(u, SWITCH[i], SWITCH[i] + .35));
+        th.style.clipPath = `inset(${(1 - p) * 100}% 0 0 0)`;
+      });
+      if (!tapFx($("#tap3"), u, SWITCH[1] - .12, 540, 424) && !tapFx($("#tap3"), u, SWITCH[2] - .12, 742, 424)) $("#tap3").style.opacity = 0;
+    }
+
+    // ── One link everywhere ──
+    const v = t - 9.95;
+    if (v > -.15 && v < 3.05) {
+      rise($("#s4cap"), v, .1, .5, 50);
+      pop($("#link"), v, .4, .4, .6, "translateX(-50%)");
+      $$("#places div").forEach((d, i) => pop(d, v, .8 + i * .14, .35, .7));
+      const dp = eo(prog(v, 1.6, 2.0));
+      $("#domain").style.opacity = dp; $("#domain").style.transform = `translateY(${(1 - dp) * 100}px)`;
+    }
+
+    // ── No app, no sign-up ──
+    const w = t - 12.75;
+    if (w > -.15 && w < 3.45) {
+      rise($("#s5cap"), w, .1, .5, 50);
+      $$("#easy .it").forEach((it, i) => {
+        const a = .6 + i * .42;
+        rise(it, w, a, .4, 50);
+        it.querySelector(".k-check").style.background = w > a + .3 ? "#2E7D4F" : "";
+        it.querySelector("path").style.strokeDashoffset = 24 * (1 - eo(prog(w, a + .3, a + .6)));
+      });
+    }
+    R.who(t, 15.9, "#s6");
+    R.cta(t, 17.95);
+  },
+});
+</script>
+</body>
+</html>

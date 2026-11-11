@@ -1,0 +1,235 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>NextSlot ad · F · Call-out pros</title>
+<link rel="stylesheet" href="ad-core.css">
+<link rel="stylesheet" href="ad-kit.css">
+<style>
+/* ── Hook: the unpaid trip ── */
+#s1 { background: #14110E;
+  background-image: linear-gradient(rgba(255,255,255,.035) 2px, transparent 2px), linear-gradient(90deg, rgba(255,255,255,.035) 2px, transparent 2px);
+  background-size: 135px 135px; }
+#s1 svg { position: absolute; inset: 0; }
+.pinlabel { position: absolute; padding: 12px 26px; border-radius: 30px; background: rgba(245,240,231,.12); color: #F5F0E7; font-size: 30px; font-weight: 700; }
+.km { top: 1470px; color: #F5F0E7; font-family: Montserrat; font-weight: 800; font-size: 130px; letter-spacing: -0.03em; line-height: 1; }
+.km small { font-size: 54px; letter-spacing: 0; margin-left: 10px; }
+.kmlabel { top: 1420px; font-size: 26px; font-weight: 700; letter-spacing: .16em; color: rgba(245,240,231,.5); }
+.nofee { top: 1640px; font-family: Montserrat; font-weight: 800; font-size: 60px; color: var(--red); }
+
+/* ── Address and fee ── */
+.addr { top: 540px; }
+.addr .input { margin-top: 24px; padding: 30px 34px; border-radius: 26px; border: 3px solid #E5DACB; font-size: 40px; font-weight: 600; min-height: 110px; }
+.addr .input i { display: inline-block; width: 4px; height: 44px; background: var(--bronze); vertical-align: -8px; margin-left: 4px; }
+.addr .sugg { margin-top: 16px; padding: 28px 30px; border-radius: 22px; background: #FBF6EE; font-size: 34px; font-weight: 500; }
+.addr .ok { margin-top: 22px; font-size: 30px; font-weight: 600; color: var(--green); line-height: 1.3; }
+.bill { top: 1040px; }
+.bill .li { display: flex; justify-content: space-between; align-items: baseline; font-size: 42px; font-weight: 600; padding: 14px 0; }
+.bill .li small { display: block; font-size: 28px; color: var(--muted); font-weight: 500; margin-top: 4px; }
+.bill .li b { font-family: Montserrat; font-weight: 800; font-size: 48px; }
+.bill .fee b, .bill .fee span { color: var(--bronze); }
+.bill .tot { font-size: 46px; }
+.bill .tot b { font-size: 68px; }
+
+/* ── Settings ── */
+.set .li { display: flex; justify-content: space-between; align-items: center; font-size: 40px; font-weight: 600; padding: 28px 0; border-bottom: 3px solid #F1EADF; }
+.set .li:last-child { border-bottom: 0; padding-bottom: 0; }
+.set .li small { font-size: 31px; color: var(--muted); font-weight: 500; }
+.tog { width: 116px; height: 64px; border-radius: 32px; background: #DDD3C5; position: relative; flex: none; }
+.tog i { position: absolute; top: 7px; left: 7px; width: 50px; height: 50px; border-radius: 50%; background: #fff; box-shadow: 0 3px 8px rgba(0,0,0,.2); }
+.rate { padding: 14px 30px; border-radius: 20px; border: 3px solid #E5DACB; font-family: Montserrat; font-weight: 800; font-size: 46px; min-width: 190px; text-align: center; }
+
+/* ── Trips ── */
+.trips .li { display: flex; align-items: center; gap: 24px; padding: 24px 0; border-bottom: 3px solid #F1EADF; }
+.trips .li:last-child { border-bottom: 0; padding-bottom: 0; }
+.trips .li b { font-size: 40px; font-weight: 700; display: block; }
+.trips .li small { font-size: 29px; color: var(--muted); }
+.trips .li .v { margin-left: auto; font-family: Montserrat; font-weight: 800; font-size: 46px; }
+.trips .li .k-pill { font-size: 26px; }
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+
+  <!-- 1. Hook -->
+  <div class="scene" id="s1">
+    <svg viewBox="0 0 1080 1920">
+      <path d="M 230 1330 C 300 1080, 540 1200, 570 960 S 770 790, 850 600" fill="none" stroke="rgba(245,240,231,.10)" stroke-width="26" stroke-linecap="round"/>
+      <path id="route" d="M 230 1330 C 300 1080, 540 1200, 570 960 S 770 790, 850 600" fill="none" stroke="#D4A574" stroke-width="10" stroke-linecap="round"/>
+      <circle cx="230" cy="1330" r="22" fill="#14110E" stroke="#F5F0E7" stroke-width="8"/>
+      <g id="dest"><circle cx="850" cy="600" r="30" fill="#E0533F"/><circle cx="850" cy="600" r="11" fill="#14110E"/></g>
+      <circle id="car" r="20" fill="#F5F0E7" stroke="#D4A574" stroke-width="8"/>
+    </svg>
+    <div class="center h k-hook" id="s1h">You drive to <span>your clients.</span></div>
+    <div class="pinlabel" style="left:270px;top:1345px" id="lblyou">You</div>
+    <div class="pinlabel" style="left:660px;top:505px" id="lblclient">Client</div>
+    <div class="center kmlabel" id="kmlabel">ONE WAY</div>
+    <div class="center km" id="km">0.0<small>km</small></div>
+    <div class="center nofee" id="nofee">Travel fee charged: R0</div>
+  </div>
+
+  <div id="wipe"></div>
+  <div class="scene c-reveal" id="s2"></div>
+
+  <!-- 3. Address in, fee out -->
+  <div class="scene" id="s3">
+    <div class="center caption" style="top:170px" id="s3cap">
+      <div class="h" style="font-size:92px">Address in.<br><span class="bronze">Fee worked out.</span></div>
+      <p>Based on the return trip, at your rate per km.</p>
+    </div>
+    <div class="k-card addr" id="addr">
+      <div class="k-eyebrow">Where should we come to?</div>
+      <div class="input"><span id="typed"></span><i id="caret"></i></div>
+      <div class="sugg" id="sugg">📍 14 Kloof Street, Gardens, Cape Town</div>
+      <div class="ok" id="addrok">✓ Address confirmed — used to calculate your call-out fee</div>
+    </div>
+    <div class="k-card bill" id="bill">
+      <div class="li"><span>Lash Lift &amp; Tint</span><b>R450</b></div>
+      <div class="li fee"><span>Call-out fee<small>12.4 km each way</small></span><b id="feev">R0</b></div>
+      <div class="k-divider" style="margin:18px 0"></div>
+      <div class="li tot"><span>Total</span><b id="totv">R450</b></div>
+    </div>
+    <div class="k-tap" id="tap3"></div>
+    <div class="k-note" style="top:1640px">Example at R3.60 per km. You set your own rate.</div>
+  </div>
+
+  <!-- 4. Settings -->
+  <div class="scene" id="s4">
+    <div class="center caption" style="top:190px" id="s4cap">
+      <div class="h" style="font-size:108px">Your rate.<br><span class="bronze">Your rules.</span></div>
+    </div>
+    <div class="k-card set" style="top:500px" id="set1">
+      <div class="k-eyebrow">Service mode &amp; travel</div>
+      <div class="li">Mobile service<div class="tog" id="tog0"><i></i></div></div>
+      <div class="li">Fixed origin address<small>Wynberg, Cape Town</small></div>
+      <div class="li">Rate per km (ZAR)<div class="rate" id="rate">3.60</div></div>
+    </div>
+    <div class="k-card set" style="top:1040px" id="set2">
+      <div class="k-eyebrow">Offered as call-out</div>
+      <div class="li">Lash Lift &amp; Tint<div class="tog" id="tog1"><i></i></div></div>
+      <div class="li">Bridal Makeup<div class="tog" id="tog2"><i></i></div></div>
+      <div class="li"><span>Gel Manicure <small>· studio only</small></span><div class="tog" id="tog3"><i></i></div></div>
+    </div>
+  </div>
+
+  <!-- 5. Nexty watches the margins -->
+  <div class="scene" id="s5">
+    <div class="center caption" style="top:170px" id="s5cap">
+      <div class="h" style="font-size:84px">Nexty flags trips <span class="bronze">that don't pay.</span></div>
+    </div>
+    <div class="k-card trips" style="top:500px" id="trips">
+      <div class="k-eyebrow">Recent call-outs</div>
+      <div class="li"><div><b>Camps Bay</b><small>9 km · Lash Lift &amp; Tint</small></div><span class="v">R450</span></div>
+      <div class="li" id="lowrow"><div><b>Paarl</b><small>58 km · Brow Shape</small></div><span class="k-pill red" id="lowpill">Low margin</span><span class="v">R180</span></div>
+      <div class="li"><div><b>Claremont</b><small>6 km · Gel Manicure</small></div><span class="v">R320</span></div>
+    </div>
+    <div class="nexty" id="fnexty" style="top:1130px">
+      <div class="tagl">✦ Nexty insight</div>
+      <h4>Low-Margin Travel Identified</h4>
+      <p>Some long trips earn less than twice their petrol cost. Consider a minimum booking value for far call-outs.</p>
+    </div>
+    <div class="k-note" style="top:1700px">Illustrative</div>
+  </div>
+
+  <div class="scene c-who" id="s6"></div>
+  <div class="scene c-cta" id="s7"></div>
+</div>
+
+<script src="ad-core.js"></script>
+<script>
+mount("#s2", C.reveal({ tag: "Call-out fees, worked out for every booking." }));
+mount("#s6", C.who({ headline: "Built for pros <span>on the move.</span>", items: [
+  ["beautician.jpg", "Mobile Beauty"], ["barber.jpg", "Mobile Barbers"],
+  ["scene-beauty-treatment-room-aspiration.webp", "Massage Therapists"], ["professional-photographer-at-work.webp", "Photographers"] ] }));
+mount("#s7", C.cta({ sub: "<b>Call-out mode: Professional plan</b><br>30-day free trial · No payment required" }));
+
+const route = $("#route"), LEN = route.getTotalLength();
+route.style.strokeDasharray = LEN;
+const ADDRESS = "14 Kloof Street, Gardens";
+const toggle = (el, on) => {              // on: 0..1
+  el.style.background = on > .5 ? "#2E7D4F" : "#DDD3C5";
+  el.firstElementChild.style.transform = `translateX(${on * 52}px)`;
+};
+
+defineAd({
+  windows: { s1: [0, 3.3], s2: [3.25, 6.0], s3: [5.9, 10.05], s4: [9.95, 13.05], s5: [12.95, 16.0], s6: [15.9, 18.05], s7: [17.95, 20.1] },
+  render(t) {
+    // ── Hook: the drive nobody pays for ──
+    if (t < 3.6) {
+      const out = eio(prog(t, 2.95, 3.3)), fade = 1 - out;
+      rise($("#s1h"), t, .1, .5);
+      $("#s1h").style.opacity *= fade;
+      const d = eio(prog(t, .45, 2.2));
+      route.style.strokeDashoffset = LEN * (1 - d);
+      const pt = route.getPointAtLength(LEN * d);
+      $("#car").setAttribute("cx", pt.x); $("#car").setAttribute("cy", pt.y);
+      $("#car").style.opacity = cl(prog(t, .35, .5));
+      $("#dest").style.opacity = cl(prog(t, .3, .5));
+      $("#lblyou").style.opacity = cl(prog(t, .3, .5)) * fade;
+      $("#lblclient").style.opacity = cl(prog(t, .4, .6)) * fade;
+      $("#kmlabel").style.opacity = cl(prog(t, .4, .6)) * fade;
+      $("#km").firstChild.textContent = (12.4 * d).toFixed(1);
+      $("#km").style.opacity = cl(prog(t, .4, .6)) * fade;
+      const np = back(prog(t, 2.3, 2.6));
+      $("#nofee").style.opacity = cl(prog(t, 2.3, 2.4)) * fade;
+      $("#nofee").style.transform = `scale(${lerp(1.6, 1, np)})`;
+    }
+    R.wipe(t, 3.05);
+    R.reveal(t, 3.25, "#s2");
+
+    // ── Address typed, fee calculated ──
+    const u = t - 5.9;
+    if (u > -.15 && u < 4.3) {
+      rise($("#s3cap"), u, .1, .5, 50);
+      const ap = eo(prog(u, .3, .75));
+      $("#addr").style.opacity = ap; $("#addr").style.transform = `translateY(${(1 - ap) * 110}px)`;
+      const picked = u > 1.85;
+      $("#typed").textContent = picked ? "14 Kloof Street, Gardens, Cape Town" : typed(ADDRESS, prog(u, .6, 1.45));
+      $("#caret").style.opacity = picked ? 0 : (Math.floor(u * 3) % 2 ? .2 : 1);
+      $("#sugg").style.opacity = picked ? 0 : eo(prog(u, 1.2, 1.4));
+      $("#sugg").style.display = u > 2.0 ? "none" : "block";
+      $("#addrok").style.display = u > 2.0 ? "block" : "none";
+      $("#addrok").style.opacity = eo(prog(u, 2.0, 2.25));
+      const bp = eo(prog(u, 2.2, 2.65));
+      $("#bill").style.opacity = bp; $("#bill").style.transform = `translateY(${(1 - bp) * 110}px)`;
+      const fee = Math.round(90 * eo(prog(u, 2.6, 3.3)));
+      $("#feev").textContent = "R" + fee; $("#totv").textContent = "R" + (450 + fee);
+      $("#totv").style.transform = `scale(${1 + Math.sin(prog(u, 3.3, 3.6) * Math.PI) * .1})`;
+      if (!tapFx($("#tap3"), u, 1.7, 540, 838)) $("#tap3").style.opacity = 0;
+    }
+
+    // ── Settings ──
+    const v = t - 9.95;
+    if (v > -.15 && v < 3.3) {
+      rise($("#s4cap"), v, .1, .5, 50);
+      const a = eo(prog(v, .3, .75)), b = eo(prog(v, .55, 1.0));
+      $("#set1").style.opacity = a; $("#set1").style.transform = `translateY(${(1 - a) * 110}px)`;
+      $("#set2").style.opacity = b; $("#set2").style.transform = `translateY(${(1 - b) * 110}px)`;
+      toggle($("#tog0"), eio(prog(v, .9, 1.15)));
+      const r = lerp(3.6, 4.5, eo(prog(v, 1.35, 1.95)));
+      $("#rate").textContent = (Math.round(r * 10) / 10).toFixed(2);
+      $("#rate").style.borderColor = v > 1.35 && v < 2.2 ? "#94672F" : "";
+      toggle($("#tog1"), eio(prog(v, 1.9, 2.1)));
+      toggle($("#tog2"), eio(prog(v, 2.1, 2.3)));
+      toggle($("#tog3"), 0);
+    }
+
+    // ── Nexty insight ──
+    const w = t - 12.95;
+    if (w > -.15 && w < 3.3) {
+      rise($("#s5cap"), w, .1, .5, 50);
+      const tp = eo(prog(w, .3, .75));
+      $("#trips").style.opacity = tp; $("#trips").style.transform = `translateY(${(1 - tp) * 110}px)`;
+      pop($("#lowpill"), w, 1.15, .35, .5);
+      $("#lowrow").style.background = w > 1.15 ? `rgba(224,83,63,${.06 + Math.sin(w * 8) * .02})` : "";
+      const np = back(prog(w, 1.5, 2.0));
+      $("#fnexty").style.opacity = cl(prog(w, 1.5, 1.7));
+      $("#fnexty").style.transform = `translateY(${(1 - np) * 180}px)`;
+    }
+    R.who(t, 15.9, "#s6");
+    R.cta(t, 17.95);
+  },
+});
+</script>
+</body>
+</html>

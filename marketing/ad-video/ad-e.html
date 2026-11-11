@@ -1,0 +1,206 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>NextSlot ad · E · Proof of payment</title>
+<link rel="stylesheet" href="ad-core.css">
+<link rel="stylesheet" href="ad-kit.css">
+<style>
+/* ── Hook: the payment that never reflects ── */
+.slip { position: absolute; left: 150px; right: 150px; top: 500px; padding: 46px 52px 40px; border-radius: 30px; background: #FBF8F3; color: var(--ink);
+  box-shadow: 0 40px 80px rgba(0,0,0,.45); transform: rotate(-3deg); }
+.slip .k-eyebrow { color: var(--muted); }
+.slip .line { display: flex; justify-content: space-between; align-items: center; font-size: 36px; padding: 20px 0; border-bottom: 3px dashed #E5DACB; }
+.slip .line b { font-family: Montserrat; font-weight: 800; }
+.slip .foot { font-size: 25px; color: var(--muted); margin-top: 22px; }
+.daychip { position: absolute; left: 50%; top: 1085px; transform: translateX(-50%); display: flex; align-items: center; gap: 22px;
+  font-family: Montserrat; font-weight: 800; font-size: 60px; color: #F5F0E7; white-space: nowrap; }
+.daychip i { width: 22px; height: 22px; border-radius: 50%; background: rgba(245,240,231,.2); display: block; }
+.daychip i.on { background: var(--red); }
+
+/* ── PayShap queue ── */
+.bank { top: 560px; display: flex; gap: 28px; align-items: center; padding: 32px 38px; }
+.bank .ic { width: 96px; height: 96px; border-radius: 26px; background: var(--ink); color: var(--gold); flex: none; display: flex; align-items: center;
+  justify-content: center; font-family: Montserrat; font-weight: 800; font-size: 50px; }
+.bank b { font-size: 38px; display: block; }
+.bank span { font-size: 30px; color: var(--muted); }
+.bank small { margin-left: auto; align-self: flex-start; font-size: 24px; color: var(--muted); font-weight: 600; }
+.queue { top: 810px; padding: 54px 52px; }
+.queue .k-name { font-size: 50px; }
+.queue .k-sub { font-size: 32px; }
+.queue .k-btn { font-size: 36px; padding: 36px 0; }
+.queue .amt { font-family: Montserrat; font-weight: 800; font-size: 76px; color: #5FD39A; text-align: right; line-height: 1; }
+.queue .amt small { display: block; font-family: Inter; font-size: 22px; letter-spacing: .12em; color: rgba(245,240,231,.4); margin-top: 8px; }
+.queue .acts { position: relative; height: 122px; margin-top: 44px; }
+.queue .acts > div { position: absolute; inset: 0; }
+.queue .two { display: grid; grid-template-columns: 1.6fr 1fr; gap: 20px; }
+.queue .okmsg { display: flex; align-items: center; gap: 26px; font-size: 32px; }
+.queue .okmsg b { display: block; font-size: 40px; }
+.mailchip { position: absolute; left: 50%; top: 1440px; padding: 24px 42px; border-radius: 60px; background: #fff; font-size: 32px; font-weight: 600;
+  white-space: nowrap; box-shadow: 0 16px 40px rgba(80,55,25,.12); opacity: 0; }
+.queue .okmsg .k-check { background: var(--green); }
+
+/* ── Deposit and balance ledger ── */
+.ledger { top: 580px; padding: 56px 54px; }
+.ledger .k-name { font-size: 50px; }
+.ledger .k-sub { font-size: 32px; }
+.ledger .tot { font-family: Montserrat; font-weight: 800; font-size: 68px; }
+.ledger .li { display: flex; align-items: center; gap: 24px; font-size: 44px; font-weight: 600; padding: 24px 0; }
+.ledger .li .k-pill { font-size: 30px; }
+.ledger .li .v { margin-left: auto; font-family: Montserrat; font-weight: 800; font-size: 52px; }
+.ledger .k-btn { margin-top: 40px; font-size: 38px; padding: 38px 0; }
+.full { position: absolute; left: 50%; top: 1470px; padding: 24px 54px; border-radius: 60px; background: var(--green); color: #fff;
+  font-family: Montserrat; font-weight: 800; font-size: 46px; white-space: nowrap; opacity: 0; }
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+
+  <!-- 1. Hook -->
+  <div class="scene dark" id="s1">
+    <div class="center h k-hook" id="s1h">Still waiting for <span>proof of payment?</span></div>
+    <div class="slip" id="slip">
+      <div class="k-eyebrow">Proof of payment</div>
+      <div class="line"><span>Amount</span><b>R450.00</b></div>
+      <div class="line"><span>Reference</span><b>Lash lift Sat</b></div>
+      <div class="line" style="border:0"><span>Status</span><span class="k-pill amber" id="pend">Pending</span></div>
+      <div class="foot">EFT payments can take 1 to 3 business days to reflect.</div>
+    </div>
+    <div class="daychip" id="daychip"><span id="dayn">Day 1</span><i class="on"></i><i></i><i></i></div>
+    <div class="k-bubble" style="left:90px;top:1230px" data-at="0.7">Sent! Did it go through? 🙏</div>
+    <div class="k-bubble me" style="left:420px;top:1380px" data-at="1.45">Nothing yet 😬</div>
+    <div class="k-bubble me" style="left:230px;top:1530px" data-at="2.2">Your appointment is tomorrow…</div>
+  </div>
+
+  <div id="wipe"></div>
+  <div class="scene c-reveal" id="s2"></div>
+
+  <!-- 3. PayShap queue -->
+  <div class="scene" id="s3">
+    <div class="center caption" style="top:170px" id="s3cap">
+      <div class="h" style="font-size:88px">PayShap lands <span class="bronze">in seconds.</span></div>
+      <p>Check it's in, then confirm. Your client is notified.</p>
+    </div>
+    <div class="k-card bank" id="bank">
+      <div class="ic">R</div>
+      <div><b>PayShap received: R225.00</b><span>From T MOKOENA · Ref Thandi Mokoena</span></div>
+      <small>now</small>
+    </div>
+    <div class="k-dark queue" id="queue">
+      <div class="k-eyebrow">PayShap payments</div>
+      <div class="k-row" style="margin-top:26px">
+        <div><div class="k-name">Thandi M.</div><div class="k-sub">Lash Lift &amp; Tint · Sat 14 Nov, 10:30</div><div class="k-sub" style="font-size:24px">Received 12 Nov, 09:14</div></div>
+        <div class="amt">R 225<small>DEPOSIT</small></div>
+      </div>
+      <div class="acts">
+        <div id="act1"><div class="k-btn ghost">I have checked — payment received</div></div>
+        <div id="act2" class="two"><div class="k-btn green">Confirm booking</div><div class="k-btn ghost">Decline</div></div>
+        <div id="act3" class="okmsg"><div class="k-check"><svg width="50" height="50" viewBox="0 0 24 24"><path id="qtick" d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="24" stroke-dashoffset="24"/></svg></div><div><b>Payment confirmed</b>Booking confirmed and client notified.</div></div>
+      </div>
+    </div>
+    <div class="mailchip" id="mailchip">✉️ Confirmation email sent to Thandi</div>
+    <div class="k-tap" id="tap3"></div>
+    <div class="k-note" style="top:1640px">PayShap is on the Starter plan.</div>
+  </div>
+
+  <div class="scene c-pay" id="s4"></div>
+
+  <!-- 5. Deposit and balance -->
+  <div class="scene" id="s5">
+    <div class="center caption" style="top:190px" id="s5cap">
+      <div class="h" style="font-size:80px;padding:0 60px">Deposits and balances, <span class="bronze">tracked.</span></div>
+    </div>
+    <div class="k-card ledger" id="ledger">
+      <div class="k-row"><div><div class="k-name">Thandi M.</div><div class="k-sub">Lash Lift &amp; Tint · Sat 10:30</div></div><div class="tot">R450</div></div>
+      <div class="k-divider"></div>
+      <div class="li">Deposit <span class="k-pill green">Paid</span><span class="v">R225</span></div>
+      <div class="li">Balance <span class="k-pill amber" id="balpill">Due</span><span class="v">R225</span></div>
+      <div class="k-btn" id="balbtn">Request balance</div>
+    </div>
+    <div class="full" id="full">Paid in full ✓</div>
+    <div class="k-tap" id="tap5"></div>
+    <div class="k-note" style="top:1640px">Illustrative</div>
+  </div>
+
+  <div class="scene c-who" id="s6"></div>
+  <div class="scene c-cta" id="s7"></div>
+</div>
+
+<script src="ad-core.js"></script>
+<script>
+mount("#s2", C.reveal({ tag: "Paid upfront. Confirmed before they arrive." }));
+mount("#s4", C.pay({ line1: "Cards work too.", line2: "Auto-confirmed." }) + '<div class="k-note" style="top:1640px">Card payments are on Flow and up.</div>');
+mount("#s6", C.who({ headline: "Less chasing. <span>More creating.</span>" }));
+mount("#s7", C.cta());
+
+defineAd({
+  windows: { s1: [0, 3.3], s2: [3.25, 6.0], s3: [5.9, 10.05], s4: [9.95, 12.85], s5: [12.75, 16.0], s6: [15.9, 18.05], s7: [17.95, 20.1] },
+  render(t) {
+    // ── Hook: three days of waiting ──
+    if (t < 3.6) {
+      const out = eio(prog(t, 2.95, 3.3)), fade = 1 - out;
+      rise($("#s1h"), t, .1, .5);
+      $("#s1h").style.opacity *= fade;
+      const sp = back(prog(t, .3, .7));
+      $("#slip").style.opacity = cl(prog(t, .3, .45)) * fade;
+      $("#slip").style.transform = `rotate(-3deg) translateY(${(1 - sp) * 80 + out * 60}px) scale(${lerp(.9, 1, sp)})`;
+      $("#slip").style.filter = `blur(${out * 8}px)`;
+      $("#pend").textContent = "Pending" + ".".repeat(1 + Math.floor(t * 3) % 3);
+      const day = t < 1.15 ? 1 : t < 2.0 ? 2 : 3;
+      $("#dayn").textContent = "Day " + day;
+      $$("#daychip i").forEach((d, i) => d.classList.toggle("on", i < day));
+      const bump = Math.max(Math.sin(prog(t, 1.15, 1.4) * Math.PI), Math.sin(prog(t, 2.0, 2.25) * Math.PI));
+      $("#daychip").style.opacity = cl(prog(t, .6, .8)) * fade;
+      $("#daychip").style.transform = `translateX(-50%) scale(${1 + bump * .12})`;
+      $$("#s1 .k-bubble").forEach(b => {
+        const a = +b.dataset.at, p = back(prog(t, a, a + .32));
+        b.style.opacity = cl(prog(t, a, a + .12)) * fade;
+        b.style.transform = `translateY(${(1 - p) * 40 + out * 70}px) scale(${lerp(.7, 1, p)})`;
+        b.style.filter = `blur(${out * 8}px)`;
+      });
+    }
+    R.wipe(t, 3.05);
+    R.reveal(t, 3.25, "#s2");
+
+    // ── PayShap arrives; check, confirm ──
+    const u = t - 5.9;
+    if (u > -.15 && u < 4.3) {
+      rise($("#s3cap"), u, .1, .5, 50);
+      const bp = back(prog(u, .5, .9));
+      $("#bank").style.opacity = cl(prog(u, .5, .65));
+      $("#bank").style.transform = `translateY(${(1 - bp) * -90}px)`;
+      const qp = eo(prog(u, .8, 1.25));
+      $("#queue").style.opacity = qp; $("#queue").style.transform = `translateY(${(1 - qp) * 110}px)`;
+      const st = u < 1.75 ? 1 : u < 2.75 ? 2 : 3;
+      $("#act1").style.opacity = st === 1 ? 1 : 0;
+      $("#act2").style.opacity = st === 2 ? eo(prog(u, 1.75, 1.95)) : 0;
+      $("#act3").style.opacity = st === 3 ? eo(prog(u, 2.75, 2.95)) : 0;
+      $("#qtick").style.strokeDashoffset = 24 * (1 - eo(prog(u, 2.85, 3.2)));
+      pop($("#mailchip"), u, 3.05, .4, .7, "translateX(-50%)");
+      if (!tapFx($("#tap3"), u, 1.6, 540, 1165) && !tapFx($("#tap3"), u, 2.6, 380, 1165)) $("#tap3").style.opacity = 0;
+    }
+    R.pay(t, 9.95);
+
+    // ── Deposit paid, balance requested, paid in full ──
+    const v = t - 12.75;
+    if (v > -.15 && v < 3.45) {
+      rise($("#s5cap"), v, .1, .5, 50);
+      const lp = eo(prog(v, .35, .8));
+      $("#ledger").style.opacity = lp; $("#ledger").style.transform = `translateY(${(1 - lp) * 110}px)`;
+      const sent = v > 1.55, paid = v > 2.2;
+      $("#balbtn").textContent = sent ? "Balance request sent ✓" : "Request balance";
+      $("#balbtn").style.background = sent ? "#94672F" : "";
+      $("#balbtn").style.transform = `scale(${1 - Math.sin(prog(v, 1.45, 1.65) * Math.PI) * .04})`;
+      $("#balpill").textContent = paid ? "Paid" : "Due";
+      $("#balpill").className = "k-pill " + (paid ? "green" : "amber");
+      $("#balpill").style.transform = `scale(${1 + Math.sin(prog(v, 2.2, 2.5) * Math.PI) * .25})`;
+      pop($("#full"), v, 2.35, .4, .6, "translateX(-50%)");
+      if (!tapFx($("#tap5"), v, 1.45, 540, 1128)) $("#tap5").style.opacity = 0;
+    }
+    R.who(t, 15.9, "#s6");
+    R.cta(t, 17.95);
+  },
+});
+</script>
+</body>
+</html>

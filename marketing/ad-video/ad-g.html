@@ -1,0 +1,206 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>NextSlot ad · G · Quiet regulars</title>
+<link rel="stylesheet" href="ad-core.css">
+<link rel="stylesheet" href="ad-kit.css">
+<style>
+/* ── Hook: regulars drifting away ── */
+.gq { position: absolute; left: 80px; right: 80px; height: 210px; padding: 0 44px; border-radius: 44px; background: #2A221B; color: #F5F0E7;
+  display: flex; align-items: center; gap: 30px; opacity: 0; }
+.gq .k-sub { color: rgba(245,240,231,.55); }
+.gq .last { margin-left: auto; text-align: right; }
+.gq .last i { display: block; font-style: normal; font-size: 22px; font-weight: 700; letter-spacing: .14em; color: rgba(245,240,231,.45); }
+.gq .last b { font-family: Montserrat; font-weight: 800; font-size: 46px; white-space: nowrap; }
+.notice { top: 1390px; font-size: 92px; color: #F5F0E7; }
+
+/* ── Loyalty list ── */
+.pills { position: absolute; left: 70px; right: 70px; top: 480px; display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; }
+.pills .k-pill { font-size: 27px; padding: 12px 24px; }
+.rows { position: absolute; left: 80px; right: 80px; top: 650px; }
+.crow { display: flex; align-items: center; gap: 28px; padding: 30px 36px; margin-bottom: 20px; border-radius: 36px; background: #fff;
+  box-shadow: 0 14px 34px rgba(80,55,25,.09); }
+.crow .k-avatar { width: 88px; height: 88px; font-size: 36px; }
+.crow .k-name { font-size: 38px; }
+.crow .k-sub { font-size: 28px; }
+.crow .k-pill { margin-left: auto; font-size: 27px; }
+
+/* ── WhatsApp nudge ── */
+.wabtn { margin-left: 20px; width: 92px; height: 92px; border-radius: 50%; background: #25D366; flex: none; display: flex; align-items: center; justify-content: center; }
+.tones { position: absolute; left: 80px; right: 80px; top: 725px; display: flex; align-items: center; gap: 16px; font-size: 26px; font-weight: 700; letter-spacing: .14em; color: var(--muted); }
+.tones .k-pill { letter-spacing: 0; font-size: 30px; background: #fff; color: var(--ink2); padding: 12px 28px; }
+.tones .k-pill.sel { background: var(--ink); color: #fff; }
+.msg { position: absolute; left: 150px; right: 80px; top: 835px; padding: 40px 44px 30px; border-radius: 40px 40px 10px 40px; background: #D9FDD3; color: #111B21;
+  font-size: 40px; line-height: 1.4; box-shadow: 0 16px 40px rgba(40,80,40,.14); min-height: 420px; }
+.msg .meta { position: absolute; right: 36px; bottom: 22px; font-size: 26px; color: #667781; }
+.msg .meta b { font-weight: 700; letter-spacing: -6px; margin-left: 8px; }
+.wago { position: absolute; left: 80px; right: 80px; top: 1330px; padding: 38px 0; border-radius: 34px; background: #1FAF55; color: #fff; text-align: center;
+  font-size: 40px; font-weight: 700; }
+
+/* ── Back in the diary ── */
+.bday { display: flex; align-items: center; gap: 34px; }
+.bday .cake { font-size: 96px; line-height: 1; }
+.bday b { font-size: 42px; display: block; line-height: 1.2; }
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+
+  <!-- 1. Hook -->
+  <div class="scene dark" id="s1">
+    <div class="center h k-hook" id="s1h">Your regulars are <span>going quiet.</span></div>
+    <div class="gq" style="top:520px" data-from="4" data-to="9" data-every="4"><div class="k-avatar">N</div><div><div class="k-name">Naledi K.</div><div class="k-sub">Usually every 4 weeks</div></div><div class="last"><i>LAST VISIT</i><b></b></div></div>
+    <div class="gq" style="top:770px" data-from="3" data-to="8" data-every="3"><div class="k-avatar">Z</div><div><div class="k-name">Zanele M.</div><div class="k-sub">Usually every 3 weeks</div></div><div class="last"><i>LAST VISIT</i><b></b></div></div>
+    <div class="gq" style="top:1020px" data-from="6" data-to="14" data-every="6"><div class="k-avatar">L</div><div><div class="k-name">Lerato P.</div><div class="k-sub">Usually every 6 weeks</div></div><div class="last"><i>LAST VISIT</i><b></b></div></div>
+    <div class="center h notice" id="notice">Would you notice?</div>
+  </div>
+
+  <div id="wipe"></div>
+  <div class="scene c-reveal" id="s2"></div>
+
+  <!-- 3. Loyalty tracker -->
+  <div class="scene" id="s3">
+    <div class="center caption" style="top:160px" id="s3cap">
+      <div class="h" style="font-size:92px">Who's due, <span class="bronze">at a glance.</span></div>
+      <p>Every regular, sorted by when they should be back.</p>
+    </div>
+    <div class="pills" id="pills">
+      <span class="k-pill pink">Birthday 🎂 · 1</span><span class="k-pill red">Overdue · 2</span><span class="k-pill orange">Not Seen in a While · 1</span>
+      <span class="k-pill amber">Time to Book · 3</span><span class="k-pill green">On Track · 12</span>
+    </div>
+    <div class="rows" id="rows">
+      <div class="crow"><div class="k-avatar">T</div><div><div class="k-name">Thandi M.</div><div class="k-sub">Lash Fill · birthday on Friday</div></div><span class="k-pill pink">Birthday 🎂</span></div>
+      <div class="crow"><div class="k-avatar">N</div><div><div class="k-name">Naledi K.</div><div class="k-sub">Lash Fill · due 2 weeks ago</div></div><span class="k-pill red">Overdue</span></div>
+      <div class="crow"><div class="k-avatar">L</div><div><div class="k-name">Lerato P.</div><div class="k-sub">Gel Overlay · 14 weeks ago</div></div><span class="k-pill orange">Not Seen in a While</span></div>
+      <div class="crow"><div class="k-avatar">Z</div><div><div class="k-name">Zanele M.</div><div class="k-sub">Brow Lamination · due this week</div></div><span class="k-pill amber">Time to Book</span></div>
+      <div class="crow"><div class="k-avatar">A</div><div><div class="k-name">Amahle D.</div><div class="k-sub">Lash Fill · next in 2 weeks</div></div><span class="k-pill green">On Track</span></div>
+    </div>
+    <div class="k-note" style="top:1660px">Illustrative</div>
+  </div>
+
+  <!-- 4. WhatsApp nudge -->
+  <div class="scene" id="s4">
+    <div class="center caption" style="top:160px" id="s4cap">
+      <div class="h" style="font-size:88px">A nudge that <span class="bronze">sounds like you.</span></div>
+      <p>Pre-written for each client. You press send.</p>
+    </div>
+    <div class="rows" style="top:500px" id="s4row">
+      <div class="crow"><div class="k-avatar">N</div><div><div class="k-name">Naledi K.</div><div class="k-sub">Lash Fill · due 2 weeks ago</div></div><span class="k-pill red">Overdue</span>
+        <div class="wabtn"><svg width="50" height="50" viewBox="0 0 24 24"><path d="M12 3a9 9 0 0 0-7.7 13.6L3 21l4.5-1.2A9 9 0 1 0 12 3z" fill="#fff"/></svg></div></div>
+    </div>
+    <div class="tones" id="tones">TONE <span class="k-pill sel">Warm</span><span class="k-pill">Professional</span><span class="k-pill">Concise</span></div>
+    <div class="msg" id="msg"><span id="msgtext"></span><div class="meta" id="msgmeta">09:41<b id="ticks">✓✓</b></div></div>
+    <div class="wago" id="wago">Open in WhatsApp</div>
+    <div class="k-tap" id="tap4"></div>
+    <div class="k-note" style="top:1660px">You send it from your own WhatsApp.</div>
+  </div>
+
+  <!-- 5. Back in the diary -->
+  <div class="scene" id="s5">
+    <div class="center caption" style="top:190px" id="s5cap">
+      <div class="h" style="font-size:104px">Back in <span class="bronze">your diary.</span></div>
+    </div>
+    <div class="k-card" style="top:520px" id="back1">
+      <div class="k-eyebrow">New booking</div>
+      <div class="k-row" style="margin-top:26px;justify-content:flex-start;gap:30px"><div class="k-avatar">N</div><div><div class="k-name" style="font-size:46px">Naledi K.</div><div class="k-sub" style="font-size:31px">Lash Fill · Sat 21 Nov, 10:30</div></div></div>
+      <div class="k-divider"></div>
+      <div class="k-row" style="font-size:36px;font-weight:600">Loyalty status <span class="k-pill red" id="flip" style="font-size:30px">Overdue</span></div>
+    </div>
+    <div class="k-card bday" style="top:1010px" id="back2">
+      <div class="cake">🎂</div>
+      <div><b>Thandi M.'s birthday is on Friday</b><div class="k-sub" style="font-size:31px">A birthday message is ready to send.</div></div>
+    </div>
+    <div class="k-note" style="top:1660px">Illustrative</div>
+  </div>
+
+  <div class="scene c-who" id="s6"></div>
+  <div class="scene c-cta" id="s7"></div>
+</div>
+
+<script src="ad-core.js"></script>
+<script>
+mount("#s2", C.reveal({ tag: "See who's due, and bring them back." }));
+mount("#s6", C.who({ headline: "Keep the clients <span>you've earned.</span>" }));
+mount("#s7", C.cta({ sub: "<b>Loyalty tools: Professional plan</b><br>30-day free trial · No payment required" }));
+
+// The app's own "warm" overdue template, filled in for this example.
+const MESSAGE = "Hi Naledi! ✨ We've missed you at Glow Studio. You're due for your Lash Fill, and we'd love to welcome you back. Reply when you're ready! 💛";
+const chars = Array.from(MESSAGE);
+
+defineAd({
+  windows: { s1: [0, 3.3], s2: [3.25, 6.0], s3: [5.9, 10.05], s4: [9.95, 13.65], s5: [13.55, 16.0], s6: [15.9, 18.05], s7: [17.95, 20.1] },
+  render(t) {
+    // ── Hook: weeks since last visit keep climbing ──
+    if (t < 3.6) {
+      const out = eio(prog(t, 2.95, 3.3)), fade = 1 - out;
+      rise($("#s1h"), t, .1, .5);
+      $("#s1h").style.opacity *= fade;
+      $$("#s1 .gq").forEach((c, i) => {
+        const a = .4 + i * .22, p = back(prog(t, a, a + .35));
+        const from = +c.dataset.from, to = +c.dataset.to, every = +c.dataset.every;
+        const weeks = Math.round(lerp(from, to, eio(prog(t, .9 + i * .1, 2.4 + i * .1))));
+        const late = cl((weeks - every) / (to - every));
+        c.querySelector(".last b").textContent = weeks + " weeks ago";
+        c.querySelector(".last b").style.color = late > .15 ? "#F08A79" : "";
+        c.style.opacity = cl(prog(t, a, a + .12)) * (1 - late * .3) * fade;
+        c.style.transform = `translateY(${(1 - p) * 50 + out * 60}px) scale(${lerp(.9, 1, p) - late * .03})`;
+        c.style.filter = `saturate(${1 - late * .6}) blur(${out * 8}px)`;
+      });
+      const np = back(prog(t, 2.25, 2.6));
+      $("#notice").style.opacity = cl(prog(t, 2.25, 2.4)) * fade;
+      $("#notice").style.transform = `scale(${lerp(.7, 1, np)})`;
+    }
+    R.wipe(t, 3.05);
+    R.reveal(t, 3.25, "#s2");
+
+    // ── Loyalty tracker ──
+    const u = t - 5.9;
+    if (u > -.15 && u < 4.3) {
+      rise($("#s3cap"), u, .1, .5, 50);
+      $$("#pills .k-pill").forEach((p, i) => pop(p, u, .45 + i * .08, .3, .6));
+      $$("#rows .crow").forEach((r, i) => rise(r, u, .8 + i * .2, .45, 50));
+      // the overdue row gets a gentle highlight once the list has landed
+      const hl = Math.sin(prog(u, 2.4, 3.6) * Math.PI);
+      $$("#rows .crow")[1].style.boxShadow = `0 14px 34px rgba(80,55,25,.09), 0 0 0 ${hl * 8}px rgba(224,83,63,${hl * .35})`;
+    }
+
+    // ── WhatsApp nudge ──
+    const v = t - 9.95;
+    if (v > -.15 && v < 3.9) {
+      rise($("#s4cap"), v, .1, .5, 50);
+      rise($("#s4row"), v, .3, .45, 60);
+      $$("#tones .k-pill").forEach((p, i) => pop(p, v, 1.0 + i * .07, .3, .6));
+      $("#tones").style.opacity = cl(prog(v, .95, 1.1));
+      const mp = back(prog(v, 1.05, 1.4));
+      $("#msg").style.opacity = cl(prog(v, 1.05, 1.2));
+      $("#msg").style.transform = `scale(${lerp(.85, 1, mp)})`;
+      $("#msg").style.transformOrigin = "100% 0";
+      $("#msgtext").textContent = chars.slice(0, Math.round(chars.length * prog(v, 1.25, 2.45))).join("");
+      const sent = v > 2.9;
+      $("#msgmeta").style.opacity = sent ? 1 : 0;
+      $("#ticks").style.color = v > 3.25 ? "#53BDEB" : "#667781";
+      rise($("#wago"), v, 1.3, .4, 40);
+      $("#wago").style.transform += ` scale(${1 - Math.sin(prog(v, 2.75, 2.95) * Math.PI) * .04})`;
+      if (!tapFx($("#tap4"), v, .85, 930, 585) && !tapFx($("#tap4"), v, 2.75, 540, 1385)) $("#tap4").style.opacity = 0;
+    }
+
+    // ── Rebooked, plus a birthday ──
+    const w = t - 13.55;
+    if (w > -.15 && w < 2.75) {
+      rise($("#s5cap"), w, .1, .45, 50);
+      const a = eo(prog(w, .3, .7)), b = eo(prog(w, .95, 1.35));
+      $("#back1").style.opacity = a; $("#back1").style.transform = `translateY(${(1 - a) * 110}px)`;
+      $("#back2").style.opacity = b; $("#back2").style.transform = `translateY(${(1 - b) * 110}px)`;
+      const on = w > 1.05;
+      $("#flip").textContent = on ? "On Track" : "Overdue";
+      $("#flip").className = "k-pill " + (on ? "green" : "red");
+      $("#flip").style.transform = `scale(${1 + Math.sin(prog(w, 1.05, 1.4) * Math.PI) * .3})`;
+    }
+    R.who(t, 15.9, "#s6");
+    R.cta(t, 17.95);
+  },
+});
+</script>
+</body>
+</html>
