@@ -18,7 +18,7 @@ import BookingBar from "@/components/booking/BookingBar";
 import BookingSheet from "@/components/booking/BookingSheet";
 import HoldTimer from "@/components/booking/HoldTimer";
 import StepHeading from "@/components/booking/StepHeading";
-import { formatDuration, formatLongDate, formatPrice } from "@/lib/bookingFormat";
+import { formatDayMonth, formatDuration, formatPrice } from "@/lib/bookingFormat";
 import YocoImg from "@/assets/Yoco.svg";
 import PayfastImg from "@/assets/Payfast.webp";
 import PayshapImg from "@/assets/payshap.png";
@@ -626,17 +626,20 @@ const ReviewStep = ({
             </div>
           )}
           <div className="min-w-0 flex-1">
-            <p className="text-[15px] font-semibold leading-snug text-foreground">
-              {booking.selectedDate ? formatLongDate(booking.selectedDate) : "Date to be confirmed"}
-            </p>
-            <p className="bk-num mt-0.5 text-sm text-muted-foreground">
-              {booking.selectedTime || "Time to be confirmed"}
+            <div className="flex items-baseline justify-between gap-3">
+              <p className="bk-num text-[15px] font-semibold leading-snug text-foreground">
+                {booking.selectedDate ? format(booking.selectedDate, "EEEE") : "Date to be confirmed"}
+                {booking.selectedDate && booking.selectedTime ? ` at ${booking.selectedTime}` : ""}
+              </p>
+              <button type="button" className="bk-link shrink-0" onClick={() => onGoToStep(1)} disabled={locked}>
+                Change
+              </button>
+            </div>
+            <p className="mt-0.5 text-sm leading-snug text-muted-foreground">
+              {booking.selectedDate ? formatDayMonth(booking.selectedDate) : "Time to be confirmed"}
               {servicesDuration > 0 && ` · ${formatDuration(servicesDuration)}`}
             </p>
           </div>
-          <button type="button" className="bk-link shrink-0" onClick={() => onGoToStep(1)} disabled={locked}>
-            Change
-          </button>
         </div>
         <div className="bk-rule flex items-start gap-2.5 border-t px-4 py-3">
           <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />

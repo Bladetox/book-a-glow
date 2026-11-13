@@ -5,11 +5,16 @@
 import { format } from "date-fns";
 
 /**
- * "Wednesday, 18 November". The year is only added when the date falls in a
- * different year from today, where leaving it out would be ambiguous.
+ * "18 November". The year is only added when the date falls in a different
+ * year from today, where leaving it out would be ambiguous.
  */
+export function formatDayMonth(date: Date, today: Date = new Date()): string {
+  return format(date, date.getFullYear() === today.getFullYear() ? "d MMMM" : "d MMMM yyyy");
+}
+
+/** "Wednesday, 18 November", with the year under the same rule as formatDayMonth. */
 export function formatLongDate(date: Date, today: Date = new Date()): string {
-  return format(date, date.getFullYear() === today.getFullYear() ? "EEEE, d MMMM" : "EEEE, d MMMM yyyy");
+  return `${format(date, "EEEE")}, ${formatDayMonth(date, today)}`;
 }
 
 /** 30 -> "30 min", 60 -> "1 h", 75 -> "1 h 15 min" */

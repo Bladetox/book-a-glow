@@ -533,7 +533,7 @@ const ScheduleStep = ({
               {loadingSlots ? (
                 <div className="grid grid-cols-4 gap-2" role="status" aria-label="Loading times">
                   {Array.from({ length: 8 }).map((_, i) => (
-                    <div key={i} className="bk-skeleton h-12 rounded-[0.875rem]" />
+                    <div key={i} className="bk-skeleton h-12 [--bk-radius:0.875rem]" />
                   ))}
                 </div>
               ) : dateSlots.length === 0 ? (

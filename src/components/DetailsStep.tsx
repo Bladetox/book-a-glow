@@ -696,14 +696,17 @@ useEffect(() => {
     showSuggestions && addressSuggestions.length > 0 ? (
       <AnimatePresence>
         <motion.div
-          ref={suggestionsRef}
           key="address-suggestions"
           initial={{ opacity: 0, height: 0, y: -4 }}
           animate={{ opacity: 1, height: "auto", y: 0 }}
           exit={{ opacity: 0, height: 0, y: -4 }}
           transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
-          className="bk-card bk-card--raised bk-divide mt-2 max-h-[200px] overflow-hidden overflow-y-auto [--bk-radius:1rem]"
+          className="mt-2 overflow-hidden"
         >
+          <div
+            ref={suggestionsRef}
+            className="bk-card bk-divide max-h-[200px] overflow-y-auto [--bk-radius:1rem]"
+          >
           {addressSuggestions.map((s) => (
             <button
               key={s.place_id}
@@ -721,6 +724,7 @@ useEffect(() => {
               <span>{s.description}</span>
             </button>
           ))}
+          </div>
         </motion.div>
       </AnimatePresence>
     ) : null;
@@ -1015,14 +1019,13 @@ useEffect(() => {
       <AnimatePresence>
         {booking.isExistingClient === true && (
           <motion.div
-            ref={conditionalSectionRef}
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
             className="-m-1 overflow-hidden p-1"
           >
-            <div className="flex flex-col gap-1.5 pb-4">
+            <div ref={conditionalSectionRef} className="flex flex-col gap-1.5 pb-4">
               <label htmlFor="existing-client-notes" className="bk-label">
                 Have there been any changes since your last appointment?
               </label>
@@ -1105,8 +1108,8 @@ useEffect(() => {
                     <div key={i} className="flex flex-col gap-2.5">
                       <div className="bk-skeleton h-4 w-2/3" />
                       <div className="flex gap-2">
-                        <div className="bk-skeleton h-[3.25rem] flex-1 rounded-2xl" />
-                        <div className="bk-skeleton h-[3.25rem] flex-1 rounded-2xl" />
+                        <div className="bk-skeleton h-[3.25rem] flex-1 [--bk-radius:1rem]" />
+                        <div className="bk-skeleton h-[3.25rem] flex-1 [--bk-radius:1rem]" />
                       </div>
                     </div>
                   ))}

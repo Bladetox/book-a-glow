@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, CircleAlert } from "lucide-react";
 import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
 import { useBusinessTheme } from "@/contexts/BusinessThemeProvider";
@@ -40,9 +40,34 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
     ...(brandFontFamily ? { fontFamily: brandFontFamily } : {}),
   }), [brandFontFamily, config.brandNameColor]);
 
+  // Scale the name down as it gets longer. The longest single word matters as
+  // much as the total length: about eleven characters fit on a line at full size.
+  const nameScale = useMemo(() => {
+    const name = config.name.trim();
+    const longestWord = Math.max(0, ...name.split(/\s+/).map((word) => word.length));
+    const byLength = name.length <= 22 ? 1 : name.length <= 32 ? 0.8 : name.length <= 44 ? 0.64 : 0.54;
+    const byWord = longestWord > 10 ? 10.5 / longestWord : 1;
+    return Math.max(0.46, Math.min(byLength, byWord));
+  }, [config.name]);
+
   const referralOptions = config.referralOptions;
   const isSelected = referralSource.trim().length > 0;
   const showError = attempted && !isSelected;
+
+  // Every option is laid out at once. Only when a tenant has more options than
+  // fit does the list scroll, and then the guest is told there are more.
+  const chipsRef = useRef<HTMLDivElement>(null);
+  const [chipsScroll, setChipsScroll] = useState(false);
+  useEffect(() => {
+    const el = chipsRef.current;
+    if (!el) return;
+    const measure = () => setChipsScroll(el.scrollHeight > el.clientHeight + 4);
+    measure();
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [referralOptions.length, themeLoading]);
 
   const handleCta = () => {
     if (!isSelected) { setAttempted(true); return; }
@@ -83,7 +108,11 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
               {config.splashWelcomeLabel}
             </motion.p>
 
-            <motion.h1 {...rise(0.28)} className="bk-display bk-splash__name mt-2.5" style={brandNameStyle}>
+            <motion.h1
+              {...rise(0.28)}
+              className="bk-display bk-splash__name mt-2.5"
+              style={{ ...brandNameStyle, "--bk-name-scale": nameScale } as React.CSSProperties}
+            >
               {config.name}
             </motion.h1>
 
@@ -94,7 +123,7 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
               </p>
             </motion.div>
 
-            <motion.p {...rise(0.46)} className="mt-1.5 pl-12 text-[15px] leading-snug text-muted-foreground">
+            <motion.p {...rise(0.46)} className="bk-splash__tagline2 mt-1.5 pl-12 text-[15px] leading-snug text-muted-foreground">
               {config.splashTagline2}
             </motion.p>
           </div>
@@ -119,13 +148,18 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
             role={showError ? "alert" : undefined}
           >
             {showError && <CircleAlert className="h-4 w-4 shrink-0" aria-hidden="true" />}
-            {showError ? "Please select an option to continue" : "Choose one to get started"}
+            {showError
+              ? "Please select an option to continue"
+              : chipsScroll
+                ? "Choose one to get started. Scroll to see all options."
+                : "Choose one to get started"}
           </p>
 
           <motion.div
+            ref={chipsRef}
             role="group"
             aria-labelledby="referral-title"
-            className="bk-splash__chips mt-[1.125rem] scrollbar-hide"
+            className="bk-splash__chips scrollbar-hide"
             animate={showError ? { x: [0, -6, 6, -4, 4, 0] } : { x: 0 }}
             transition={{ duration: 0.4, ease: "easeInOut" }}
           >

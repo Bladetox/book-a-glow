@@ -3,6 +3,7 @@ import {
   addMinutesToTime,
   dayPeriod,
   formatCountdown,
+  formatDayMonth,
   formatDuration,
   formatLongDate,
   formatPrice,
@@ -82,6 +83,15 @@ describe("formatCountdown", () => {
     expect(formatCountdown(599)).toBe("9:59");
     expect(formatCountdown(5)).toBe("0:05");
     expect(formatCountdown(-3)).toBe("0:00");
+  });
+});
+
+describe("formatDayMonth", () => {
+  const today = new Date(2026, 10, 13);
+
+  it("follows the same year rule as the long date", () => {
+    expect(formatDayMonth(new Date(2026, 10, 18), today)).toBe("18 November");
+    expect(formatDayMonth(new Date(2027, 0, 8), today)).toBe("8 January 2027");
   });
 });
 

@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
 import { useBusinessTheme } from "@/contexts/BusinessThemeProvider";
 import { useBrandFont } from "@/hooks/useBrandFont";
+import { formatPrice } from "@/lib/bookingFormat";
 
 const REDIRECT_SECONDS = 12;
 const PHENOMEBEAUTY_TENANT_ID = "phenomebeauty";
@@ -314,7 +315,7 @@ const PaymentSuccess = () => {
                 {paidAmount != null && (
                   <div className="flex justify-between gap-4 py-3 text-sm">
                     <dt className="text-muted-foreground">Total paid</dt>
-                    <dd className="bk-num font-semibold text-foreground">{config.currency}{paidAmount}</dd>
+                    <dd className="bk-num font-semibold text-foreground">{formatPrice(config.currency, paidAmount)}</dd>
                   </div>
                 )}
                 <div className="flex justify-between gap-4 py-3 text-sm">
@@ -419,7 +420,7 @@ const PaymentSuccess = () => {
                 {displayDeposit != null && (
                   <div className="flex justify-between gap-4 py-3 text-sm">
                     <dt className="text-muted-foreground">Deposit paid</dt>
-                    <dd className="bk-num font-semibold text-foreground">{config.currency}{displayDeposit}</dd>
+                    <dd className="bk-num font-semibold text-foreground">{formatPrice(config.currency, displayDeposit)}</dd>
                   </div>
                 )}
               </motion.dl>

@@ -977,7 +977,9 @@
 }
 
 .booking-app .bk-splash__name {
-  font-size: clamp(2.5rem, min(14.5vw, 9.5vh), 4.5rem);
+  /* --bk-name-scale is set from the length of the business name, so a long
+     name or a long single word still sets cleanly without breaking mid-word. */
+  font-size: calc(clamp(2.5rem, min(14.5vw, 8vh), 4.5rem) * var(--bk-name-scale, 1));
   line-height: 0.98;
   letter-spacing: -0.03em;
   text-wrap: balance;
@@ -1003,8 +1005,9 @@
   gap: 0.5rem;
   max-height: min(11.5rem, 30vh);
   overflow-y: auto;
-  /* Room for the focus ring, which the scroll container would otherwise clip. */
-  margin: -0.25rem;
+  /* The quarter-rem padding (cancelled by the side margins) leaves room for
+     the focus ring, which the scroll container would otherwise clip. */
+  margin: 0.875rem -0.25rem -0.25rem;
   padding: 0.25rem;
 }
 
@@ -1079,7 +1082,9 @@
   outline-offset: 2px;
 }
 
-@media (max-height: 600px) {
+/* Short viewports (small phones, or any phone with browser chrome showing):
+   tighten the panel so the name keeps its room. */
+@media (max-height: 700px) {
   .booking-app .bk-splash__logo {
     width: 3rem;
     height: 3rem;
@@ -1093,6 +1098,28 @@
 
   .booking-app .bk-splash__panel {
     padding-top: 1.125rem;
+  }
+
+  .booking-app .bk-splash__chip {
+    min-height: 2.5rem;
+    padding: 0 1rem;
+    font-size: 0.875rem;
+  }
+
+  /* Three rows and the top of a fourth, so a longer list visibly continues. */
+  .booking-app .bk-splash__chips {
+    max-height: min(10.25rem, 26vh);
+  }
+
+  .booking-app .bk-splash__cta {
+    min-height: 3.25rem;
+  }
+}
+
+@media (max-height: 600px) {
+  .booking-app .bk-splash__logo,
+  .booking-app .bk-splash__tagline2 {
+    display: none;
   }
 }
 
@@ -1110,7 +1137,8 @@
 .booking-app .bk-skeleton {
   position: relative;
   overflow: hidden;
-  border-radius: 0.625rem;
+  /* Set --bk-radius on the element to change the corner size. */
+  border-radius: var(--bk-radius, 0.625rem);
   background: var(--bk-well);
 }
 

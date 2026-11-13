@@ -48,7 +48,7 @@ const ServicesStep = ({ selectedTreatments, onAdd, onRemove }: ServicesStepProps
         {heading}
         <div className="flex gap-2">
           {[88, 120, 96].map((width) => (
-            <div key={width} className="bk-skeleton h-10 rounded-full" style={{ width }} />
+            <div key={width} className="bk-skeleton h-10 [--bk-radius:9999px]" style={{ width }} />
           ))}
         </div>
         <div className="flex flex-col gap-2.5">
