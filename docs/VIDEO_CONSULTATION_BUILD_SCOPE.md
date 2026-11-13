@@ -58,7 +58,7 @@ The initial repository review on `main` identified these existing paths:
 
 The inspected `create_booking_with_consultation` implementation derives the deposit percentage from tenant-level `app_settings`. The service model also contains `services.deposit_percent`, but the active pricing path does not currently use that field as the payment authority.
 
-The clarified product requirement is to retain the existing payment choices and behaviour for video-call services: the client may choose full payment or the existing supported deposit/percentage option. Do not force 100% payment for video calls. Do not change tenant-wide deposit settings or physical-service payment behaviour. Confirm the existing UI and provider paths support the selected choice consistently.
+The product requirement is to retain the existing payment choices and behaviour for video-call services: the client can choose full payment or the existing supported deposit/percentage option. Do not force 100% payment for video calls. Do not change tenant-wide deposit settings or physical-service payment behaviour. Verify that the selected choice is represented consistently in the booking record, checkout amount and provider settlement path.
 
 ### Important availability finding
 
@@ -88,29 +88,23 @@ Requirements:
 - Existing services must render and behave exactly as before.
 - Do not silently change the tenant's general deposit setting.
 
-### 4.2 Consultation availability
+### 4.2 Dedicated video-call availability
 
-Tenants must be able to make time available for video-call services independently of physical-service hours.
-
-The agreed day-level behaviour is:
-
-- **Services:** available for physical services.
-- **Consultations:** available for video-call services.
-- **Closed:** no appointments.
+The tenant configures additional dates and times specifically for video-call services. These are independent of the existing physical-service availability and can coexist on the same day.
 
 Requirements:
 
-- Reuse the existing staff availability architecture.
-- Extend it additively so the tenant can distinguish service availability from video-call availability.
-- Preserve recurring weekly schedules and specific-date overrides.
-- Preserve existing physical-service schedule data and current save semantics.
+- Reuse the existing staff availability architecture, extending it additively to distinguish physical-service hours from video-call hours.
+- Preserve the existing physical-service schedule and its current admin experience.
+- Allow both schedules on the same date. For example, physical appointments may run during the day and video calls in the evening.
+- Preserve recurring weekly schedules and specific-date overrides where supported by the current schedule UI.
 - Update availability reads, admin schedule UI, save operations, public slot discovery and authoritative booking validation together.
-- A consultation slot must be checked against video-call availability, not merely the physical-service schedule.
-- A physical booking must continue to be checked against physical-service availability.
+- A video-call booking must be checked against the dedicated video-call availability, not merely the physical-service schedule.
+- A physical-service booking must continue to be checked against physical-service availability.
 - Existing bookings remain valid when a tenant later edits availability.
 - Do not introduce a new staff scheduling system.
 
-The exact storage representation (for example, an availability mode on rows versus a narrowly scoped companion setting) must be selected after tracing the current production schema and all readers/writers. Choose the smallest safe additive migration. Do not implement a destructive table redesign.
+The exact storage representation (for example, an availability type on existing rows versus a narrowly scoped companion schedule) must be selected after tracing the current production schema and every reader/writer. Choose the smallest safe additive migration. Do not implement a destructive table redesign. Saving video-call availability must never delete or suppress physical-service availability, or vice versa.
 
 ### 4.3 Public booking flow
 
@@ -163,16 +157,16 @@ On a video-call service booking, the tenant must be able to click the client's p
 
 Requirements:
 
-- In the existing tenant booking details/list UI, render the client's phone number as a clickable contact link for video-call bookings. Use the WhatsApp link convention where supported by the device and existing app behaviour.
+- In the existing tenant booking details/list UI, render the client's phone number as a WhatsApp hyperlink for video-call bookings.
 - Use the existing phone normalisation conventions. For South African numbers, convert local `0XXXXXXXXX` to `27XXXXXXXXX`; preserve valid international country codes.
-- Use a correctly normalised international number for the WhatsApp link (standard `https://wa.me/<international-digits>` format) where applicable.
+- Link to the WhatsApp contact/chat using the standard `https://wa.me/<international-digits>` format and the existing phone normalisation conventions.
 - Open WhatsApp in a new tab/window where appropriate and use safe external-link attributes.
 - Do not pre-send a message, initiate an automated call, or claim that the hyperlink starts a video call.
-- The tenant manually initiates the call and switches to video using WhatsApp or the device's available calling experience. NextSlot does not host the call.
+- The tenant clicks the number, initiates the WhatsApp call and switches to video in WhatsApp. NextSlot does not host the call.
 - If the client has no valid phone number, show a clear unavailable state rather than a broken link.
 - Do not expose the client's phone number to public users or other tenants.
 
-The WhatsApp hyperlink opens the client's WhatsApp contact/chat. The actual call and switch to video are performed by the tenant in WhatsApp.
+The WhatsApp hyperlink gives the tenant a direct route to the client's contact. The tenant initiates the call and switches to video in WhatsApp.
 
 ### 4.7 Booking lifecycle, dashboard and reporting
 
@@ -180,7 +174,7 @@ The WhatsApp hyperlink opens the client's WhatsApp contact/chat. The actual call
 - Existing confirmation, cancellation, completion, no-show, rescheduling and payment lifecycle rules remain authoritative.
 - Do not add a meeting lifecycle or meeting status.
 - Video consultations must continue appearing in tenant booking lists, calendar views, dashboard totals, revenue and service reporting.
-- Where a service-level breakdown is shown, identify video-call service services using the service flag or existing booking-item/service relationship.
+- Where a service-level breakdown is shown, identify video-call services using the service flag or existing booking-item/service relationship.
 - Do not double-count bookings or revenue.
 - Do not change Nexty recommendations or metrics unless a verified reporting defect requires it.
 - Keep existing client records, per-booking consultation history and consolidated guest consultation profiles unchanged.
@@ -249,7 +243,7 @@ The WhatsApp hyperlink opens the client's WhatsApp contact/chat. The actual call
 
 ### Service and availability
 - [ ] Existing services default to `is_video_consultation = false`.
-- [ ] Tenant can create and edit a video-call service service.
+- [ ] Tenant can create and edit a video-call service.
 - [ ] Video consultation can be enabled without changing tenant-wide deposit settings.
 - [ ] Tenant can configure video-call dates and times independently of physical-service hours.
 - [ ] Enabling Video call automatically disables Is call-out for that service.
@@ -398,7 +392,7 @@ Verified live behaviour:
 
 #### Required full-payment implementation
 
-The canonical booking function must derive whether the selected service is a video-call service by reading the persisted service record. It must preserve the existing payment choice and percentage calculation for that booking. The server must not accept a client-supplied total or deposit amount as authoritative; it should validate the selected payment intent against the persisted service and tenant payment configuration using the same rules as ordinary services.
+The canonical booking function must derive whether the selected service is a video-call service by reading the persisted service record. It must preserve the existing payment choice and percentage calculation for that booking. The server must not accept a client-supplied total or deposit amount as authoritative; it should validate the selected payment intent and amount using the same rules as ordinary services.
 
 This must not mutate `app_settings.deposit_percent` or alter the pricing of physical services.
 
@@ -425,7 +419,7 @@ The deployed checkout and webhook paths were inspected read-only.
 | Yoco | Server reads booking; `full` uses `total_amount`, `deposit` uses `deposit_amount` | `full` sets full-payment flags; `deposit` only sets deposit-paid and recalculates balance | Yes |
 | PayFast | Server reads booking; `full` uses `total_amount`, `deposit` uses `deposit_amount` | `full` sets full-payment flags; `deposit` only marks deposit paid | Yes |
 | iKhokha | Server recalculates expected amount from booking and ignores mismatched browser amount | `full` sets full-payment flags; `deposit` only marks deposit paid | Yes |
-| PayShap | Manual tenant verification; booking amounts determine full/deposit outcome | Confirmation hook treats `deposit_amount = total_amount` or zero balance as full payment | Force full intent in UI and retain the amount-based full-payment check |
+| PayShap | Manual tenant verification; booking amounts determine full/deposit outcome | Confirmation hook recognises full payment when the deposit equals the total or the balance is zero | Pass the selected full/deposit intent and preserve the existing amount-based confirmation behaviour |
 
 **Provider consistency requirement:** The selected payment type must match the amount charged and the webhook branch used to settle the booking. The earlier proposal to force full payment for video calls is withdrawn.
 
