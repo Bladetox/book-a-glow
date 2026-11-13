@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 
 /**
  * saLog — Super-admin audit logger.
@@ -15,7 +16,7 @@ export async function saLog(
   entity: string,
   entityId: string,
   label: string,
-  meta?: Record<string, unknown>
+  meta?: { [key: string]: Json | undefined }
 ): Promise<void> {
   try {
     const { data: { user } } = await supabase.auth.getUser();

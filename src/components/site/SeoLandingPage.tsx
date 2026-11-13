@@ -17,7 +17,8 @@ type PageContent = { sections:Section[]; fit:string[]; related:[string,string][]
 const SeoLandingPage = ({ path }: { path:string }) => {
   usePageSEO(path);
   const data = (seoPages as Record<string,PageData>)[path];
-  const page = (pageContent as Record<string,PageContent>)[path];
+  // The JSON import is inferred as loose arrays; its entries follow the tuple shapes above.
+  const page = (pageContent as unknown as Record<string,PageContent>)[path];
   if (!data || !page || !data.indexable) return null;
 
   return (
@@ -26,7 +27,7 @@ const SeoLandingPage = ({ path }: { path:string }) => {
       <main>
         <section className="seo-landing__hero">
           <div className="seo-landing__orb" aria-hidden="true">
-            <Orb scale={1.15} />
+            <Orb />
           </div>
           <div className="seo-landing__hero-copy">
             <p style={{fontSize:11,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:C.gold,margin:"0 0 16px",fontFamily:FONT_BODY}}>{data.eyebrow}</p>

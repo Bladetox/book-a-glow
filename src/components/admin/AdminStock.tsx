@@ -830,7 +830,7 @@ const AdminStock = () => {
                   label={actionType === "use" ? "Log Usage" : "Confirm Restock"}
                   loading={applyAction.isPending}
                   disabled={effectiveQty === null}
-                  variant={actionType === "use" ? "danger" : "default"}
+                  variant={actionType === "use" ? "danger" : "primary"}
                   onClick={() => applyAction.mutate()}
                 />
               </div>

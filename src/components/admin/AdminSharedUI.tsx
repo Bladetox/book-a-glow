@@ -2,7 +2,7 @@
 // Import from here instead of rebuilding inline in each view.
 // Zero logic — purely presentational.
 
-import { forwardRef, useId, useState } from "react";
+import { forwardRef, useEffect, useId, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { ChevronDown, Loader2, HelpCircle } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -70,6 +70,13 @@ export const AdminCard = ({
   const contentId = useId();
   const reduceMotion = useAdminReducedMotion();
 
+  // Collapsed content must not be focusable. React 18 has no `inert` prop (a
+  // boolean value is silently dropped), so the attribute is set on the element.
+  const regionRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    regionRef.current?.toggleAttribute("inert", !open);
+  }, [open]);
+
   const heading = (
     <>
       {Icon && <div className="p-2 rounded-xl nexty-card shrink-0"><Icon className="w-4 h-4 text-white/40" /></div>}
@@ -97,7 +104,7 @@ export const AdminCard = ({
         {actions && <div className="flex items-center gap-2 shrink-0">{actions}</div>}
       </div>
       {collapsible ? (
-        <div id={contentId} role="region" aria-label={title} aria-hidden={!open} inert={!open}>
+        <div ref={regionRef} id={contentId} role="region" aria-label={title} aria-hidden={!open}>
           <motion.div
             initial={false}
             animate={{ height: open ? "auto" : 0, opacity: open ? 1 : 0 }}

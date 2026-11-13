@@ -203,7 +203,8 @@ const AdminShell = ({ tenant, subscription }: AdminShellProps) => {
 
   // Hard lockout — admin explicitly cancelled/disabled this tenant.
   if (isBlocked) {
-    return <TrialExpiredPaywall tenantId={tenant?.id ?? ""} />;
+    // Signing out flips the session listener below back to the login screen.
+    return <TrialExpiredPaywall onSignOut={() => { void supabase.auth.signOut(); }} />;
   }
 
   if (flagsLoading) {

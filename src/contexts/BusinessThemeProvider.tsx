@@ -112,13 +112,14 @@ export const BusinessThemeProvider: React.FC<{ children: React.ReactNode }> = ({
       return;
     }
     setLoading(true);
-    supabase
-      .from("tenants")
-      .select("theme_id")
-      .eq("id", tenantSlug)
-      .eq("is_active", true)
-      .single()
-      .then(({ data, error }) => {
+    const loadTheme = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("tenants")
+          .select("theme_id")
+          .eq("id", tenantSlug)
+          .eq("is_active", true)
+          .single();
         if (!error && data?.theme_id) {
           const found = findTheme(data.theme_id);
           if (found) {
@@ -126,8 +127,11 @@ export const BusinessThemeProvider: React.FC<{ children: React.ReactNode }> = ({
             localStorage.setItem("ns_business_theme", found.id);
           }
         }
-      })
-      .finally(() => setLoading(false));
+      } finally {
+        setLoading(false);
+      }
+    };
+    void loadTheme();
   }, [tenantSlug, adminPath]);
 
   const baseTheme = useMemo(

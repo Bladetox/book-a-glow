@@ -148,6 +148,11 @@ export function NotificationBell() {
   const inactiveClients = alertData?.inactiveClients ?? [];
   const overdueCount = overdueClients.length;
   const inactiveCount = inactiveClients.length;
+  const longestInactive = inactiveClients.reduce<(typeof inactiveClients)[number] | null>(
+    (longest, client) =>
+      !longest || client.days_since_visit > longest.days_since_visit ? client : longest,
+    null,
+  );
 
   const { data: upcomingBirthdays = [] } = useQuery({
     queryKey: ["birthday-bell-detail", tenantId],
@@ -370,16 +375,8 @@ export function NotificationBell() {
                               </p>
                               <p className="text-[11px] text-white/35 mt-0.5 leading-relaxed">
                                 Longest absent:{" "}
-                                {inactiveClients.sort(
-                                  (a, b) =>
-                                    b.days_since_booking - a.days_since_booking,
-                                )[0]?.client_name ?? "Unknown"}{" "}
-                                (
-                                {inactiveClients.sort(
-                                  (a, b) =>
-                                    b.days_since_booking - a.days_since_booking,
-                                )[0]?.days_since_booking ?? 0}{" "}
-                                days)
+                                {longestInactive?.client_name ?? "Unknown"}{" "}
+                                ({longestInactive?.days_since_visit ?? 0} days)
                               </p>
                             </div>
                             <ChevronRight className="w-3.5 h-3.5 text-white/20 shrink-0 mt-1" />

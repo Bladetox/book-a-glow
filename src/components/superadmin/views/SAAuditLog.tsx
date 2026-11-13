@@ -5,11 +5,12 @@ import {
   UserCog, Building2, KeyRound, BellOff, RotateCcw, CheckCircle2, Download,
 } from "lucide-react";
 import type { ElementType } from "react";
+import type { Json } from "@/integrations/supabase/types";
 
 interface AuditLog {
   id: string; action: string; entity: string;
   entity_id: string | null; label: string | null;
-  meta: Record<string, unknown> | null;
+  meta: Json | null;
   actor_id: string | null; actor_email: string | null;
   created_at: string | null;
 }

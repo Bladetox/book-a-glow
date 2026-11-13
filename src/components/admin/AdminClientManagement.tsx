@@ -44,7 +44,7 @@ const ProactiveAlertBanner = ({
   birthdayCount: number;
   onOpen: (type: AlertModalType) => void;
 }) => {
-  const chips: AlertChip[] = [
+  const allChips: AlertChip[] = [
     {
       key:    "inactive_90_days",
       icon:   "💤",
@@ -63,7 +63,8 @@ const ProactiveAlertBanner = ({
       border: "border-pink-500/25",
       bg:     "bg-pink-500/[0.06] hover:bg-pink-500/[0.1]",
     },
-  ].filter(c => c.count > 0);
+  ];
+  const chips = allChips.filter(c => c.count > 0);
 
   if (chips.length === 0) return null;
 

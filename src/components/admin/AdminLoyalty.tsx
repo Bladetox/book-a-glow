@@ -833,7 +833,15 @@ export default function AdminLoyalty({ onNavigate }: AdminLoyaltyProps) {
     setSelectedIds(ids => ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id]);
 
   const enrollMutation = useMutation({
-    mutationFn: async (candidate: EnrollCandidate & { lastBookingDate?: string; nextDueDate?: string; notes?: string }) => {
+    mutationFn: async (
+      candidate: Omit<EnrollCandidate, "candidateSource"> & {
+        // Engine that surfaced the candidate; "manual" when there was none.
+        candidateSource?: LoyaltyRow["source"];
+        lastBookingDate?: string;
+        nextDueDate?: string;
+        notes?: string;
+      },
+    ) => {
       // FIX-G: Guard against re-enrolment — show a toast instead of inserting a duplicate row.
       if (enrolledPhones.has(normPhone(candidate.phone))) {
         throw new Error("already_enrolled");
