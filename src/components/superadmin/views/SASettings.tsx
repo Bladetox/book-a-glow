@@ -32,13 +32,14 @@ const ENV_INFO = [
   { k: "Build",       v: import.meta.env.VITE_APP_VERSION ?? "—" },
 ];
 
-interface NotifPrefs {
+// A type alias rather than an interface, so it can be stored as a JSON object.
+type NotifPrefs = {
   newTenant:     boolean;
   trialExpiring: boolean;
   tenantSuspend: boolean;
   systemErrors:  boolean;
   dailyDigest:   boolean;
-}
+};
 
 const NOTIF_LABELS: { key: keyof NotifPrefs; label: string; desc: string }[] = [
   { key: "newTenant",     label: "New tenant sign-up",      desc: "Alert when a new tenant is created via self-serve." },

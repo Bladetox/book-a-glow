@@ -21,7 +21,9 @@ export interface AvailabilitySlot {
 
 export const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] as const;
 
-const AVAILABILITY_SELECT = ["id", "staff_id", "day_of_week", "day_enabled", "slot_start_time", "slot_end_time", "is_available", "requires_travel_buffer", "buffer_minutes", "specific_date", "override_reason", "tenant_id", "created_at", "updated_at"].join(",");
+// One literal (not a joined array) so the row type can be inferred.
+const AVAILABILITY_SELECT =
+  "id,staff_id,day_of_week,day_enabled,slot_start_time,slot_end_time,is_available,requires_travel_buffer,buffer_minutes,specific_date,override_reason,tenant_id,created_at,updated_at";
 const normaliseSlot = (slot: string): string => slot.slice(0, 5);
 const normaliseSlotList = (slots: string[]): string[] => [...new Set(slots.map(normaliseSlot))].sort();
 

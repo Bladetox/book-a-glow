@@ -36,6 +36,7 @@ type FilterType = typeof filters[number];
 const statusDisplayLabel: Record<BookingRow["status"], string> = {
   pending:         "pending",
   pending_payment: "awaiting payment",
+  payment_claimed: "payment claimed",
   confirmed:       "confirmed",
   in_progress:     "in progress",
   completed:       "serviced",
@@ -47,6 +48,7 @@ const statusDisplayLabel: Record<BookingRow["status"], string> = {
 const statusBorderAccent: Record<BookingRow["status"], string> = {
   pending:         "border-l-2 border-l-amber-500/50",
   pending_payment: "border-l-2 border-l-orange-500/40",
+  payment_claimed: "border-l-2 border-l-orange-500/40",
   confirmed:       "border-l-2 border-l-emerald-500/30",
   in_progress:     "border-l-2 border-l-sky-400/40",
   completed:       "border-l-2 border-l-sky-500/20",
@@ -58,7 +60,7 @@ const statusBorderAccent: Record<BookingRow["status"], string> = {
 const statusTagColor = (
   status: BookingRow["status"]
 ): "amber" | "emerald" | "sky" | "red" | "default" => {
-  if (status === "pending" || status === "pending_payment") return "amber";
+  if (status === "pending" || status === "pending_payment" || status === "payment_claimed") return "amber";
   if (status === "confirmed")                               return "emerald";
   if (status === "completed" || status === "complete" || status === "in_progress") return "sky";
   if (status === "cancelled" || status === "no_show")       return "red";
@@ -1255,8 +1257,16 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <p className="text-sm font-semibold text-white/90 truncate">{b.client}</p>
-                            {isClientBlocked && <ShieldBan className="w-3 h-3 text-red-400/70 shrink-0" title="Client blocked" />}
-                            {b.isCallOut && <Car className="w-3 h-3 text-violet-400/70 shrink-0" title="Call-out booking" />}
+                            {isClientBlocked && (
+                              <span className="inline-flex shrink-0" title="Client blocked" role="img" aria-label="Client blocked">
+                                <ShieldBan className="w-3 h-3 text-red-400/70" aria-hidden="true" />
+                              </span>
+                            )}
+                            {b.isCallOut && (
+                              <span className="inline-flex shrink-0" title="Call-out booking" role="img" aria-label="Call-out booking">
+                                <Car className="w-3 h-3 text-violet-400/70" aria-hidden="true" />
+                              </span>
+                            )}
                             <AdminTag label={statusDisplayLabel[b.status]} color={statusTagColor(b.status)} />
                             <PaymentTag
                               fullPaymentReceived={b.fullPaymentReceived}

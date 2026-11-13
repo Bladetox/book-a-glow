@@ -365,7 +365,7 @@ const About = () => {
                 justifyContent: "center",
                 overflow: "hidden",
               }}>
-                <Orb scale={0.9} />
+                <Orb />
                 <div style={{
                   position: "absolute",
                   bottom: 18,

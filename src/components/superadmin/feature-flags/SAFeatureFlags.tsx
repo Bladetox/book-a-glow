@@ -42,7 +42,7 @@ function GlobalPanel({
     setStatus("saving");
     setErrorMsg(null);
     const res = await writeFlags(PLATFORM_TENANT_ID, flags);
-    if (!res.ok) {
+    if (res.ok === false) {
       setErrorMsg(res.message);
       setStatus("error");
       return;
@@ -142,7 +142,7 @@ function TenantPanel({ globalFlags }: { globalFlags: Record<string, boolean> }) 
     setSaveStatus("saving");
     setSaveError(null);
     const res = await writeFlags(selectedId, overrides);
-    if (!res.ok) {
+    if (res.ok === false) {
       setSaveError(res.message);
       setSaveStatus("error");
       return;

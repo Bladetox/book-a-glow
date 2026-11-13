@@ -22,9 +22,12 @@ export const PwaUpdater = () => {
     // Dynamic import keeps this out of SSR / test bundles cleanly.
     import("virtual:pwa-register")
       .then(({ registerSW }) => {
-        registerSW({
+        // registerSW returns the function that activates the waiting worker.
+        // onNeedRefresh is called with no arguments, so the handler has to use
+        // this returned function rather than a parameter.
+        const updateSW = registerSW({
           // Called when a new SW has finished installing and is waiting to activate.
-          onNeedRefresh(updateSW) {
+          onNeedRefresh() {
             const { dismiss } = toast({
               title: "Update available",
               description: "A new version of the app is ready.",

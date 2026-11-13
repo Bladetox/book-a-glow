@@ -22,10 +22,10 @@ export interface Service {
   display_order: number | null;
 }
 
-const SERVICE_COLUMNS =
-  "id, name, description, category, price, duration_minutes, " +
-  "deposit_percent, is_active, is_archived, is_call_out_available, " +
-  "image_url, tags, tenant_id, created_at, updated_at, display_order";
+// One literal (not a concatenation) so the row type can be inferred.
+const SERVICE_COLUMNS = `id, name, description, category, price, duration_minutes,
+  deposit_percent, is_active, is_archived, is_call_out_available,
+  image_url, tags, tenant_id, created_at, updated_at, display_order`;
 
 function invalidateServiceQueries(
   qc: ReturnType<typeof useQueryClient>,

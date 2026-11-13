@@ -44,7 +44,7 @@ const AdminMobileNav = ({ activeView, onSelect, pendingCount = 0 }: AdminMobileN
     >
     <div className="flex items-center justify-around" style={{ height: "56px" }}>
       {NAV_GROUPS.map(({ label, icon: Icon, targetView, views }) => {
-        const isActive     = views.includes(activeView);
+        const isActive     = (views as readonly string[]).includes(activeView);
         const isSchedule   = label === "Schedule";
         const showBadge    = isSchedule && pendingCount > 0;
 

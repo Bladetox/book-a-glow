@@ -173,10 +173,11 @@ export function TenantProvider({ ownerId, children }: TenantProviderProps) {
 
         const { data } = await supabase
           .from("tenants")
+          // One literal (not a concatenation) so the row type can be inferred.
           .select(
-            "id, name, owner_id, email, phone, address, logo_url, is_active, custom_domain, " +
-            "theme_id, currency, is_lifetime_free, subscription_status, trial_ends_at, plan, " +
-            "paynow_enabled, paynow_number"
+            `id, name, owner_id, email, phone, address, logo_url, is_active, custom_domain,
+             theme_id, currency, is_lifetime_free, subscription_status, trial_ends_at, plan,
+             paynow_enabled, paynow_number`
           )
           .eq("id", tenantIdToLoad)
           .maybeSingle();

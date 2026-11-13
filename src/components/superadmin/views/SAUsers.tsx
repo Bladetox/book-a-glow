@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 import {
   Search, Loader2, UserCheck, UserX, ShieldCheck,
   ChevronLeft, ChevronRight, Pencil, X, Save, AlertTriangle,
@@ -15,7 +16,8 @@ interface TenantMap { [id: string]: string; }
 
 const PAGE_SIZE = 50;
 
-const ROLES = ["admin", "staff", "super_admin"];
+type AppRole = Database["public"]["Enums"]["app_role"];
+const ROLES: AppRole[] = ["admin", "staff", "super_admin"];
 
 const GlassCard = ({ children, className = "" }: { children: React.ReactNode; className?: string }) => (
   <div className={`bg-white/[0.03] backdrop-blur-sm border border-white/[0.07] rounded-2xl ${className}`}>{children}</div>
@@ -30,7 +32,7 @@ function EditRoleModal({
   onClose: () => void;
   onSaved: (updated: Profile) => void;
 }) {
-  const [role, setRole] = useState(profile.role ?? "staff");
+  const [role, setRole] = useState<AppRole>((profile.role as AppRole | null) ?? "staff");
   const [busy, setBusy] = useState(false);
   const [err,  setErr]  = useState("");
 
@@ -75,7 +77,7 @@ function EditRoleModal({
             <label className="text-[11px] text-white/30 font-medium uppercase tracking-wider">Role</label>
             <select
               value={role}
-              onChange={e => setRole(e.target.value)}
+              onChange={e => setRole(e.target.value as AppRole)}
               className="w-full bg-white/[0.04] border border-white/[0.07] rounded-xl px-3 py-2.5 text-sm text-white/70 outline-none focus:border-[rgba(0,200,83,0.3)] transition-colors"
             >
               {ROLES.map(r => <option key={r} value={r} className="bg-[#111]">{r}</option>)}
