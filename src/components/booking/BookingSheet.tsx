@@ -50,6 +50,30 @@ const BookingSheet = ({
     return () => document.removeEventListener("keydown", onKey);
   }, [open, onClose]);
 
+  // Keep keyboard focus inside the sheet while it is open.
+  const trapFocus = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== "Tab") return;
+    const panel = panelRef.current;
+    if (!panel) return;
+    const focusable = panel.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])',
+    );
+    if (focusable.length === 0) {
+      event.preventDefault();
+      return;
+    }
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    const active = document.activeElement;
+    if (event.shiftKey && (active === first || active === panel)) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && active === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
+
   const isBottom = variant === "bottom";
 
   return createPortal(
@@ -74,6 +98,7 @@ const BookingSheet = ({
             aria-modal="true"
             aria-labelledby={labelledBy}
             tabIndex={-1}
+            onKeyDown={trapFocus}
             className={`booking-app bk-sheet ${isBottom ? "bk-sheet--bottom" : "bk-sheet--center"} outline-none`}
             style={{ zIndex: layer + 1 }}
             initial={isBottom ? { y: "100%" } : { opacity: 0, scale: 0.97 }}
