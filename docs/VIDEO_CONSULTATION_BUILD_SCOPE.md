@@ -295,3 +295,168 @@ The WhatsApp hyperlink opens the client's WhatsApp contact/chat. The actual call
 The feature is complete when a tenant can offer a video consultation as a service, allocate consultation hours, receive a fully paid booking, see the booking in the normal NextSlot workflow, and click the client's WhatsApp-linked number to initiate the call on the appointment day.
 
 **No meeting infrastructure. No new payment system. No new messaging platform. No parallel booking architecture.**
+
+
+---
+
+## 11. Deeper live trace — production database and payment paths
+
+**Trace date:** 13 November 2026  
+**Repository baseline:** `main` at `8d567d65a1cd47ac782aa2b14ac78ecb8a151aef`  
+**Live Supabase project:** `kjibbbuceipnialfgflt` (Phenomebeauty App)  
+**Latest migration recorded in live project at trace time:** `20261107045758`
+
+This section records a read-only inspection of the live PostgreSQL schema, migration history, function definitions, grants, RLS policies and deployed payment Edge Functions. No production schema, tenant data, payment configuration or Edge Function was changed.
+
+### 11.1 Availability — verified live details
+
+The live `public.staff_availability` table has no availability-mode column. It stores the existing physical-service schedule only.
+
+Relevant live schema facts:
+
+- Slot rows are constrained to exactly 30 minutes.
+- The unique index is `staff_availability_unique_slot` on `(staff_id, day_of_week, slot_start_time, COALESCE(specific_date, '0001-01-01'))`.
+- The unique index does not include a schedule type.
+- Existing recurring and specific-date schedules share the same row space.
+- Existing RLS policies scope staff/admin access. They are not to be broadened or replaced for this feature.
+
+The current live save functions are destructive within their selected scope:
+
+- `save_staff_availability` deletes every recurring row for the selected staff member, tenant and weekday, then inserts the replacement slot set.
+- `save_staff_daily_override` deletes every row for the selected staff member and specific date, then inserts the replacement override.
+- The legacy `replace_staff_availability` function also deletes by staff/day or staff/date without a schedule-type predicate. The current frontend hook uses the two `save_*` RPCs; the legacy writer must nevertheless be made safe or explicitly retired/restricted so it cannot erase a second schedule type.
+
+Current frontend availability paths:
+
+- `src/hooks/useSupabaseAvailability.ts` reads all rows for the tenant/staff and maps them into one weekly schedule and one override map. Its current `toWeekAvailability` and `toDailyOverrides` helpers assume a single schedule per day/date.
+- `src/hooks/usePublicAvailability.ts` calls `get_booking_horizon_availability` for date discovery and `get_available_slots` for the selected date.
+- `get_month_availability` is a SQL wrapper over `get_booking_horizon_availability`.
+
+Live database functions that read or write `staff_availability` and therefore belong in the migration review:
+
+1. `save_staff_availability`
+2. `save_staff_daily_override`
+3. `replace_staff_availability` (legacy writer)
+4. `get_booking_horizon_availability`
+5. `get_month_availability` (delegates to horizon)
+6. `get_available_slots`
+7. `check_availability`
+8. `acquire_slot_hold`
+9. `resize_slot_hold`
+10. `reschedule_booking`
+
+The hold-aware `create_booking_with_consultation` overload delegates to the service-role-only canonical booking function, which calls `check_availability`. That final validation is part of the same mode-aware path.
+
+#### Availability implementation consequences
+
+- Adding an availability type without changing the unique index will prevent two schedule types from storing the same staff/day/start-time row.
+- Adding a type without changing the delete predicates will cause saving one schedule to delete the other.
+- Adding a type without changing `v_has_override` logic will allow a consultation override to suppress physical recurring availability (or vice versa).
+- The public month/date and slot functions must receive the requested schedule mode and filter both recurring rows and overrides by that mode.
+- The final booking RPC must derive the mode from the selected service record, not trust the browser's requested mode.
+- `acquire_slot_hold` needs enough mode context to validate the slot being held. Holds and booking-conflict checks must remain shared across both modes so a single staff member cannot be double-booked across physical and remote work.
+- `reschedule_booking` must derive the mode from the persisted booking's service items and validate against the matching schedule. Keep its existing tenant-admin authorization unchanged.
+- `resize_slot_hold` currently revalidates against the single schedule. Video consultation services should not inherit physical-service add-on behaviour by default. If add-ons are excluded for video consultations, reject video/add-on combinations in both the UI and authoritative RPC rather than allowing the resize path to bypass the mode rules.
+- The UI mapping must become explicitly mode-aware. Do not merge both types into the current single `WeekAvailability` / `DailyOverrides` map.
+
+**Schedule semantics:** The feature requires independent physical and consultation hours. Do not implement one mutually exclusive day setting that forces a tenant to choose either physical services or consultations for the entire day. Both schedules must be able to exist on the same date. A closed override should be scoped deliberately: closing one mode must not silently close the other unless the tenant explicitly chooses a whole-day closure.
+
+### 11.2 Availability security and compatibility
+
+The live save RPCs are `SECURITY DEFINER`, require authenticated execution and check `is_tenant_admin(auth.uid(), p_tenant_id)` plus the tenant-owner/staff relationship. Public slot-discovery and booking validation functions have explicit anonymous execution grants because guest booking is intentional.
+
+Preserve these boundaries:
+
+- Do not change the current `staff_availability` RLS policies as a shortcut.
+- Keep admin-only save RPC execution and tenant ownership checks.
+- Keep anonymous execution only on the public booking availability/hold path that requires it.
+- Keep `SECURITY DEFINER` search paths pinned to `public` and preserve explicit grants/revokes.
+- Avoid overloaded PostgREST signatures that become ambiguous when optional parameters are added. Deliberately drop/recreate/re-grant affected signatures and update all callers together.
+
+### 11.3 Payment — verified live calculation path
+
+The live `services` table already contains `deposit_percent` (nullable, default 50), but the active booking pricing functions do not use it.
+
+Verified live behaviour:
+
+- Both active `calculate_booking_price` overloads read the tenant's `app_settings.deposit_percent`.
+- The canonical `create_booking_with_consultation` function also reads tenant-level `app_settings.deposit_percent`.
+- The canonical booking function recomputes the total from service records and consistency pricing. It does not trust the browser's `p_total_amount`.
+- It uses `p_deposit_amount` as a full-payment signal only when the supplied value is at least the calculated total; otherwise it falls back to the tenant's deposit percentage.
+- `get_booking_consistency_quote` calls `calculate_booking_price` and returns its `deposit_amount`, so its display quote also currently reflects tenant-level deposit settings.
+- The public hold-aware booking RPC has the extra hold ID/session-token parameters. It validates the hold and delegates to the canonical function. The older no-hold signature is restricted to service-role execution; the hold-aware signature is the anonymous guest-booking entry point.
+
+**Correction to the earlier build assumption:** setting `services.deposit_percent = 100` alone will not enforce full payment in the live booking path. That column is not the authority used by the active pricing and booking functions.
+
+#### Required full-payment implementation
+
+The canonical booking function must derive whether the selected service is a video consultation by reading the persisted service record. For a video consultation it must set the booking's deposit/payment amount to the complete server-calculated total and `balance_due = 0`, regardless of tenant-level deposit settings or caller-supplied deposit values.
+
+This must not mutate `app_settings.deposit_percent` or alter the pricing of physical services.
+
+The consistency quote path must return a full amount due for video consultations as well, so the public review screen does not display a misleading partial deposit. Keep the existing consistency price calculation itself intact unless a separate product decision excludes video services from consistency pricing.
+
+### 11.4 Payment — verified UI and provider behaviour
+
+The live `ReviewStep.tsx` currently:
+
+- Chooses the default payment choice from tenant-level `requiresDeposit` and `depositPercent`.
+- Offers deposit/full toggles for Yoco/PayFast and PayShap when tenant settings allow deposits.
+- Sends `p_deposit_amount = total` only when the selected payment choice is full.
+- Passes payment type to Yoco, PayFast and iKhokha checkout paths.
+- Sets PayShap's `payshap_payment_intent` to `full` or `deposit` based on the selected UI choice.
+
+For video consultation services, the UI must force the full-payment choice for every provider, hide deposit selection, display the full amount due, and send the full-payment intent. This is usability and consistency; it is not the security boundary.
+
+### 11.5 Payment — deployed Edge Function and webhook behaviour
+
+The deployed checkout and webhook paths were inspected read-only.
+
+| Provider | Checkout amount source | Full-payment webhook behaviour | Video-specific guard required |
+|---|---|---|---|
+| Yoco | Server reads booking; `full` uses `total_amount`, `deposit` uses `deposit_amount` | `full` sets full-payment flags; `deposit` only sets deposit-paid and recalculates balance | Yes |
+| PayFast | Server reads booking; `full` uses `total_amount`, `deposit` uses `deposit_amount` | `full` sets full-payment flags; `deposit` only marks deposit paid | Yes |
+| iKhokha | Server recalculates expected amount from booking and ignores mismatched browser amount | `full` sets full-payment flags; `deposit` only marks deposit paid | Yes |
+| PayShap | Manual tenant verification; booking amounts determine full/deposit outcome | Confirmation hook treats `deposit_amount = total_amount` or zero balance as full payment | Force full intent in UI and retain the amount-based full-payment check |
+
+**Critical provider finding:** It is not sufficient to set `deposit_amount = total_amount` and rely on the payment amount alone. If a video booking is submitted to a gateway as `payment_type = 'deposit'`, the gateway can charge the full amount from the booking row while its webhook follows the *deposit* branch. That branch does not consistently set `full_payment_received` and related flags. This can leave a fully charged consultation looking unpaid or partially paid in NextSlot.
+
+Therefore:
+
+- Yoco, PayFast and iKhokha checkout functions must derive the service type from the persisted booking/service items and reject `payment_type = 'deposit'` for a video consultation.
+- The frontend must send `payment_type = 'full'` for video consultations.
+- Keep the existing full-payment webhook branches and ledger logic. Do not rewrite payment webhooks or introduce a new payment lifecycle.
+- PayShap must set `payshap_payment_intent = 'full'`; its current confirmation logic already recognises a booking whose deposit equals its total as fully paid.
+
+### 11.6 Confirmed implementation order after the trace
+
+1. Add the service flag with default false and update all service reads/writes.
+2. Add an availability type to the existing schedule rows, migrate all existing rows to the physical-service type, and replace the unique index with a type-aware equivalent.
+3. Update both current availability save RPCs and the legacy `replace_staff_availability` writer (or explicitly retire the unused legacy path).
+4. Update availability hooks and UI maps so recurring schedules and date overrides are separated by type.
+5. Update `get_booking_horizon_availability`, `get_available_slots`, `check_availability`, `acquire_slot_hold`, `resize_slot_hold`, and `reschedule_booking` in a coordinated migration. Keep cross-mode booking/hold collisions shared.
+6. Update the canonical booking RPC to derive video mode from the service record, reject mixed physical/video bookings and call-outs for video consultations, validate consultation availability, and force the complete calculated total due.
+7. Update `get_booking_consistency_quote` so its displayed due-now amount matches the full-payment rule.
+8. Force full payment in `ReviewStep` and add service-type guards to Yoco, PayFast and iKhokha checkout functions. Keep existing webhook full-payment branches.
+9. Run physical booking and all payment-provider regression tests before the PhenomeBeauty pilot.
+
+### 11.7 Additional acceptance tests from the live trace
+
+- [ ] Saving consultation weekly hours does not delete physical weekly rows.
+- [ ] Saving a consultation date override does not suppress physical recurring availability.
+- [ ] Saving a physical date override does not suppress consultation recurring availability.
+- [ ] The same staff member cannot acquire overlapping physical and consultation holds.
+- [ ] A video consultation cannot be held/booked against physical-only hours.
+- [ ] A physical service cannot be held/booked against consultation-only hours.
+- [ ] Tenant rescheduling of a video consultation validates consultation hours.
+- [ ] The old physical schedule continues to work with all existing date overrides.
+- [ ] A video booking receives `deposit_amount = total_amount` and `balance_due = 0` even when the tenant deposit setting is below 100%.
+- [ ] The tenant-wide deposit setting remains unchanged.
+- [ ] The consistency quote displays the full amount due for video consultations.
+- [ ] Yoco rejects a deposit-type checkout for a video consultation.
+- [ ] PayFast rejects a deposit-type checkout for a video consultation.
+- [ ] iKhokha rejects a deposit-type checkout for a video consultation.
+- [ ] All three card-provider full-payment webhooks set the existing full-payment flags and ledger correctly.
+- [ ] PayShap confirmation records the consultation as fully paid and creates the correct full-payment ledger entry.
+- [ ] Existing physical-service deposit checkouts continue to charge and settle exactly as before.
+
