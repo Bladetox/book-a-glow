@@ -12,12 +12,20 @@ import {
   isToday,
   isSameDay,
 } from "date-fns";
-import { ChevronLeft, ChevronRight, Loader2, CalendarDays, ChevronDown, X, Clock } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, CalendarDays, CalendarX2, TriangleAlert } from "lucide-react";
 import { useMonthAvailability, useDateSlots } from "@/hooks/usePublicAvailability";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 import type { useSlotHold } from "@/hooks/useSlotHold";
 import { usePublicTenant } from "@/contexts/PublicTenantContext";
+import StepHeading from "@/components/booking/StepHeading";
+import {
+  addMinutesToTime,
+  dayPeriodLabels,
+  formatDuration,
+  formatLongDate,
+  groupSlotsByPeriod,
+} from "@/lib/bookingFormat";
 
 interface ScheduleStepProps {
   selectedDate: Date | null;
@@ -60,6 +68,8 @@ const ScheduleStep = ({
   const [refreshingAvailability, setRefreshingAvailability] = useState(false);
   const [availabilityRefreshError, setAvailabilityRefreshError] = useState(false);
   const [acquiringSlot, setAcquiringSlot] = useState(false);
+  // The slot the guest just tapped, so its own button shows the progress spinner.
+  const [pendingTime, setPendingTime] = useState<string | null>(null);
   const timeSlotsRef = useRef<HTMLDivElement>(null);
   const popupTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -191,7 +201,7 @@ const ScheduleStep = ({
       const isAvailable = isDayAvailable(day);
       if (!isAvailable && monthAvailability !== undefined) {
         const status = monthAvailability[format(day, "yyyy-MM-dd")]?.status ?? "restricted";
-        showAvailabilityNotice(status);
+        showAvailabilityNotice(status === "available" ? "restricted" : status);
         return;
       }
       if (isAvailable) handleSelectDate(day);
@@ -239,6 +249,7 @@ const ScheduleStep = ({
     }
 
     setAcquiringSlot(true);
+    setPendingTime(time);
     try {
       const staffId = await getStaffId(tenantId);
       const result = await slotHold.acquireHold({
@@ -256,20 +267,25 @@ const ScheduleStep = ({
       onSelectTime(time);
     } finally {
       setAcquiringSlot(false);
+      setPendingTime(null);
     }
   }, [selectedDate, selectedTime, acquiringSlot, tenantId, totalDuration, slotHold, onSelectTime]);
 
   const hasAnyAvailableDate = Object.values(monthAvailability ?? {}).some((day) => day.status === "available");
   const noSuitableDatesInHorizon = !loadingMonth && !!monthAvailability && !hasAnyAvailableDate;
 
-  const mm = String(Math.floor(slotHold.secondsLeft / 60)).padStart(2, "0");
-  const ss = String(slotHold.secondsLeft % 60).padStart(2, "0");
+  const selectedEndTime = selectedTime ? addMinutesToTime(selectedTime, totalDuration) : null;
+  const slotGroups = groupSlotsByPeriod(dateSlots);
+  const prevMonthDisabled = isCurrentMonth;
+  const nextMonthDisabled =
+    isLastBookableMonth || startOfMonth(addMonths(currentMonth, 1)) > startOfMonth(lastBookableDate);
 
   return (
-    <div className="flex flex-col gap-5">
-      <h3 className="text-xs font-semibold tracking-[0.2em] uppercase text-muted-foreground">
-        Choose date &amp; time
-      </h3>
+    <div className="flex flex-col gap-4">
+      <StepHeading
+        title="Pick a date & time"
+        description={`Showing times that fit your ${formatDuration(totalDuration)} appointment.`}
+      />
 
       {/* ── Date availability feedback ── */}
       <AnimatePresence>
@@ -280,29 +296,36 @@ const ScheduleStep = ({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -8, scale: 0.98 }}
             transition={{ duration: 0.2 }}
-            className="rounded-2xl border border-border bg-card px-4 py-4"
+            className="bk-card p-4"
             role="status"
             aria-live="polite"
           >
-            <p className="text-sm font-semibold text-foreground">
-              {availabilityNotice === "insufficient_time"
-                ? "Not enough time on this date"
-                : availabilityNotice === "fully_booked"
-                ? "This date is fully booked"
-                : "No suitable appointment times on this date"}
-            </p>
-            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-              {availabilityNotice === "insufficient_time"
-                ? "Your selected services need more time than is available on this date. You can view other dates that can accommodate your appointment or adjust your service selection."
-                : availabilityNotice === "fully_booked"
-                ? "There is enough operating time for your selected services, however all suitable appointment times have already been taken. Please choose another date."
-                : "The available times on this date do not meet the current booking rules. Please view another date or adjust your service selection."}
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
+            <div className="flex items-start gap-3">
+              <span className="bk-well grid h-10 w-10 shrink-0 place-items-center rounded-full text-foreground">
+                <CalendarX2 className="h-[18px] w-[18px]" aria-hidden="true" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-[15px] font-semibold leading-snug text-foreground">
+                  {availabilityNotice === "insufficient_time"
+                    ? "Not enough time on this date"
+                    : availabilityNotice === "fully_booked"
+                    ? "This date is fully booked"
+                    : "No suitable appointment times on this date"}
+                </p>
+                <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                  {availabilityNotice === "insufficient_time"
+                    ? "Your selected services need more time than is available on this date. You can view other dates that can accommodate your appointment or adjust your service selection."
+                    : availabilityNotice === "fully_booked"
+                    ? "There is enough operating time for your selected services, however all suitable appointment times have already been taken. Please choose another date."
+                    : "The available times on this date do not meet the current booking rules. Please view another date or adjust your service selection."}
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2">
               <button
                 type="button"
                 onClick={handleFindAnotherDate}
-                className="rounded-xl bg-primary px-3.5 py-2 text-xs font-semibold text-primary-foreground"
+                className="bk-btn bk-btn--primary bk-btn--sm"
               >
                 Find another date
               </button>
@@ -310,7 +333,7 @@ const ScheduleStep = ({
                 <button
                   type="button"
                   onClick={onReviewServices}
-                  className="rounded-xl border border-border px-3.5 py-2 text-xs font-semibold text-foreground"
+                  className="bk-btn bk-btn--quiet bk-btn--sm"
                 >
                   Review services
                 </button>
@@ -321,17 +344,20 @@ const ScheduleStep = ({
       </AnimatePresence>
 
       {refreshingAvailability && (
-        <div className="flex items-center justify-center gap-3 rounded-2xl border border-border bg-card px-4 py-5" role="status" aria-live="polite">
-          <Loader2 className="h-4 w-4 animate-spin text-primary" />
+        <div className="bk-card flex items-center justify-center gap-3 px-4 py-6" role="status" aria-live="polite">
+          <Loader2 className="h-4 w-4 animate-spin text-foreground" aria-hidden="true" />
           <p className="text-sm text-muted-foreground">Checking available dates for your selected services…</p>
         </div>
       )}
 
       {availabilityRefreshError && !refreshingAvailability && (
-        <div className="rounded-2xl border border-destructive/30 bg-destructive/5 px-4 py-4" role="alert">
-          <p className="text-sm font-semibold text-foreground">We couldn’t refresh availability</p>
-          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Your previous availability has been hidden to avoid showing outdated dates. Please try again.</p>
-          <button type="button" onClick={handleFindAnotherDate} className="mt-3 rounded-xl bg-primary px-3.5 py-2 text-xs font-semibold text-primary-foreground">Try again</button>
+        <div className="bk-note bk-note--danger" role="alert">
+          <TriangleAlert className="mt-0.5 h-[18px] w-[18px] shrink-0 text-destructive" aria-hidden="true" />
+          <div className="min-w-0">
+            <p className="font-semibold text-foreground">We couldn’t refresh availability</p>
+            <p className="mt-1 text-muted-foreground">Your previous availability has been hidden to avoid showing outdated dates. Please try again.</p>
+            <button type="button" onClick={handleFindAnotherDate} className="bk-btn bk-btn--primary bk-btn--sm mt-3">Try again</button>
+          </div>
         </div>
       )}
 
@@ -344,57 +370,45 @@ const ScheduleStep = ({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.97 }}
             transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
-            className="flex items-center gap-3 rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3"
+            className="bk-note bk-note--danger"
+            role="alert"
           >
-            <span className="text-lg leading-none shrink-0">⚡</span>
-            <p className="text-sm font-medium text-foreground">{slotHold.error}</p>
+            <TriangleAlert className="mt-0.5 h-[18px] w-[18px] shrink-0 text-destructive" aria-hidden="true" />
+            <p className="font-medium text-foreground">{slotHold.error}</p>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* ── Hold countdown timer ── */}
-      <AnimatePresence>
-        {slotHold.secondsLeft > 0 && selectedTime && (
-          <motion.div
-            key="hold-countdown"
-            initial={{ opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.2 }}
-            className="flex items-center gap-2 rounded-2xl border border-primary/30 bg-primary/5 px-4 py-2.5"
-          >
-            <Clock className="w-3.5 h-3.5 text-primary shrink-0" />
-            <p className="text-xs text-muted-foreground">
-              Slot held for{" "}
-              <span className="font-semibold text-foreground tabular-nums">{mm}:{ss}</span>
-              {" "}— complete your booking before it expires
-            </p>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* The hold countdown lives in the bottom bar, where it stays visible on
+          every later step and never pushes this layout around. */}
 
       {/* Collapsed date strip */}
       <AnimatePresence>
         {selectedDate && !calendarOpen && !availabilityNotice && !refreshingAvailability && (
           <motion.button
             key="date-strip"
+            type="button"
             initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.2 }}
             onClick={handleChangeDate}
-            className="glass-card-service rounded-2xl px-4 py-3 flex items-center justify-between w-full text-left"
+            className="bk-card bk-card--interactive flex w-full items-center gap-3 px-4 py-3 text-left"
           >
-            <div className="flex items-center gap-3">
-              <CalendarDays className="w-4 h-4 text-primary shrink-0" />
-              <div>
-                <p className="text-sm font-semibold text-foreground">
-                  {format(selectedDate, "EEEE, d MMMM yyyy")}
-                </p>
-                <p className="text-[11px] text-muted-foreground mt-0.5">Tap to change date</p>
-              </div>
-            </div>
-            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+            <span className="bk-well grid h-10 w-10 shrink-0 place-items-center rounded-full text-foreground">
+              <CalendarDays className="h-[18px] w-[18px]" aria-hidden="true" />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[15px] font-semibold leading-snug text-foreground">
+                {formatLongDate(selectedDate)}
+              </span>
+              <span className="bk-num mt-0.5 block text-[13px] text-muted-foreground">
+                {selectedTime && selectedEndTime
+                  ? `${selectedTime} – ${selectedEndTime}`
+                  : "Choose a time below"}
+              </span>
+            </span>
+            <span className="bk-link shrink-0">Change</span>
           </motion.button>
         )}
       </AnimatePresence>
@@ -410,39 +424,39 @@ const ScheduleStep = ({
             transition={{ duration: 0.28, ease: "easeInOut" }}
             className="overflow-hidden"
           >
-            <div className="glass-card-service rounded-2xl p-4">
-              <div className="flex items-center justify-between mb-4">
+            <div className="bk-card px-3 pb-4 pt-2.5">
+              <div className="mb-2 flex items-center justify-between">
                 <motion.button
-                  whileTap={!isCurrentMonth ? { scale: 0.85 } : undefined}
-                  disabled={isCurrentMonth}
-                  onClick={() => !isCurrentMonth && setCurrentMonth(subMonths(currentMonth, 1))}
-                  className={`transition-colors p-1.5 rounded-full ${
-                    isCurrentMonth
-                      ? "text-muted-foreground/20 cursor-not-allowed"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                  }`}
+                  type="button"
+                  whileTap={!prevMonthDisabled ? { scale: 0.88 } : undefined}
+                  disabled={prevMonthDisabled}
+                  onClick={() => !prevMonthDisabled && setCurrentMonth(subMonths(currentMonth, 1))}
+                  className="bk-icon-btn"
+                  aria-label="Previous month"
                 >
-                  <ChevronLeft className="w-5 h-5" />
+                  <ChevronLeft className="h-5 w-5" />
                 </motion.button>
 
-                <span className="font-display text-base font-semibold text-foreground flex items-center gap-2">
+                <span className="bk-display flex items-center gap-2 text-[1.0625rem] text-foreground" aria-live="polite">
                   {format(currentMonth, "MMMM yyyy")}
-                  {loadingMonth && <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground" />}
+                  {loadingMonth && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" aria-label="Loading availability" />}
                 </span>
 
                 <motion.button
-                  whileTap={!isLastBookableMonth ? { scale: 0.85 } : undefined}
-                  disabled={isLastBookableMonth || startOfMonth(addMonths(currentMonth, 1)) > startOfMonth(lastBookableDate)}
+                  type="button"
+                  whileTap={!nextMonthDisabled ? { scale: 0.88 } : undefined}
+                  disabled={nextMonthDisabled}
                   onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
-                  className={`transition-colors p-1.5 rounded-full ${isLastBookableMonth ? "text-muted-foreground/20 cursor-not-allowed" : "text-muted-foreground hover:text-foreground hover:bg-muted/50"}`}
+                  className="bk-icon-btn"
+                  aria-label="Next month"
                 >
-                  <ChevronRight className="w-5 h-5" />
+                  <ChevronRight className="h-5 w-5" />
                 </motion.button>
               </div>
 
-              <div className="grid grid-cols-7 gap-1 text-center mb-2">
+              <div className="mb-1.5 grid grid-cols-7 gap-1 text-center" aria-hidden="true">
                 {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((d) => (
-                  <span key={d} className="text-[10px] font-semibold text-muted-foreground uppercase">
+                  <span key={d} className="text-xs font-medium text-muted-foreground">
                     {d}
                   </span>
                 ))}
@@ -457,36 +471,31 @@ const ScheduleStep = ({
                   const isBeyondBookingWindow = isAfter(day, lastBookableDate);
                   const dayStatus = monthAvailability?.[format(day, "yyyy-MM-dd")]?.status;
                   const isAvailable = !isBeyondBookingWindow && dayStatus === "available";
-                  const isActive = selectedDate && isSameDay(day, selectedDate);
+                  const isActive = !!selectedDate && isSameDay(day, selectedDate);
                   const isHardDisabled = !bookingWindowReady || isPast || isBeyondBookingWindow;
                   const isDateDisabled = isHardDisabled || !isAvailable;
 
                   return (
                     <motion.button
                       key={day.toISOString()}
-                      whileTap={!isDateDisabled ? { scale: 0.85 } : undefined}
+                      type="button"
+                      whileTap={!isDateDisabled ? { scale: 0.88 } : undefined}
                       disabled={isDateDisabled}
                       aria-disabled={isDateDisabled}
+                      aria-pressed={isActive}
+                      aria-label={`${format(day, "EEEE d MMMM")}${isDateDisabled ? ", unavailable" : ""}`}
+                      data-available={!isDateDisabled}
+                      data-today={isToday(day)}
+                      data-day-status={dayStatus}
                       onClick={() => handleDayTap(day)}
-                      className={`w-full aspect-square rounded-xl text-sm font-medium transition-all duration-200
-                        ${
-                          isBeyondBookingWindow
-                            ? "text-muted-foreground/15 cursor-not-allowed"
-                            : isHardDisabled
-                            ? "text-muted-foreground/20 cursor-not-allowed"
-                            : isAvailable
-                            ? "hover:bg-muted/50 cursor-pointer active:bg-muted"
-                            : "text-muted-foreground/25 cursor-not-allowed"
-                        }
-                        ${isActive ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25" : "text-foreground"}
-                      `}
+                      className="bk-day"
                     >
                       {format(day, "d")}
                     </motion.button>
                   );
                 })}
               </div>
-              <p className="mt-3 text-[11px] text-muted-foreground text-center">
+              <p className="mt-3 text-center text-xs text-muted-foreground">
                 {bookingWindowReady
                   ? `Bookings are available up to ${format(lastBookableDate, "d MMMM yyyy")}.`
                   : "Loading booking availability…"}
@@ -497,10 +506,17 @@ const ScheduleStep = ({
       </AnimatePresence>
 
       {noSuitableDatesInHorizon && !availabilityNotice && !refreshingAvailability && (
-        <div className="rounded-2xl border border-border bg-card px-4 py-4" role="status" aria-live="polite">
-          <p className="text-sm font-semibold text-foreground">No available dates for these services</p>
-          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">There are currently no bookable dates within this business’s booking window for your selected services. You can adjust your service selection and check again.</p>
-          <button type="button" onClick={onReviewServices} className="mt-3 rounded-xl border border-border px-3.5 py-2 text-xs font-semibold text-foreground">Review services</button>
+        <div className="bk-card p-4" role="status" aria-live="polite">
+          <div className="flex items-start gap-3">
+            <span className="bk-well grid h-10 w-10 shrink-0 place-items-center rounded-full text-foreground">
+              <CalendarX2 className="h-[18px] w-[18px]" aria-hidden="true" />
+            </span>
+            <div className="min-w-0">
+              <p className="text-[15px] font-semibold leading-snug text-foreground">No available dates for these services</p>
+              <p className="mt-1 text-sm leading-relaxed text-muted-foreground">There are currently no bookable dates within this business’s booking window for your selected services. You can adjust your service selection and check again.</p>
+            </div>
+          </div>
+          <button type="button" onClick={onReviewServices} className="bk-btn bk-btn--quiet bk-btn--sm mt-4">Review services</button>
         </div>
       )}
 
@@ -514,44 +530,42 @@ const ScheduleStep = ({
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
             >
-              <h4 className="text-xs font-semibold tracking-[0.15em] uppercase text-muted-foreground mb-3">
-                Available times
-              </h4>
               {loadingSlots ? (
-                <div className="flex justify-center py-4">
-                  <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                <div className="grid grid-cols-4 gap-2" role="status" aria-label="Loading times">
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <div key={i} className="bk-skeleton h-12 rounded-[0.875rem]" />
+                  ))}
                 </div>
               ) : dateSlots.length === 0 ? (
-                <p className="text-xs text-muted-foreground text-center py-4">
+                <p className="py-4 text-center text-sm text-muted-foreground">
                   No slots available — tap the date above to pick another
                 </p>
               ) : (
-                <div className="grid grid-cols-4 gap-2">
-                  {dateSlots.map((time, i) => (
-                    <motion.button
-                      key={time}
-                      initial={{ opacity: 0, scale: 0.9 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: i * 0.02 }}
-                      whileTap={{ scale: 0.9 }}
-                      disabled={acquiringSlot}
-                      onClick={() => handleSlotTap(time)}
-                      className={`py-2.5 rounded-xl text-sm font-medium transition-all duration-200 flex items-center justify-center gap-1
-                        ${
-                          selectedTime === time
-                            ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
-                            : "glass-card-service text-foreground"
-                        }
-                        ${acquiringSlot ? "opacity-60 cursor-wait" : ""}
-                      `}
-                    >
-                      {acquiringSlot && selectedTime !== time
-                        ? time
-                        : acquiringSlot && selectedTime === time
-                        ? <><span>{time}</span><Loader2 className="w-3 h-3 animate-spin" /></>
-                        : time
-                      }
-                    </motion.button>
+                <div className="flex flex-col gap-4">
+                  {slotGroups.map((group) => (
+                    <section key={group.period} aria-label={`${dayPeriodLabels[group.period]} times`}>
+                      <h3 className="bk-overline mb-2">{dayPeriodLabels[group.period]}</h3>
+                      <div className="grid grid-cols-4 gap-2">
+                        {group.slots.map((time) => {
+                          const isPending = pendingTime === time;
+                          return (
+                            <motion.button
+                              key={time}
+                              type="button"
+                              whileTap={{ scale: 0.94 }}
+                              disabled={acquiringSlot}
+                              aria-pressed={selectedTime === time}
+                              aria-label={isPending ? `Holding ${time}` : undefined}
+                              data-pending={isPending}
+                              onClick={() => handleSlotTap(time)}
+                              className="bk-slot"
+                            >
+                              {isPending ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : time}
+                            </motion.button>
+                          );
+                        })}
+                      </div>
+                    </section>
                   ))}
                 </div>
               )}

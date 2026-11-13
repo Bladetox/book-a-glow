@@ -43,6 +43,10 @@ export interface PublicBusinessConfig {
   mobileServiceEnabled: boolean;
   clientLabelExisting: string;
   clientLabelNew: string;
+  /** Heading of the services step (app_settings: services_step_heading) */
+  servicesStepHeading: string;
+  /** Placeholder for the returning-client notes field (app_settings: client_type_existing_notes_placeholder) */
+  existingClientNotesPlaceholder: string;
   /** Optional CSS @font-face stylesheet URL (Google Fonts CSS, Bunny Fonts, or self-hosted) */
   brandFontUrl: string | null;
   /** Optional hex/hsl colour override for the business name heading only */
@@ -86,6 +90,8 @@ const defaults: PublicBusinessConfig = {
   mobileServiceEnabled: false,
   clientLabelExisting: "Returning Client",
   clientLabelNew: "New Client",
+  servicesStepHeading: "Select a service",
+  existingClientNotesPlaceholder: "e.g. any changes since your last visit, preferences\u2026",
   brandFontUrl: null,
   brandNameColor: null,
   payshapEnabled: false,
@@ -234,6 +240,11 @@ export function usePublicBusinessConfig(): PublicBusinessConfig & { loading: boo
     // Client type labels
     clientLabelExisting: s.client_label_existing || defaults.clientLabelExisting,
     clientLabelNew: s.client_label_new || defaults.clientLabelNew,
+
+    // Per-tenant step copy
+    servicesStepHeading: s.services_step_heading || defaults.servicesStepHeading,
+    existingClientNotesPlaceholder:
+      s.client_type_existing_notes_placeholder || defaults.existingClientNotesPlaceholder,
 
     // Per-tenant branding overrides (null for all tenants that haven't set them)
     brandFontUrl: s.brand_font_url || null,

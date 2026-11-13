@@ -1,4 +1,4 @@
-import { BookingState, safetyQuestions } from "@/data/bookingData";
+import { BookingState } from "@/data/bookingData";
 import { usePublicServices } from "@/hooks/usePublicServices";
 import { usePublicTerms } from "@/hooks/usePublicTerms";
 import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
@@ -9,12 +9,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
-import { Sparkles, X, Loader2, Plus, Minus } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import BookingConfirmation from "@/components/BookingConfirmation";
+import { Sparkles, X, Loader2, Plus, Minus, MapPin, Check, TriangleAlert } from "lucide-react";
+import { motion, AnimatePresence, useIsPresent } from "framer-motion";
 import { toast } from "sonner";
 import type { PublicService } from "@/hooks/usePublicServices";
 import type { ResizeHoldResult } from "@/hooks/useSlotHold";
+import BookingBar from "@/components/booking/BookingBar";
+import BookingSheet from "@/components/booking/BookingSheet";
+import HoldTimer from "@/components/booking/HoldTimer";
+import StepHeading from "@/components/booking/StepHeading";
+import { formatDuration, formatLongDate, formatPrice } from "@/lib/bookingFormat";
 import YocoImg from "@/assets/Yoco.svg";
 import PayfastImg from "@/assets/Payfast.webp";
 import PayshapImg from "@/assets/payshap.png";
@@ -27,9 +31,16 @@ interface ReviewStepProps {
   releaseHold: () => Promise<void>;
   holdId: string | null;
   sessionToken: string;
+  /** Seconds left on the slot hold, shown beside the pay button. */
+  holdSecondsLeft?: number;
   resizeHold: (serviceIds: string[]) => Promise<ResizeHoldResult>;
   isResizing: boolean;
   onPayshapComplete: () => void;
+  /**
+   * Reports whether the guest must stay on this step: while a payment is being
+   * submitted, and once a booking exists that a retry has to reuse.
+   */
+  onLockChange?: (locked: boolean) => void;
 }
 
 type PaymentChoice = "deposit" | "full" | "payshap_deposit" | "payshap_full" | "ikhokha_deposit" | "ikhokha_full";
@@ -40,18 +51,19 @@ type SubmitPhase =
   | "gateway";
 
 function phaseLabel(phase: SubmitPhase, cur: string, amount: number, choice: PaymentChoice): string {
+  const price = formatPrice(cur, amount);
   switch (phase) {
     case "creating":
     case "gateway":
       return "Processing\u2026";
     default:
-      if (choice === "payshap_deposit") return `Continue to PayShap ${cur}${amount.toLocaleString()}`;
-      if (choice === "payshap_full")    return `Continue to PayShap ${cur}${amount.toLocaleString()}`;
-      if (choice === "ikhokha_deposit")  return `Confirm & Pay Deposit ${cur}${amount.toLocaleString()}`;
-      if (choice === "ikhokha_full")     return `Confirm & Pay ${cur}${amount.toLocaleString()}`;
+      if (choice === "payshap_deposit") return `Continue to PayShap ${price}`;
+      if (choice === "payshap_full")    return `Continue to PayShap ${price}`;
+      if (choice === "ikhokha_deposit")  return `Confirm & pay deposit ${price}`;
+      if (choice === "ikhokha_full")     return `Confirm & pay ${price}`;
       return choice === "full"
-        ? `Confirm & Pay ${cur}${amount.toLocaleString()}`
-        : `Confirm & Pay Deposit ${cur}${amount.toLocaleString()}`;
+        ? `Confirm & pay ${price}`
+        : `Confirm & pay deposit ${price}`;
   }
 }
 
@@ -87,24 +99,37 @@ function redirectToPayfast(payfastUrl: string, fields: Record<string, string>) {
   form.submit();
 }
 
-// Logo component — theme-adaptive via dark:invert
-function GatewayLogo({ choice, className }: { choice: PaymentChoice; className?: string }) {
-  const isPayshap = choice === "payshap_deposit" || choice === "payshap_full";
-
-  if (isPayshap) {
+/**
+ * Payment gateway logo. These are full-colour brand marks, so they are never
+ * recoloured: marks that need a light ground (PayFast, iKhokha) sit on a white
+ * chip, and self-contained marks (Yoco, PayShap) render as they are.
+ */
+function GatewayMark({ src, alt, onChip }: { src: string; alt: string; onChip: boolean }) {
+  if (onChip) {
     return (
-      <img
-        src={PayshapImg}
-        alt="PayShap"
-        className={`object-contain dark:invert ${className ?? ""}`}
-      />
+      <span className="bk-paymark">
+        <img src={src} alt={alt} />
+      </span>
     );
   }
-
-  return null;
+  return <img src={src} alt={alt} className="h-[1.625rem] w-auto shrink-0 rounded-md object-contain" />;
 }
 
-const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, holdId, sessionToken, resizeHold, isResizing, onPayshapComplete }: ReviewStepProps) => {
+const ReviewStep = ({
+  booking,
+  onUpdate,
+  onGoToStep,
+  releaseHold,
+  holdId,
+  holdSecondsLeft = 0,
+  sessionToken,
+  resizeHold,
+  isResizing,
+  onPayshapComplete,
+  onLockChange,
+}: ReviewStepProps) => {
+  // False while this step is animating out, so its pay bar leaves with it.
+  const isPresent = useIsPresent();
   const { data: allServices = [] } = usePublicServices();
   const { sections: termsSections } = usePublicTerms();
   const config = usePublicBusinessConfig();
@@ -148,6 +173,15 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, holdId, sessio
     const t = setTimeout(() => setPayshapCountdown((c) => c - 1), 1000);
     return () => clearTimeout(t);
   }, [payshapSuccess, payshapCountdown, onPayshapComplete]);
+
+  // While a payment is in flight, or once a booking row exists that a retry
+  // must reuse, the guest stays on this step: editing the selection now would
+  // no longer match what was created.
+  const locked = submitting || !!pendingBookingId || payshapSuccess;
+  useEffect(() => {
+    onLockChange?.(locked);
+  }, [locked, onLockChange]);
+  useEffect(() => () => onLockChange?.(false), [onLockChange]);
 
   // Shows every configured suggestion for the selected trigger service(s),
   // including ones already added — so their quantity/remove controls stay
@@ -284,13 +318,16 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, holdId, sessio
 
   const isPayshap  = paymentChoice === "payshap_deposit"  || paymentChoice === "payshap_full";
   const isIkhokha  = paymentChoice === "ikhokha_deposit"  || paymentChoice === "ikhokha_full";
+  const isFullChoice =
+    paymentChoice === "full" || paymentChoice === "payshap_full" || paymentChoice === "ikhokha_full";
 
+  const amountDueNow = isFullChoice ? total : deposit;
 
-    const amountDueNow =
-    paymentChoice === "full" || paymentChoice === "payshap_full" || paymentChoice === "ikhokha_full"
-      ? total
-      : deposit;
-  
+  // The deposit / pay-in-full pair for whichever gateway this tenant uses.
+  const depositChoice: PaymentChoice = isPayshap ? "payshap_deposit" : isIkhokha ? "ikhokha_deposit" : "deposit";
+  const fullChoice: PaymentChoice = isPayshap ? "payshap_full" : isIkhokha ? "ikhokha_full" : "full";
+  const canChoosePayment = config.requiresDeposit && depositPercent < 100;
+
   const gatewayLogoSrc = isPayshap
     ? PayshapImg
     : isIkhokha
@@ -300,6 +337,12 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, holdId, sessio
     : YocoImg;
 
   const gatewayLogoAlt = isPayshap ? "PayShap" : isIkhokha ? "iKhokha" : payfastMode ? "PayFast" : "Yoco";
+  // Yoco and PayShap marks carry their own background; the other two need one.
+  const gatewayOnChip = !isPayshap && (isIkhokha || !!payfastMode);
+
+  const servicesDuration = selectedWithQty.reduce((sum, { svc, qty }) => sum + svc.duration * qty, 0);
+  const addedAddonCount = pairWithAddons.reduce((sum, svc) => sum + getAddonQty(svc.id), 0);
+  const confirmDisabled = submitting || (!holdId && !pendingBookingId);
 
   const ensureBookingCreated = async (): Promise<string> => {
     if (pendingBookingId) {
@@ -564,74 +607,91 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, holdId, sessio
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h2 className="text-[17px] font-bold text-foreground leading-tight">Review your booking</h2>
-        <p className="text-xs text-muted-foreground mt-0.5">Check everything looks right before confirming.</p>
-      </div>
-
-      {/* Services */}
-      <div className="rounded-2xl border border-border/50 bg-muted/20 overflow-hidden">
-        <div className="px-4 pt-3 pb-2 border-b border-border/30">
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Services</p>
-        </div>
-        <div className="divide-y divide-border/20">
-          {selectedWithQty.map(({ svc, qty }) => (
-            <div key={svc.id} className="flex items-center justify-between px-4 py-2.5">
-              <div>
-                <p className="text-sm font-medium text-foreground">{svc.name}{qty > 1 ? ` x${qty}` : ""}</p>
-                {svc.duration_minutes && (
-                  <p className="text-[11px] text-muted-foreground">{svc.duration_minutes} min</p>
-                )}
-              </div>
-              <p className="text-sm font-semibold text-foreground">{cur}{(svc.price * qty).toLocaleString()}</p>
-            </div>
-          ))}
-          {isCallOut && (
-            <div className="flex items-center justify-between px-4 py-2.5">
-              <p className="text-sm font-medium text-foreground">Call-out fee</p>
-              <p className="text-sm font-semibold text-foreground">{cur}{callOutFee.toLocaleString()}</p>
-            </div>
-          )}
-        </div>
-        <div className="flex items-center justify-between px-4 py-2.5 border-t border-border/30 bg-muted/20">
-          <p className="text-sm font-bold text-foreground">Total</p>
-          <p className="text-sm font-bold text-foreground">{cur}{total.toLocaleString()}</p>
-        </div>
-      </div>
+      <StepHeading
+        title="Review & confirm"
+        description="Check everything looks right before you pay."
+      />
 
       {/* Appointment */}
-      <div className="rounded-2xl border border-border/50 bg-muted/20 overflow-hidden">
-        <div className="px-4 pt-3 pb-2 border-b border-border/30">
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Appointment</p>
-        </div>
-        <div className="divide-y divide-border/20">
+      <section className="bk-card bk-card--raised overflow-hidden" aria-label="Appointment">
+        <div className="flex items-center gap-3.5 p-4">
           {booking.selectedDate && (
-            <div className="flex items-center justify-between px-4 py-2.5">
-              <p className="text-sm text-muted-foreground">Date</p>
-              <p className="text-sm font-medium text-foreground">{format(booking.selectedDate, "EEE d MMM yyyy")}</p>
+            <div className="bk-well flex h-[3.75rem] w-14 shrink-0 flex-col items-center justify-center rounded-2xl" aria-hidden="true">
+              <span className="text-[11px] font-semibold uppercase leading-none tracking-wider text-muted-foreground">
+                {format(booking.selectedDate, "MMM")}
+              </span>
+              <span className="bk-num mt-1 text-xl font-semibold leading-none text-foreground">
+                {format(booking.selectedDate, "d")}
+              </span>
             </div>
           )}
-          {booking.selectedTime && (
-            <div className="flex items-center justify-between px-4 py-2.5">
-              <p className="text-sm text-muted-foreground">Time</p>
-              <p className="text-sm font-medium text-foreground">{booking.selectedTime}</p>
-            </div>
-          )}
-          <div className="flex items-start justify-between px-4 py-2.5">
-            <p className="text-sm text-muted-foreground shrink-0 pt-0.5">Location</p>
-            <p className="text-sm font-medium text-foreground text-right ml-3">
-              {isCallOut ? (booking.address || "Your address") : (config.salonAddress || "Salon")}
+          <div className="min-w-0 flex-1">
+            <p className="text-[15px] font-semibold leading-snug text-foreground">
+              {booking.selectedDate ? formatLongDate(booking.selectedDate) : "Date to be confirmed"}
+            </p>
+            <p className="bk-num mt-0.5 text-sm text-muted-foreground">
+              {booking.selectedTime || "Time to be confirmed"}
+              {servicesDuration > 0 && ` · ${formatDuration(servicesDuration)}`}
             </p>
           </div>
+          <button type="button" className="bk-link shrink-0" onClick={() => onGoToStep(1)} disabled={locked}>
+            Change
+          </button>
         </div>
-      </div>
+        <div className="bk-rule flex items-start gap-2.5 border-t px-4 py-3">
+          <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+          <p className="text-sm leading-snug text-foreground">
+            <span className="sr-only">Location: </span>
+            {isCallOut ? (booking.address || "Your address") : (config.salonAddress || "Salon")}
+          </p>
+        </div>
+      </section>
+
+      {/* Services */}
+      <section className="bk-card overflow-hidden" aria-labelledby="review-services">
+        <div className="flex items-center justify-between px-4 pb-1 pt-3.5">
+          <h3 id="review-services" className="bk-overline">Services</h3>
+          <button type="button" className="bk-link" onClick={() => onGoToStep(0)} disabled={locked}>
+            Edit
+          </button>
+        </div>
+        <ul className="bk-divide px-4">
+          {selectedWithQty.map(({ svc, qty }) => (
+            <li key={svc.id} className="flex items-start justify-between gap-4 py-3">
+              <div className="min-w-0">
+                <p className="text-[15px] font-medium leading-snug text-foreground">
+                  {svc.name}
+                  {qty > 1 && <span className="ml-1.5 text-muted-foreground">×{qty}</span>}
+                </p>
+                {svc.duration > 0 && (
+                  <p className="mt-0.5 text-[13px] text-muted-foreground">{formatDuration(svc.duration * qty)}</p>
+                )}
+              </div>
+              <p className="bk-num shrink-0 text-[15px] font-medium text-foreground">
+                {formatPrice(cur, svc.price * qty)}
+              </p>
+            </li>
+          ))}
+          {isCallOut && (
+            <li className="flex items-center justify-between gap-4 py-3">
+              <p className="text-[15px] font-medium text-foreground">Call-out fee</p>
+              <p className="bk-num text-[15px] font-medium text-foreground">{formatPrice(cur, callOutFee)}</p>
+            </li>
+          )}
+        </ul>
+        <div className="bk-rule bk-well flex items-center justify-between border-t px-4 py-3">
+          <p className="text-[15px] font-semibold text-foreground">Total</p>
+          <p className="bk-num text-[17px] font-semibold text-foreground">{formatPrice(cur, total)}</p>
+        </div>
+      </section>
 
       {/* Consistency pricing line — only renders for a qualifying, mapped
           service; silent no-op while the feature is off (quote.is_qualifying_booking
           is always false then) or for any non-mapped booking. */}
       {quote?.is_qualifying_booking && (
-        <div className="px-1 -mt-1">
-          <p className="text-xs font-medium text-primary leading-snug">
+        <div className="-mt-1 flex items-start gap-2 px-1">
+          <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-foreground" aria-hidden="true" />
+          <p className="text-[13px] font-medium leading-snug text-foreground">
             {quote.state === "qualified" &&
               `Your ${quote.service_name} consistency price is applied. Check your email for details.`}
             {quote.state === "progress" &&
@@ -642,532 +702,384 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, holdId, sessio
         </div>
       )}
 
-      {/* Payment summary - Yoco / PayFast */}
-      {!isPayshap && !isIkhokha && (
-        <div className="rounded-2xl border border-border/50 bg-muted/20 overflow-hidden">
-          <div className="px-4 pt-3 pb-2 border-b border-border/30">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Payment</p>
+      {/* Your details */}
+      <section className="bk-card px-4 py-3.5" aria-labelledby="review-details">
+        <div className="flex items-center justify-between">
+          <h3 id="review-details" className="bk-overline">Your details</h3>
+          <button type="button" className="bk-link" onClick={() => onGoToStep(2)} disabled={locked}>
+            Edit
+          </button>
+        </div>
+        <p className="mt-2 text-[15px] font-medium leading-snug text-foreground">{booking.fullName.trim()}</p>
+        <p className="mt-0.5 break-words text-sm leading-snug text-muted-foreground">
+          {guestPhoneForQuote}
+          {guestPhoneForQuote && booking.email ? " · " : ""}
+          {booking.email}
+        </p>
+      </section>
+
+      {/* Payment — one block for every gateway (Yoco / PayFast / iKhokha / PayShap) */}
+      <section className="bk-card overflow-hidden" aria-labelledby="review-payment">
+        <div className="px-4 pt-3.5">
+          <h3 id="review-payment" className="bk-overline">Payment</h3>
+        </div>
+
+        {canChoosePayment && (
+          <div role="radiogroup" aria-labelledby="review-payment" className="grid grid-cols-2 gap-2.5 px-4 pt-3">
+            {[
+              { choice: depositChoice, label: "Pay deposit", amount: deposit },
+              { choice: fullChoice, label: "Pay in full", amount: total },
+            ].map((option) => (
+              <button
+                key={option.choice}
+                type="button"
+                role="radio"
+                aria-checked={paymentChoice === option.choice}
+                disabled={locked}
+                onClick={() => setPaymentChoice(option.choice)}
+                className="bk-option"
+              >
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[13px] text-muted-foreground">{option.label}</span>
+                  <span className="bk-num mt-0.5 block text-[17px] font-semibold leading-tight text-foreground">
+                    {formatPrice(cur, option.amount)}
+                  </span>
+                </span>
+                <span className="bk-mark" aria-hidden="true">
+                  <Check strokeWidth={3} />
+                </span>
+              </button>
+            ))}
           </div>
-          <div className="divide-y divide-border/20">
-            {paymentChoice === "deposit" && (
-              <>
-                <div className="flex items-center justify-between px-4 py-2.5">
-                  <p className="text-sm text-muted-foreground">Deposit due now ({depositPercent}%)</p>
-                  <p className="text-sm font-semibold text-primary">{cur}{deposit.toLocaleString()}</p>
-                </div>
-                <div className="flex items-center justify-between px-4 py-2.5">
-                  <p className="text-sm text-muted-foreground">Balance on the day</p>
-                  <p className="text-sm font-medium text-foreground">{cur}{balance.toLocaleString()}</p>
-                </div>
-              </>
-            )}
-            {paymentChoice === "full" && (
-              <div className="flex items-center justify-between px-4 py-2.5">
-                <p className="text-sm text-muted-foreground">Paying in full</p>
-                <p className="text-sm font-semibold text-primary">{cur}{total.toLocaleString()}</p>
-              </div>
-            )}
-            {/* Trust row */}
-            <div className="flex items-center justify-between px-4 py-2.5">
-              <p className="text-sm text-muted-foreground">Pay with</p>
-              <img
-                src={payfastMode ? PayfastImg : YocoImg}
-                alt={payfastMode ? "PayFast" : "Yoco"}
-                className="h-5 w-auto object-contain dark:invert"
-              />
+        )}
+
+        <dl className="bk-divide mt-1 px-4">
+          {isFullChoice ? (
+            <div className="flex items-center justify-between gap-4 py-3">
+              <dt className="text-sm text-muted-foreground">Paying in full</dt>
+              <dd className="bk-num text-[15px] font-semibold text-foreground">{formatPrice(cur, total)}</dd>
             </div>
-          </div>
-        </div>
-      )}
-
-            {/* Payment summary - iKhokha */}
-      {isIkhokha && (
-        <div className="rounded-2xl border border-border/50 bg-muted/20 overflow-hidden">
-          <div className="px-4 pt-3 pb-2 border-b border-border/30">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Payment</p>
-          </div>
-          <div className="divide-y divide-border/20">
-            {paymentChoice === "ikhokha_deposit" && (
-              <>
-                <div className="flex items-center justify-between px-4 py-2.5">
-                  <p className="text-sm text-muted-foreground">Deposit due now ({depositPercent}%)</p>
-                  <p className="text-sm font-semibold text-primary">{cur}{deposit.toLocaleString()}</p>
-                </div>
-                <div className="flex items-center justify-between px-4 py-2.5">
-                  <p className="text-sm text-muted-foreground">Balance on the day</p>
-                  <p className="text-sm font-medium text-foreground">{cur}{balance.toLocaleString()}</p>
-                </div>
-              </>
-            )}
-            {paymentChoice === "ikhokha_full" && (
-              <div className="flex items-center justify-between px-4 py-2.5">
-                <p className="text-sm text-muted-foreground">Paying in full</p>
-                <p className="text-sm font-semibold text-primary">{cur}{total.toLocaleString()}</p>
+          ) : (
+            <>
+              <div className="flex items-center justify-between gap-4 py-3">
+                <dt className="text-sm text-muted-foreground">
+                  {isPayshap ? `Deposit (${depositPercent}%)` : `Deposit due now (${depositPercent}%)`}
+                </dt>
+                <dd className="bk-num text-[15px] font-semibold text-foreground">{formatPrice(cur, deposit)}</dd>
               </div>
-            )}
-            <div className="flex items-center justify-between px-4 py-2.5">
-              <p className="text-sm text-muted-foreground">Pay with</p>
-              <img src={IkhokhaImg} alt="iKhokha" className="h-5 w-auto object-contain" />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* iKhokha deposit / full toggle */}
-      {isIkhokha && config.requiresDeposit && config.depositPercent < 100 && (
-        <div className="flex rounded-xl border border-border/50 overflow-hidden text-sm">
-          <button
-            onClick={() => setPaymentChoice("ikhokha_deposit")}
-            className={`flex-1 py-2.5 font-medium transition-colors ${
-              paymentChoice === "ikhokha_deposit"
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted/30 text-muted-foreground hover:bg-muted/50"
-            }`}
-          >
-            Pay deposit
-          </button>
-          <button
-            onClick={() => setPaymentChoice("ikhokha_full")}
-            className={`flex-1 py-2.5 font-medium transition-colors ${
-              paymentChoice === "ikhokha_full"
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted/30 text-muted-foreground hover:bg-muted/50"
-            }`}
-          >
-            Pay in full
-          </button>
-        </div>
-      )}
-      
-      {/* Payment summary - PayShap */}
-      {isPayshap && (
-        <div className="rounded-2xl border border-border/50 bg-muted/20 overflow-hidden">
-          <div className="px-4 pt-3 pb-2 border-b border-border/30">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Payment</p>
-          </div>
-          <div className="divide-y divide-border/20">
-            {paymentChoice === "payshap_deposit" && (
-              <>
-                <div className="flex items-center justify-between px-4 py-2.5">
-                  <p className="text-sm text-muted-foreground">Deposit ({depositPercent}%)</p>
-                  <p className="text-sm font-semibold text-primary">{cur}{deposit.toLocaleString()}</p>
-                </div>
-                <div className="flex items-center justify-between px-4 py-2.5">
-                  <p className="text-sm text-muted-foreground">Balance on the day</p>
-                  <p className="text-sm font-medium text-foreground">{cur}{balance.toLocaleString()}</p>
-                </div>
-              </>
-            )}
-            {paymentChoice === "payshap_full" && (
-              <div className="flex items-center justify-between px-4 py-2.5">
-                <p className="text-sm text-muted-foreground">Paying in full</p>
-                <p className="text-sm font-semibold text-primary">{cur}{total.toLocaleString()}</p>
+              <div className="flex items-center justify-between gap-4 py-3">
+                <dt className="text-sm text-muted-foreground">Balance on the day</dt>
+                <dd className="bk-num text-[15px] font-medium text-foreground">{formatPrice(cur, balance)}</dd>
               </div>
-            )}
-            {/* Trust row */}
-            <div className="flex items-center justify-between px-4 py-2.5">
-              <p className="text-sm text-muted-foreground">Pay with</p>
-              <img
-                src={PayshapImg}
-                alt="PayShap"
-                className="h-5 w-auto object-contain dark:invert"
-              />
-            </div>
+            </>
+          )}
+          {/* Trust row */}
+          <div className="flex items-center justify-between gap-4 py-3">
+            <dt className="text-sm text-muted-foreground">Pay with</dt>
+            <dd>
+              <GatewayMark src={gatewayLogoSrc} alt={gatewayLogoAlt} onChip={gatewayOnChip} />
+            </dd>
           </div>
-        </div>
-      )}
-
-      {/* Payment method toggle - Yoco / PayFast */}
-      {!isPayshap && !isIkhokha && config.requiresDeposit && depositPercent < 100 && (
-        <div className="flex rounded-xl border border-border/50 overflow-hidden text-sm">
-          <button
-            onClick={() => setPaymentChoice("deposit")}
-            className={`flex-1 py-2.5 font-medium transition-colors ${
-              paymentChoice === "deposit"
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted/30 text-muted-foreground hover:bg-muted/50"
-            }`}
-          >
-            Pay deposit
-          </button>
-          <button
-            onClick={() => setPaymentChoice("full")}
-            className={`flex-1 py-2.5 font-medium transition-colors ${
-              paymentChoice === "full"
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted/30 text-muted-foreground hover:bg-muted/50"
-            }`}
-          >
-            Pay in full
-          </button>
-        </div>
-      )}
-
-      {/* Payment method toggle - PayShap */}
-      {isPayshap && config.requiresDeposit && config.depositPercent < 100 && (
-        <div className="flex rounded-xl border border-border/50 overflow-hidden text-sm">
-          <button
-            onClick={() => setPaymentChoice("payshap_deposit")}
-            className={`flex-1 py-2.5 font-medium transition-colors ${
-              paymentChoice === "payshap_deposit"
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted/30 text-muted-foreground hover:bg-muted/50"
-            }`}
-          >
-            Pay deposit
-          </button>
-          <button
-            onClick={() => setPaymentChoice("payshap_full")}
-            className={`flex-1 py-2.5 font-medium transition-colors ${
-              paymentChoice === "payshap_full"
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted/30 text-muted-foreground hover:bg-muted/50"
-            }`}
-          >
-            Pay in full
-          </button>
-        </div>
-      )}
+        </dl>
+      </section>
 
       {/* Terms */}
       {termsSections.length > 0 && (
-        <button
-          onClick={() => setShowTerms(true)}
-          className="text-xs text-muted-foreground underline underline-offset-2 text-left"
-        >
+        <button type="button" onClick={() => setShowTerms(true)} className="bk-link self-start px-1">
           View terms &amp; conditions
         </button>
       )}
 
       {!holdId && !pendingBookingId && (
-        <div className="rounded-xl border border-amber-500/25 bg-amber-500/5 p-4 text-sm">
-          <p className="font-medium">Your 10-minute slot hold has expired.</p>
-          <p className="mt-1 text-muted-foreground">Choose the appointment time again before confirming.</p>
-          <button type="button" className="mt-3 text-sm font-semibold underline underline-offset-4" onClick={() => onGoToStep(1)}>
-            Return to schedule
-          </button>
+        <div className="bk-note bk-note--warning" role="alert">
+          <TriangleAlert className="mt-0.5 h-[18px] w-[18px] shrink-0" aria-hidden="true" />
+          <div className="min-w-0">
+            <p className="font-semibold text-foreground">Your 10-minute slot hold has expired.</p>
+            <p className="mt-1 text-muted-foreground">Choose the appointment time again before confirming.</p>
+            <button type="button" className="bk-link mt-3" onClick={() => onGoToStep(1)}>
+              Return to schedule
+            </button>
+          </div>
         </div>
       )}
 
-      {/* CTA */}
-      <motion.button
-        onClick={handleConfirm}
-        disabled={submitting || (!holdId && !pendingBookingId)}
-        whileTap={submitting || (!holdId && !pendingBookingId) ? {} : { scale: 0.97 }}
-        className="btn-next w-full flex items-center justify-center gap-2.5"
-      >
-        {submitting ? (
-          <>
-            <Loader2 className="w-4 h-4 animate-spin shrink-0" />
-            <span>{phaseLabel(phase, cur, amountDueNow, paymentChoice)}</span>
-          </>
-        ) : (
-          <>
-            <img
-              src={gatewayLogoSrc}
-              alt={gatewayLogoAlt}
-              className="h-4 w-auto object-contain dark:invert shrink-0"
-            />
-            <span>{phaseLabel(phase, cur, amountDueNow, paymentChoice)}</span>
-          </>
-        )}
-      </motion.button>
+      {/* Pay bar. Portalled so it is fixed to the viewport rather than to the
+          animated step layer, and removed as soon as this step starts leaving. */}
+      {isPresent && !payshapSuccess && createPortal(
+        <BookingBar standalone>
+          <div className="mx-auto flex w-full max-w-md flex-col gap-2.5 px-4 pb-4 pt-3">
+            <div className="flex min-h-7 items-center justify-between gap-3">
+              <button type="button" className="bk-link" onClick={() => onGoToStep(2)} disabled={locked}>
+                Back
+              </button>
+              {holdSecondsLeft > 0 && !pendingBookingId && <HoldTimer secondsLeft={holdSecondsLeft} />}
+            </div>
+            <motion.button
+              type="button"
+              onClick={handleConfirm}
+              disabled={confirmDisabled}
+              whileTap={confirmDisabled ? {} : { scale: 0.975 }}
+              className="bk-btn bk-btn--primary bk-btn--block"
+            >
+              {submitting ? (
+                <Loader2 className="h-4 w-4 shrink-0 animate-spin" aria-hidden="true" />
+              ) : (
+                !confirmDisabled && (
+                  <GatewayMark src={gatewayLogoSrc} alt="" onChip={gatewayOnChip} />
+                )
+              )}
+              <span>{phaseLabel(phase, cur, amountDueNow, paymentChoice)}</span>
+            </motion.button>
+          </div>
+        </BookingBar>,
+        document.body,
+      )}
 
       {/* PayShap success overlay */}
       <AnimatePresence>
         {payshapSuccess && (
           <motion.div
             key="payshap-success"
-            className="fixed inset-0 z-[90] flex flex-col items-center justify-center bg-background px-6"
+            className="fixed inset-0 z-[90] flex flex-col items-center justify-center overflow-y-auto bg-background px-6 py-8"
             initial={{ opacity: 0, scale: 0.97 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.97 }}
             transition={{ duration: 0.25 }}
           >
-            <div className="w-full max-w-sm flex flex-col items-center gap-6 text-center">
-              <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center">
-                <svg
-                  className="w-7 h-7 text-primary"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2.2}
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
+            <div className="flex w-full max-w-sm flex-col items-center gap-6 text-center">
+              <div className="grid h-16 w-16 place-items-center rounded-full bg-primary text-primary-foreground">
+                <Check className="h-8 w-8" strokeWidth={2.5} aria-hidden="true" />
               </div>
-              <div className="flex flex-col gap-2">
-                <p className="text-lg font-bold text-foreground">Booking submitted</p>
-                <p className="text-sm text-muted-foreground leading-relaxed">
+              <div className="flex w-full flex-col gap-2">
+                <p className="bk-display text-2xl leading-tight text-foreground">Booking submitted</p>
+                <p className="text-sm leading-relaxed text-muted-foreground">
                   {payshapEmailFailed
                     ? "Your booking is held, but we could not send the payment instructions email. Use the details below or contact the business before paying."
                     : "Your slot is provisionally held. Complete your PayShap payment using the details below."}
                 </p>
+              </div>
+              <div className="bk-card bk-divide w-full text-left">
                 {config.phone && (
-                  <div className="w-full rounded-xl border border-border/60 bg-muted/30 px-4 py-3">
-                    <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">PayShap number</p>
-                    <p className="mt-1 text-lg font-semibold text-foreground">{config.phone}</p>
+                  <div className="px-4 py-3.5">
+                    <p className="bk-overline">PayShap number</p>
+                    <p className="bk-num mt-1 text-lg font-semibold text-foreground">{config.phone}</p>
                   </div>
                 )}
-                <div className="w-full rounded-xl border border-border/60 bg-muted/30 px-4 py-3">
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Amount to pay</p>
-                  <p className="mt-1 text-lg font-semibold text-foreground">{cur}{amountDueNow.toLocaleString()}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {paymentChoice === "payshap_deposit" ? `Deposit (${depositPercent}%). Balance due on the day: ${cur}${balance.toLocaleString()}.` : "Full payment"}
+                <div className="px-4 py-3.5">
+                  <p className="bk-overline">Amount to pay</p>
+                  <p className="bk-num mt-1 text-lg font-semibold text-foreground">{formatPrice(cur, amountDueNow)}</p>
+                  <p className="mt-1 text-[13px] leading-snug text-muted-foreground">
+                    {paymentChoice === "payshap_deposit" ? `Deposit (${depositPercent}%). Balance due on the day: ${formatPrice(cur, balance)}.` : "Full payment"}
                   </p>
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Redirecting in {payshapCountdown}s
-              </p>
-              <motion.button
-                whileTap={{ scale: 0.97 }}
-                onClick={onPayshapComplete}
-                className="btn-next w-full"
-              >
-                Done
-              </motion.button>
+              <div className="flex w-full flex-col gap-3">
+                <motion.button
+                  type="button"
+                  whileTap={{ scale: 0.975 }}
+                  onClick={onPayshapComplete}
+                  className="bk-btn bk-btn--primary bk-btn--block"
+                >
+                  Done
+                </motion.button>
+                <p className="bk-num text-[13px] text-muted-foreground">
+                  Redirecting in {payshapCountdown}s
+                </p>
+              </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Pair-with suggestions are portalled so the booking step's motion/overflow layers cannot clip the sheet. */}
-      {createPortal(
-                <AnimatePresence>
-                {showPairWith && hasPairWith && (
-                  <>
-                    <motion.div
-                      key="pair-backdrop"
-                      className="fixed inset-0 z-[10000] bg-black/60 backdrop-blur-sm"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.2 }}
-                      onClick={() => setShowPairWith(false)}
-                    />
-                    <motion.div
-                      key="pair-sheet"
-                      className="fixed bottom-0 left-0 right-0 z-[10001] mx-auto max-w-md rounded-t-3xl bg-background border-t border-border/60 flex flex-col"
-                      style={{ height: "90dvh" }}
-                      initial={{ y: "100%" }}
-                      animate={{ y: 0 }}
-                      exit={{ y: "100%" }}
-                      transition={{ type: "spring", stiffness: 380, damping: 38 }}
-                    >
-                      <div className="w-10 h-1 rounded-full bg-muted-foreground/25 mx-auto mt-3 mb-2 shrink-0" />
-                      <div className="flex items-start justify-between px-5 pt-1 pb-4 shrink-0">
-                        <div className="flex-1 min-w-0 pr-3">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Sparkles className="w-4 h-4 text-primary shrink-0" />
-                            <h2 className="font-display text-lg font-bold text-foreground leading-tight">
-                              Pair it with
-                            </h2>
-                          </div>
-                          <p className="text-xs text-muted-foreground leading-snug">
-                            Clients who booked your selection also added these.
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => setShowPairWith(false)}
-                          className="w-8 h-8 rounded-full flex items-center justify-center bg-muted/60 text-muted-foreground hover:bg-muted transition-colors shrink-0 mt-0.5"
-                          aria-label="Close"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                      <div className="flex-1 overflow-y-auto px-5 pb-2 flex flex-col gap-3 scrollbar-hide">
-                        {pairWithAddons.map((svc) => {
-                          const qty = getAddonQty(svc.id);
-                          const busy = addonBusyId === svc.id;
-                          return (
-                            <motion.div
-                              key={svc.id}
-                              layout
-                              className="rounded-2xl border border-border/50 bg-muted/20 p-4 flex items-start justify-between gap-3"
-                            >
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-semibold text-foreground leading-snug">{svc.name}</p>
-                                {svc.duration_minutes && (
-                                  <p className="text-[11px] text-muted-foreground mt-0.5">{svc.duration_minutes} min</p>
-                                )}
-                                <p className="text-sm font-bold text-primary mt-1">{cur}{svc.price.toLocaleString()}</p>
-                                {qty > 0 && (
-                                  <p className="text-[11px] text-primary font-medium mt-1">Added to booking</p>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-2 shrink-0">
-                                {busy ? (
-                                  <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
-                                ) : qty > 0 ? (
-                                  <>
-                                    <motion.button
-                                      whileTap={{ scale: 0.9 }}
-                                      onClick={() => decrementAddon(svc.id)}
-                                      disabled={isResizing}
-                                      className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-foreground disabled:opacity-50"
-                                      aria-label="Remove one"
-                                    >
-                                      <Minus className="w-3.5 h-3.5" />
-                                    </motion.button>
-                                    <span className="text-sm font-bold text-foreground w-4 text-center">{qty}</span>
-                                    <motion.button
-                                      whileTap={{ scale: 0.9 }}
-                                      onClick={() => incrementAddon(svc.id)}
-                                      disabled={isResizing}
-                                      className="w-7 h-7 rounded-full bg-primary flex items-center justify-center text-primary-foreground disabled:opacity-50"
-                                      aria-label="Add one"
-                                    >
-                                      <Plus className="w-3.5 h-3.5" />
-                                    </motion.button>
-                                  </>
-                                ) : (
-                                  <motion.button
-                                    whileTap={{ scale: 0.9 }}
-                                    onClick={() => incrementAddon(svc.id)}
-                                    disabled={isResizing}
-                                    className="h-7 px-3 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-xs font-semibold disabled:opacity-50"
-                                    aria-label="Add"
-                                  >
-                                    Add
-                                  </motion.button>
-                                )}
-                              </div>
-                            </motion.div>
-                          );
-                        })}
-                      </div>
-                      <div className="px-5 pt-3 pb-[max(1.5rem,env(safe-area-inset-bottom))] shrink-0 border-t border-border/30">
-                        <motion.button
-                          whileTap={{ scale: 0.97 }}
-                          onClick={() => setShowPairWith(false)}
-                          className="btn-next w-full"
-                        >
-                          Close
-                        </motion.button>
-                      </div>
-                    </motion.div>
-                  </>
-                )}
-              </AnimatePresence>,
-        document.body
-      )}
-      {/* Extension-blocked dialog: the held slot can't accommodate the proposed
-          add-on. Portalled like the other overlays so it always renders above
-          the pair-with sheet. */}
-      {createPortal(
-        <AnimatePresence>
-          {extensionBlocked && (
-            <>
-              <motion.div
-                key="extension-blocked-backdrop"
-                className="fixed inset-0 z-[10002] bg-black/60 backdrop-blur-sm"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-              />
-              <motion.div
-                key="extension-blocked-sheet"
-                className="fixed inset-0 z-[10003] m-auto w-[calc(100%-2rem)] max-w-sm h-fit rounded-3xl bg-background border border-border/60 shadow-2xl flex flex-col overflow-hidden"
-                initial={{ opacity: 0, scale: 0.98 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.98 }}
-                transition={{ duration: 0.2, ease: "easeOut" }}
+      {/* Pair-with suggestions */}
+      <BookingSheet
+        open={showPairWith && hasPairWith}
+        onClose={() => setShowPairWith(false)}
+        labelledBy="pair-with-title"
+      >
+        <div className="flex shrink-0 items-start justify-between gap-3 px-5 pb-4 pt-3">
+          <div className="min-w-0 flex-1">
+            <p className="bk-overline flex items-center gap-1.5">
+              <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+              Recommended
+            </p>
+            <h2 id="pair-with-title" className="bk-display mt-1 text-[1.375rem] leading-tight text-foreground">
+              Pair it with
+            </h2>
+            <p className="mt-1 text-sm leading-snug text-muted-foreground">
+              Clients who booked your selection also added these.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowPairWith(false)}
+            className="bk-icon-btn bk-icon-btn--sm bk-well -mr-1.5"
+            aria-label="Close"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto overscroll-contain px-5 pb-4 pt-0.5 scrollbar-hide">
+          {pairWithAddons.map((svc) => {
+            const qty = getAddonQty(svc.id);
+            const busy = addonBusyId === svc.id;
+            return (
+              <div
+                key={svc.id}
+                className={`bk-card flex shrink-0 items-center justify-between gap-3 px-4 py-3.5 ${qty > 0 ? "is-selected" : ""}`}
               >
-                <div className="p-5 flex flex-col gap-3">
-                  <h2 className="font-display text-lg font-bold text-foreground leading-tight">
-                    This enhancement needs more appointment time
-                  </h2>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    {extensionBlocked.message} Your original appointment time is still being held.
+                <div className="min-w-0 flex-1">
+                  <p className="text-[15px] font-semibold leading-snug text-foreground">{svc.name}</p>
+                  <p className="bk-num mt-0.5 text-[13px] text-muted-foreground">
+                    {formatPrice(cur, svc.price)}
+                    {svc.duration > 0 && ` · ${formatDuration(svc.duration)}`}
                   </p>
-                  <div className="flex flex-col gap-2 mt-2">
-                    <motion.button
-                      whileTap={{ scale: 0.97 }}
-                      onClick={keepOriginalAppointment}
-                      className="btn-next w-full"
-                    >
-                      Keep your original appointment
-                    </motion.button>
-                    <button
-                      type="button"
-                      onClick={() => void chooseAnotherTime()}
-                      className="w-full py-2.5 text-sm font-semibold text-muted-foreground underline underline-offset-4"
-                    >
-                      Choose another time
-                    </button>
-                  </div>
+                  {qty > 0 && (
+                    <p className="bk-ok mt-1 flex items-center gap-1 text-[13px] font-medium">
+                      <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                      Added to booking
+                    </p>
+                  )}
                 </div>
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>,
-        document.body
-      )}
-      {/* Terms dialog is portalled outside the animated booking-step layer. */}
-      {createPortal(
-                <AnimatePresence>
-                {showTerms && (
-                  <>
-                    <motion.div
-                      key="terms-backdrop"
-                      className="fixed inset-0 z-[10000] bg-black/60 backdrop-blur-sm"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.2 }}
-                      onClick={() => setShowTerms(false)}
-                    />
-                    <motion.div
-                      key="terms-sheet"
-                      className="fixed inset-0 z-[10001] m-auto w-[calc(100%-2rem)] max-w-md max-h-[calc(100dvh-2rem)] rounded-3xl bg-background border border-border/60 shadow-2xl flex flex-col overflow-hidden"
-                      style={{ height: "min(92dvh, 48rem)" }}
-                      initial={{ opacity: 0, scale: 0.98 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.98 }}
-                      transition={{ duration: 0.2, ease: "easeOut" }}
+                <div className="flex shrink-0 items-center gap-1">
+                  {busy ? (
+                    <span className="grid h-10 w-10 place-items-center">
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" aria-label="Updating" />
+                    </span>
+                  ) : qty > 0 ? (
+                    <>
+                      <motion.button
+                        type="button"
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => decrementAddon(svc.id)}
+                        disabled={isResizing}
+                        className="bk-icon-btn bk-icon-btn--outline bk-icon-btn--sm"
+                        aria-label={`Remove one ${svc.name}`}
+                      >
+                        <Minus className="h-4 w-4" strokeWidth={2.5} />
+                      </motion.button>
+                      <span className="bk-num w-7 text-center text-[15px] font-semibold text-foreground">{qty}</span>
+                      <motion.button
+                        type="button"
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => incrementAddon(svc.id)}
+                        disabled={isResizing}
+                        className="bk-icon-btn bk-icon-btn--solid bk-icon-btn--sm"
+                        aria-label={`Add one ${svc.name}`}
+                      >
+                        <Plus className="h-4 w-4" strokeWidth={2.5} />
+                      </motion.button>
+                    </>
+                  ) : (
+                    <motion.button
+                      type="button"
+                      whileTap={{ scale: 0.94 }}
+                      onClick={() => incrementAddon(svc.id)}
+                      disabled={isResizing}
+                      className="bk-btn bk-btn--quiet bk-btn--sm"
+                      aria-label={`Add ${svc.name}`}
                     >
-                      <div className="w-10 h-1 rounded-full bg-muted-foreground/25 mx-auto mt-3 mb-2 shrink-0" />
-                      <div className="flex items-center justify-between px-5 pt-1 pb-4 shrink-0">
-                        <h2 className="font-display text-lg font-bold text-foreground">Terms &amp; Conditions</h2>
-                        <button
-                          onClick={() => setShowTerms(false)}
-                          className="w-8 h-8 rounded-full flex items-center justify-center bg-muted/60 text-muted-foreground hover:bg-muted transition-colors"
-                          aria-label="Close terms"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-                      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-6 flex flex-col gap-5 scrollbar-hide">
-                      {termsSections.map((section, i) => (
-                        <div key={i} className="flex flex-col gap-2">
-                          {section.title && (
-                            <p className="text-sm font-bold text-foreground">{section.title}</p>
-                          )}
-                          {section.content && (
-                            <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-line">
-                              {section.content}
-                            </p>
-                          )}
-                        </div>
-                      ))}
-                      </div>
-                      <div className="px-5 pt-3 pb-[max(1.5rem,env(safe-area-inset-bottom))] shrink-0 border-t border-border/30">
-                        <motion.button
-                          whileTap={{ scale: 0.97 }}
-                          onClick={() => setShowTerms(false)}
-                          className="btn-next w-full"
-                        >
-                          Got it
-                        </motion.button>
-                      </div>
-                    </motion.div>
-                  </>
-                )}
-              </AnimatePresence>,
-        document.body
-      )}
+                      <Plus className="h-4 w-4" strokeWidth={2.5} aria-hidden="true" />
+                      Add
+                    </motion.button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="bk-rule shrink-0 border-t px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3">
+          <motion.button
+            type="button"
+            whileTap={{ scale: 0.975 }}
+            onClick={() => setShowPairWith(false)}
+            className="bk-btn bk-btn--primary bk-btn--block"
+          >
+            {addedAddonCount > 0 ? "Done" : "No thanks"}
+          </motion.button>
+        </div>
+      </BookingSheet>
+
+      {/* Extension-blocked dialog: the held slot can't accommodate the proposed
+          add-on. Layered above the pair-with sheet, and it has to be answered. */}
+      <BookingSheet
+        open={!!extensionBlocked}
+        variant="center"
+        labelledBy="extension-blocked-title"
+        layer={10002}
+      >
+        <div className="flex flex-col gap-3 p-5">
+          <h2 id="extension-blocked-title" className="bk-display text-xl leading-tight text-foreground">
+            This enhancement needs more appointment time
+          </h2>
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            {extensionBlocked?.message} Your original appointment time is still being held.
+          </p>
+          <div className="mt-2 flex flex-col gap-2.5">
+            <motion.button
+              type="button"
+              whileTap={{ scale: 0.975 }}
+              onClick={keepOriginalAppointment}
+              className="bk-btn bk-btn--primary bk-btn--block"
+            >
+              Keep your original appointment
+            </motion.button>
+            <button
+              type="button"
+              onClick={() => void chooseAnotherTime()}
+              className="bk-btn bk-btn--quiet bk-btn--block"
+            >
+              Choose another time
+            </button>
+          </div>
+        </div>
+      </BookingSheet>
+
+      {/* Terms dialog */}
+      <BookingSheet
+        open={showTerms}
+        onClose={() => setShowTerms(false)}
+        variant="center"
+        labelledBy="terms-title"
+      >
+        <div className="flex shrink-0 items-center justify-between gap-3 px-5 pb-3 pt-5">
+          <h2 id="terms-title" className="bk-display text-xl leading-tight text-foreground">
+            Terms &amp; conditions
+          </h2>
+          <button
+            type="button"
+            onClick={() => setShowTerms(false)}
+            className="bk-icon-btn bk-icon-btn--sm bk-well -mr-1.5"
+            aria-label="Close terms"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto overscroll-contain px-5 pb-5 pt-1 scrollbar-hide">
+          {termsSections.map((section, i) => (
+            <div key={i} className="flex flex-col gap-1.5">
+              {section.title && (
+                <p className="text-[15px] font-semibold leading-snug text-foreground">{section.title}</p>
+              )}
+              {section.content && (
+                <p className="whitespace-pre-line text-sm leading-relaxed text-muted-foreground">
+                  {section.content}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+        <div className="bk-rule shrink-0 border-t px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-3">
+          <motion.button
+            type="button"
+            whileTap={{ scale: 0.975 }}
+            onClick={() => setShowTerms(false)}
+            className="bk-btn bk-btn--primary bk-btn--block"
+          >
+            Got it
+          </motion.button>
+        </div>
+      </BookingSheet>
     </div>
   );
 };

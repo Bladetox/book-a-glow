@@ -6,11 +6,12 @@ import {
 } from "@/data/defaultConsultationQuestions";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRef, useState, useCallback, useEffect, useMemo } from "react";
-import { User, Phone, Mail, MapPin, Star, Sparkles, X, Check } from "lucide-react";
+import { User, Phone, Mail, MapPin, Star, Sparkles, X, Check, ChevronDown, CircleAlert } from "lucide-react";
 import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
 import { usePublicTenant } from "@/contexts/PublicTenantContext";
 import { supabase } from "@/integrations/supabase/client";
 import { groupQuestionsBySection, isAnswered } from "@/lib/consultationSections";
+import StepHeading from "@/components/booking/StepHeading";
 
 interface DetailsStepProps {
   booking: BookingState;
@@ -72,183 +73,169 @@ const ConsultationQRenderer = ({
       ? "text"
       : q.type;
 
-  const answered = isAnswered(answer);
-  const groupErrorClass = showError ? "ring-1 ring-destructive/40 rounded-2xl p-2 -m-2" : "";
+  const required = q.required ? (
+    <span className="ml-1 text-destructive" aria-hidden="true">*</span>
+  ) : null;
+  const labelClass = "text-[15px] font-medium leading-snug text-foreground";
+  const errorId = `q-error-${q.key}`;
 
   return (
     <motion.div
       key={q.key}
-      initial={{ opacity: 0, x: -10 }}
-      animate={{ opacity: 1, x: 0 }}
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
       transition={{ delay: idx * 0.04 }}
-      className={`grid grid-cols-[24px_1fr] gap-3 ${groupErrorClass}`}
+      data-question-error={showError ? "true" : undefined}
+      className="flex flex-col gap-2.5"
     >
-      <span className="pt-[3px] text-xs font-semibold tabular-nums">
-        {answered ? (
-          <Check className="w-3.5 h-3.5 text-primary" aria-label="answered" />
-        ) : (
-          <span className="text-primary/70">{String(idx + 1).padStart(2, "0")}</span>
-        )}
-      </span>
-
-      <div className="flex flex-col gap-2.5">
-        {effectiveType === "yes_no" && (
-          <fieldset className="flex flex-col gap-2.5">
-            <legend className="text-[15px] leading-snug text-foreground">
-              {q.label}
-              {q.required && <span className="text-destructive ml-1">*</span>}
-            </legend>
-            <div
-              role="radiogroup"
-              aria-required={q.required || undefined}
-              className="grid grid-cols-2 gap-2"
-            >
-              {([false, true] as const).map((val) => {
-                const selected = answer === val;
-                return (
-                  <button
-                    key={String(val)}
-                    type="button"
-                    role="radio"
-                    aria-checked={selected}
-                    onClick={() => onAnswer(q.key, val)}
-                    className={`min-h-[48px] rounded-xl border text-sm font-medium flex items-center justify-center gap-2 transition-all
-                      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40
-                      ${selected
-                        ? "border-primary/60 bg-primary/10 text-foreground"
-                        : "border-border/50 bg-muted/20 text-muted-foreground hover:border-border hover:text-foreground"
-                      }`}
-                  >
-                    {selected && <Check className="w-4 h-4 text-primary" />}
-                    {val ? "Yes" : "No"}
-                  </button>
-                );
-              })}
-            </div>
-            <AnimatePresence>
-              {answer === true && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="overflow-hidden flex flex-col gap-1.5 mt-1"
+      {effectiveType === "yes_no" && (
+        <fieldset className="flex flex-col gap-2.5">
+          <legend className={`${labelClass} mb-2.5`}>
+            {q.label}
+            {required}
+          </legend>
+          <div
+            role="radiogroup"
+            aria-required={q.required || undefined}
+            aria-describedby={showError ? errorId : undefined}
+            className="grid grid-cols-2 gap-2"
+          >
+            {([false, true] as const).map((val) => {
+              const selected = answer === val;
+              return (
+                <button
+                  key={String(val)}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  onClick={() => onAnswer(q.key, val)}
+                  className="bk-option justify-center font-medium"
                 >
-                  <label
-                    htmlFor={`detail-${q.key}`}
-                    className="text-[11px] font-medium text-muted-foreground"
+                  {selected && <Check className="h-4 w-4" aria-hidden="true" />}
+                  {val ? "Yes" : "No"}
+                </button>
+              );
+            })}
+          </div>
+          <AnimatePresence>
+            {answer === true && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2 }}
+                className="flex flex-col gap-1.5 overflow-hidden p-1 -m-1"
+              >
+                <label htmlFor={`detail-${q.key}`} className="bk-field-hint">
+                  Please provide details
+                </label>
+                <textarea
+                  id={`detail-${q.key}`}
+                  className={inputClass}
+                  placeholder="e.g. details, dates, severity…"
+                  value={details[q.key] ?? ""}
+                  onChange={(e) => onDetail(q.key, e.target.value)}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </fieldset>
+      )}
+
+      {effectiveType === "text" && (
+        <>
+          <label htmlFor={`q-${q.key}`} className={labelClass}>
+            {q.label}
+            {required}
+          </label>
+          <input
+            id={`q-${q.key}`}
+            type="text"
+            className={inputClass}
+            placeholder="Your answer…"
+            value={(answer as string) ?? ""}
+            onChange={(e) => onAnswer(q.key, e.target.value)}
+            aria-required={q.required || undefined}
+            aria-describedby={showError ? errorId : undefined}
+          />
+        </>
+      )}
+
+      {effectiveType === "textarea" && (
+        <>
+          <label htmlFor={`q-${q.key}`} className={labelClass}>
+            {q.label}
+            {required}
+          </label>
+          <textarea
+            id={`q-${q.key}`}
+            className={inputClass}
+            placeholder="Your answer…"
+            value={(answer as string) ?? ""}
+            onChange={(e) => onAnswer(q.key, e.target.value)}
+            aria-required={q.required || undefined}
+            aria-describedby={showError ? errorId : undefined}
+          />
+        </>
+      )}
+
+      {(effectiveType === "radio" || effectiveType === "checkbox") && (
+        <fieldset className="flex flex-col">
+          <legend className={`${labelClass} mb-2.5`}>
+            {q.label}
+            {required}
+          </legend>
+          <div
+            role={effectiveType === "radio" ? "radiogroup" : "group"}
+            aria-required={q.required || undefined}
+            aria-describedby={showError ? errorId : undefined}
+            className="flex flex-col gap-2"
+          >
+            {(q.options ?? []).map((opt) => {
+              const selected =
+                effectiveType === "radio"
+                  ? answer === opt
+                  : Array.isArray(answer) && (answer as string[]).includes(opt);
+
+              return (
+                <button
+                  key={opt}
+                  type="button"
+                  role={effectiveType === "radio" ? "radio" : "checkbox"}
+                  aria-checked={selected}
+                  onClick={() => {
+                    if (effectiveType === "radio") {
+                      onAnswer(q.key, opt);
+                    } else {
+                      const prev = Array.isArray(answer) ? (answer as string[]) : [];
+                      onAnswer(
+                        q.key,
+                        selected ? prev.filter((v) => v !== opt) : [...prev, opt],
+                      );
+                    }
+                  }}
+                  className="bk-option justify-between"
+                >
+                  <span>{opt}</span>
+                  <span
+                    className={`bk-mark ${effectiveType === "radio" ? "" : "bk-mark--square"}`}
+                    aria-hidden="true"
                   >
-                    Please provide details
-                  </label>
-                  <textarea
-                    id={`detail-${q.key}`}
-                    className={`${inputClass} min-h-[56px] text-sm`}
-                    placeholder="e.g. details, dates, severity…"
-                    value={details[q.key] ?? ""}
-                    onChange={(e) => onDetail(q.key, e.target.value)}
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </fieldset>
-        )}
+                    <Check strokeWidth={3} />
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </fieldset>
+      )}
 
-        {effectiveType === "text" && (
-          <>
-            <label
-              htmlFor={`q-${q.key}`}
-              className="text-[15px] leading-snug text-foreground"
-            >
-              {q.label}
-              {q.required && <span className="text-destructive ml-1">*</span>}
-            </label>
-            <input
-              id={`q-${q.key}`}
-              type="text"
-              className={`${inputClass} text-sm`}
-              placeholder="Your answer…"
-              value={(answer as string) ?? ""}
-              onChange={(e) => onAnswer(q.key, e.target.value)}
-              aria-required={q.required || undefined}
-            />
-          </>
-        )}
-
-        {effectiveType === "textarea" && (
-          <>
-            <label
-              htmlFor={`q-${q.key}`}
-              className="text-[15px] leading-snug text-foreground"
-            >
-              {q.label}
-              {q.required && <span className="text-destructive ml-1">*</span>}
-            </label>
-            <textarea
-              id={`q-${q.key}`}
-              className={`${inputClass} min-h-[60px] text-sm`}
-              placeholder="Your answer…"
-              value={(answer as string) ?? ""}
-              onChange={(e) => onAnswer(q.key, e.target.value)}
-              aria-required={q.required || undefined}
-            />
-          </>
-        )}
-
-        {(effectiveType === "radio" || effectiveType === "checkbox") && (
-          <fieldset className="flex flex-col gap-2">
-            <legend className="text-[15px] leading-snug text-foreground">
-              {q.label}
-              {q.required && <span className="text-destructive ml-1">*</span>}
-            </legend>
-            <div
-              role={effectiveType === "radio" ? "radiogroup" : "group"}
-              aria-required={q.required || undefined}
-              className="flex flex-col gap-2"
-            >
-              {(q.options ?? []).map((opt) => {
-                const selected =
-                  effectiveType === "radio"
-                    ? answer === opt
-                    : Array.isArray(answer) && (answer as string[]).includes(opt);
-
-                return (
-                  <button
-                    key={opt}
-                    type="button"
-                    role={effectiveType === "radio" ? "radio" : "checkbox"}
-                    aria-checked={selected}
-                    onClick={() => {
-                      if (effectiveType === "radio") {
-                        onAnswer(q.key, opt);
-                      } else {
-                        const prev = Array.isArray(answer) ? (answer as string[]) : [];
-                        onAnswer(
-                          q.key,
-                          selected ? prev.filter((v) => v !== opt) : [...prev, opt],
-                        );
-                      }
-                    }}
-                    className={`min-h-[48px] w-full flex items-center justify-between gap-3 rounded-xl border px-4 text-left text-sm transition-colors
-                      focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40
-                      ${selected
-                        ? "border-primary/60 bg-primary/10 text-foreground"
-                        : "border-border/50 bg-muted/20 text-muted-foreground hover:border-border"
-                      }`}
-                  >
-                    <span>{opt}</span>
-                    <span
-                      className={`shrink-0 w-4 h-4 border transition-colors
-                        ${effectiveType === "radio" ? "rounded-full" : "rounded-[4px]"}
-                        ${selected ? "border-primary bg-primary" : "border-muted-foreground/40"}`}
-                      aria-hidden="true"
-                    />
-                  </button>
-                );
-              })}
-            </div>
-          </fieldset>
-        )}
-      </div>
+      {showError && (
+        <p id={errorId} className="bk-field-error flex items-center gap-1.5">
+          <CircleAlert className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+          This question needs an answer.
+        </p>
+      )}
     </motion.div>
   );
 };
@@ -527,9 +514,7 @@ useEffect(() => {
   const mobileServiceEnabled = config.mobileServiceEnabled;
   const existingClientLabel = config.clientLabelExisting;
   const newClientLabel = config.clientLabelNew;
-  const existingClientNotesPlaceholder: string =
-    (config as Record<string, string>)["client_type_existing_notes_placeholder"] ??
-    "e.g. any changes since your last visit, preferences\u2026";
+  const existingClientNotesPlaceholder = config.existingClientNotesPlaceholder;
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -594,8 +579,7 @@ useEffect(() => {
     return booking.addressVerified ? "valid" : "invalid";
   };
 
-  const inputClass =
-    "w-full glass-input rounded-2xl px-4 py-3.5 text-foreground placeholder:text-muted-foreground focus:outline-none transition-all duration-200";
+  const inputClass = "bk-input";
 
   const callPlacesFunction = async (body: object) => {
     const { data, error } = await supabase.functions.invoke("places-autocomplete", { body });
@@ -718,9 +702,9 @@ useEffect(() => {
           animate={{ opacity: 1, height: "auto", y: 0 }}
           exit={{ opacity: 0, height: 0, y: -4 }}
           transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
-          className="mt-2 rounded-2xl overflow-hidden border border-border/40 bg-background/95 backdrop-blur-sm shadow-xl max-h-[200px] overflow-y-auto"
+          className="bk-card bk-card--raised bk-divide mt-2 max-h-[200px] overflow-hidden overflow-y-auto [--bk-radius:1rem]"
         >
-          {addressSuggestions.map((s, idx) => (
+          {addressSuggestions.map((s) => (
             <button
               key={s.place_id}
               type="button"
@@ -731,10 +715,9 @@ useEffect(() => {
                 selectingRef.current = true;
               }}
               onClick={() => handleSelectSuggestion(s.description)}
-              className={`w-full text-left px-4 py-3 text-sm text-foreground hover:bg-muted/50 active:bg-muted/70 transition-colors flex items-start gap-2
-                ${idx < addressSuggestions.length - 1 ? "border-b border-border/20" : ""}`}
+              className="flex w-full items-start gap-2.5 px-4 py-3 text-left text-sm leading-snug text-foreground transition-colors hover:bg-[var(--bk-well)] active:bg-[var(--bk-well)]"
             >
-              <MapPin className="w-3.5 h-3.5 text-primary mt-0.5 shrink-0" />
+              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
               <span>{s.description}</span>
             </button>
           ))}
@@ -742,11 +725,19 @@ useEffect(() => {
       </AnimatePresence>
     ) : null;
 
+  const nameState = getValidationClass("fullName", booking.fullName);
+  const phoneState = getValidationClass("phone", booking.phone);
+  const emailState = getValidationClass("email", booking.email);
+  const addressState = getAddressValidationClass();
+  const fieldIcon = "h-[18px] w-[18px] shrink-0 text-muted-foreground";
+  const okIcon = "bk-ok h-[18px] w-[18px] shrink-0";
+
   return (
-    <div className="flex flex-col gap-5">
-      <h3 className="text-xs font-semibold tracking-[0.2em] uppercase text-muted-foreground">
-        Your details
-      </h3>
+    <div className="flex flex-col gap-6">
+      <StepHeading
+        title="Your details"
+        description="We'll send your booking confirmation here."
+      />
 
       <AnimatePresence>
         {isBlocked && (
@@ -754,39 +745,269 @@ useEffect(() => {
             initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
-            className="rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3.5 text-sm text-destructive"
+            className="bk-note bk-note--danger"
+            role="alert"
           >
-            {/* FIX 1: corrected message — this fires when the guest is blocked, not when a date is full */}
-            We&apos;re unable to complete this booking. Please contact us directly for assistance.
+            <CircleAlert className="mt-0.5 h-[18px] w-[18px] shrink-0 text-destructive" aria-hidden="true" />
+            {/* This fires when the guest is blocked, not when a date is full */}
+            <p className="text-foreground">
+              We&apos;re unable to complete this booking. Please contact us directly for assistance.
+            </p>
           </motion.div>
         )}
       </AnimatePresence>
 
+      {/* Contact fields */}
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="flex flex-col gap-4"
+      >
+        {/* Full Name */}
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="booking-full-name" className="bk-label">Full name</label>
+          <div className={`bk-input bk-input--group ${nameState === "invalid" ? "is-invalid" : ""}`}>
+            <User className={fieldIcon} aria-hidden="true" />
+            <input
+              ref={nameInputRef}
+              id="booking-full-name"
+              name="full-name"
+              placeholder="First and last name"
+              value={booking.fullName}
+              autoComplete="name"
+              aria-required="true"
+              aria-invalid={nameState === "invalid" || undefined}
+              aria-describedby={nameState === "invalid" ? "booking-full-name-error" : undefined}
+              onChange={(e) => {
+                onUpdate({ fullName: e.target.value });
+                markTouchedOnChange("fullName", e.target.value);
+              }}
+              onBlur={() => markTouched("fullName")}
+            />
+            {nameState === "valid" && <Check className={okIcon} aria-hidden="true" />}
+          </div>
+          {nameState === "invalid" && (
+            <p id="booking-full-name-error" className="bk-field-error">Please enter your full name.</p>
+          )}
+        </div>
+
+        {/* Phone */}
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="booking-phone" className="bk-label">Mobile number</label>
+          <div className={`bk-input bk-input--group ${phoneState === "invalid" ? "is-invalid" : ""}`}>
+            <Phone className={fieldIcon} aria-hidden="true" />
+            <div className="relative flex shrink-0 items-center">
+              <select
+                id="booking-phone-code"
+                name="phone-code"
+                aria-label="Country code"
+                className="cursor-pointer pr-5 font-medium [&>option]:bg-background [&>option]:text-foreground"
+                value={booking.phoneCode}
+                onChange={(e) => onUpdate({ phoneCode: e.target.value })}
+              >
+                {phoneCodes.map((pc) => (
+                  <option key={pc.code} value={pc.code}>
+                    {pc.label} {pc.code}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-0 h-4 w-4 text-muted-foreground" aria-hidden="true" />
+            </div>
+            <span className="h-6 w-px shrink-0" style={{ background: "var(--bk-line-strong)" }} aria-hidden="true" />
+            <input
+              id="booking-phone"
+              name="phone"
+              placeholder="82 123 4567"
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              value={booking.phone}
+              aria-required="true"
+              aria-invalid={phoneState === "invalid" || undefined}
+              aria-describedby={phoneState === "invalid" ? "booking-phone-error" : undefined}
+              onChange={(e) => {
+                onUpdate({ phone: e.target.value });
+                markTouchedOnChange("phone", e.target.value);
+              }}
+              onBlur={() => markTouched("phone")}
+            />
+            {phoneState === "valid" && <Check className={okIcon} aria-hidden="true" />}
+          </div>
+          {phoneState === "invalid" && (
+            <p id="booking-phone-error" className="bk-field-error">
+              Enter your number without the country code, digits only.
+            </p>
+          )}
+        </div>
+
+        {/* Email */}
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="booking-email" className="bk-label">Email address</label>
+          <div className={`bk-input bk-input--group ${emailState === "invalid" ? "is-invalid" : ""}`}>
+            <Mail className={fieldIcon} aria-hidden="true" />
+            <input
+              id="booking-email"
+              name="email"
+              type="email"
+              inputMode="email"
+              autoComplete="email"
+              placeholder="you@example.com"
+              value={booking.email}
+              aria-required="true"
+              aria-invalid={emailState === "invalid" || undefined}
+              aria-describedby={emailState === "invalid" ? "booking-email-error" : undefined}
+              onChange={(e) => {
+                onUpdate({ email: e.target.value });
+                markTouchedOnChange("email", e.target.value);
+              }}
+              onBlur={() => markTouched("email")}
+            />
+            {blockChecking ? (
+              <span
+                className="bk-spin h-4 w-4 shrink-0 rounded-full border-2"
+                style={{ borderColor: "var(--bk-line)", borderTopColor: "hsl(var(--muted-foreground))" }}
+                aria-hidden="true"
+              />
+            ) : (
+              emailState === "valid" && <Check className={okIcon} aria-hidden="true" />
+            )}
+          </div>
+          {emailState === "invalid" && (
+            <p id="booking-email-error" className="bk-field-error">Please enter a valid email address.</p>
+          )}
+        </div>
+
+        {/* Address */}
+        <AnimatePresence initial={false}>
+          {mobileServiceEnabled && (
+            <motion.div
+              key="address-field"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.25, ease: "easeInOut" }}
+              onAnimationStart={() => setAddressCollapsed(true)}
+              onAnimationComplete={(def) => {
+                if (def === "animate") setAddressCollapsed(false);
+              }}
+              className={addressCollapsed ? "overflow-hidden" : "overflow-visible"}
+            >
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="booking-address" className="bk-label">Your address</label>
+                <div className={`bk-input bk-input--group ${addressState === "invalid" ? "is-invalid" : ""}`}>
+                  <MapPin className={fieldIcon} aria-hidden="true" />
+                  <input
+                    ref={addressInputRef}
+                    id="booking-address"
+                    name="address"
+                    placeholder="Start typing your address"
+                    value={booking.address}
+                    inputMode="search"
+                    aria-required="true"
+                    aria-invalid={addressState === "invalid" || undefined}
+                    aria-describedby="booking-address-hint"
+                    onChange={(e) => {
+                      onUpdate({ address: e.target.value, addressVerified: false, distanceKm: null });
+                      if (e.target.value.trim().length >= 2) {
+                        setTouched((prev) => ({ ...prev, address: true }));
+                      }
+                      if (e.target.value.length < 3) setShowSuggestions(false);
+                    }}
+                    onBlur={() => {
+                      markTouched("address");
+                      if (selectingRef.current) return;
+                      setTimeout(() => {
+                        if (!selectingRef.current && !suggestionsRef.current?.matches(":focus-within")) {
+                          setShowSuggestions(false);
+                        }
+                      }, 300);
+                    }}
+                    onFocus={() => {
+                      if (addressSuggestions.length > 0 && !booking.addressVerified) {
+                        setShowSuggestions(true);
+                      }
+                      if (addressScrollTimerRef.current) clearTimeout(addressScrollTimerRef.current);
+                      addressScrollTimerRef.current = setTimeout(keepAddressVisible, 250);
+                    }}
+                    autoComplete="off"
+                    autoCorrect="off"
+                    spellCheck={false}
+                  />
+                  {addressLoading && !booking.addressVerified && (
+                    <span
+                      className="bk-spin h-4 w-4 shrink-0 rounded-full border-2"
+                      style={{ borderColor: "var(--bk-line)", borderTopColor: "hsl(var(--primary))" }}
+                      aria-hidden="true"
+                    />
+                  )}
+                  {booking.address.length > 0 && !addressLoading && (
+                    <button
+                      type="button"
+                      onPointerDown={(e) => {
+                        e.preventDefault();
+                        handleClearAddress();
+                      }}
+                      className="bk-icon-btn bk-icon-btn--sm -mr-2.5"
+                      aria-label="Clear address"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {suggestionsList}
+
+              {!showSuggestions && (
+                <p
+                  id="booking-address-hint"
+                  className={`mt-1.5 flex items-center gap-1.5 text-[13px] leading-snug ${
+                    addressState === "invalid" ? "bk-field-error" : "text-muted-foreground"
+                  }`}
+                >
+                  {booking.addressVerified && <Check className="bk-ok h-3.5 w-3.5 shrink-0" aria-hidden="true" />}
+                  {booking.addressVerified
+                    ? "Address confirmed — used to calculate your call-out fee"
+                    : addressState === "invalid"
+                      ? "Choose your address from the suggestions so we can calculate your call-out fee"
+                      : "Used to calculate your call-out fee"}
+                </p>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
+
       {/* Existing / New client */}
-      <div>
-        <p className="text-sm text-foreground mb-3">Have you booked with us before?</p>
-        <div className="flex gap-3">
+      <div className={!mobileServiceEnabled && booking.isExistingClient === null ? "pb-4" : ""}>
+        <p id="client-type-label" className="bk-label mb-2">Have you booked with us before?</p>
+        <div role="radiogroup" aria-labelledby="client-type-label" className="grid grid-cols-2 gap-2.5">
           {[
             { label: existingClientLabel, value: true, icon: Star },
             { label: newClientLabel, value: false, icon: Sparkles },
           ].map((opt) => (
             <motion.button
               key={String(opt.value)}
-              whileTap={{ scale: 0.95 }}
+              type="button"
+              role="radio"
+              aria-checked={booking.isExistingClient === opt.value}
+              whileTap={{ scale: 0.97 }}
               onClick={() => onUpdate({ isExistingClient: opt.value })}
-              className={`flex-1 py-3.5 rounded-2xl text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2
-                ${booking.isExistingClient === opt.value
-                  ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
-                  : "glass-card-service text-foreground"
-                }`}
+              className="bk-option bk-option--stack font-medium"
             >
-              <opt.icon className="w-4 h-4" />
-              {opt.label}
+              <span className="flex w-full items-center justify-between">
+                <opt.icon className="h-5 w-5 shrink-0 text-muted-foreground" aria-hidden="true" />
+                <span className="bk-mark" aria-hidden="true">
+                  <Check strokeWidth={3} />
+                </span>
+              </span>
+              <span className="leading-snug">{opt.label}</span>
             </motion.button>
           ))}
         </div>
         {booking.isExistingClient === null && Object.keys(touched).length > 0 && (
-          <p className="text-[11px] text-destructive mt-2">Please select one to continue</p>
+          <p className="bk-field-hint mt-2">Please select one to continue</p>
         )}
       </div>
 
@@ -799,14 +1020,16 @@ useEffect(() => {
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-            className="overflow-hidden"
+            className="-m-1 overflow-hidden p-1"
           >
-            <div className="glass-card-service rounded-2xl p-4 flex flex-col gap-2">
-              <p className="text-sm text-foreground">Have there been any changes since your last appointment?</p>
+            <div className="flex flex-col gap-1.5 pb-4">
+              <label htmlFor="existing-client-notes" className="bk-label">
+                Have there been any changes since your last appointment?
+              </label>
               <textarea
                 id="existing-client-notes"
                 name="existing-client-notes"
-                className={`${inputClass} min-h-[70px]`}
+                className={inputClass}
                 placeholder={existingClientNotesPlaceholder}
                 value={booking.existingClientNotes}
                 onChange={(e) => onUpdate({ existingClientNotes: e.target.value })}
@@ -819,7 +1042,6 @@ useEffect(() => {
       {/* New client: dynamic consultation form */}
       <AnimatePresence>
         {booking.isExistingClient === false && (
-          // FIX 4: consistent indentation on all motion.div props
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
@@ -833,68 +1055,72 @@ useEffect(() => {
           >
             <div
               ref={conditionalSectionRef}
-              className="glass-card-service rounded-2xl p-4 flex flex-col gap-4"
+              className="bk-card flex flex-col gap-6 p-4 pb-5"
             >
               {/* ---------- Framing header (tenant-neutral) ---------- */}
               <div>
-                <p className="text-[10px] font-semibold tracking-[0.2em] uppercase text-muted-foreground">
-                  New client
-                </p>
-                <h4 className="text-lg font-semibold text-foreground mt-1">Quick questions</h4>
-                <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">
+                <p className="bk-overline">New client</p>
+                <h3 className="bk-display mt-1 text-lg leading-snug text-foreground">Quick questions</h3>
+                <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
                   A few quick questions so your provider can prepare. Takes about 2 minutes.
                   Your answers are confidential.
                 </p>
-              </div>
 
-              {/* ---------- Progress (flat list denominator) ---------- */}
-              {!consultationLoading && consultationQuestions.length > 0 && (() => {
-                const answeredCount = consultationQuestions.filter((q) =>
-                  isAnswered(booking.consultationAnswers[q.key]),
-                ).length;
-                const total = consultationQuestions.length;
-                const pct = total ? Math.round((answeredCount / total) * 100) : 0;
-                return (
-                  <div className="flex flex-col gap-1.5">
-                    <div className="flex justify-between text-[11px] text-muted-foreground">
-                      <span>{answeredCount} of {total} answered</span>
-                      <span>{pct}%</span>
+                {/* ---------- Progress (flat list denominator) ---------- */}
+                {!consultationLoading && consultationQuestions.length > 0 && (() => {
+                  const answeredCount = consultationQuestions.filter((q) =>
+                    isAnswered(booking.consultationAnswers[q.key]),
+                  ).length;
+                  const total = consultationQuestions.length;
+                  const pct = total ? Math.round((answeredCount / total) * 100) : 0;
+                  return (
+                    <div className="mt-4 flex flex-col gap-2">
+                      <div
+                        className="bk-meter"
+                        role="progressbar"
+                        aria-valuemin={0}
+                        aria-valuemax={total}
+                        aria-valuenow={answeredCount}
+                        aria-label="Questions answered"
+                      >
+                        <motion.div
+                          className="h-full rounded-full bg-primary"
+                          initial={false}
+                          animate={{ width: `${pct}%` }}
+                          transition={{ duration: 0.35, ease: "easeOut" }}
+                        />
+                      </div>
+                      <p className="bk-num text-[13px] text-muted-foreground">
+                        {answeredCount} of {total} answered
+                      </p>
                     </div>
-                    <div className="h-1 rounded-full bg-muted/40 overflow-hidden">
-                      <motion.div
-                        className="h-full bg-primary"
-                        initial={false}
-                        animate={{ width: `${pct}%` }}
-                        transition={{ duration: 0.35, ease: "easeOut" }}
-                      />
-                    </div>
-                  </div>
-                );
-              })()}
+                  );
+                })()}
+              </div>
 
               {/* ---------- Skeleton loading ---------- */}
               {consultationLoading ? (
-                <div className="flex flex-col gap-5">
+                <div className="flex flex-col gap-6" role="status" aria-label="Loading questions">
                   {[0, 1, 2].map((i) => (
-                    <div key={i} className="flex flex-col gap-2 animate-pulse">
-                      <div className="h-3 w-2/3 rounded bg-muted/40" />
+                    <div key={i} className="flex flex-col gap-2.5">
+                      <div className="bk-skeleton h-4 w-2/3" />
                       <div className="flex gap-2">
-                        <div className="h-11 flex-1 rounded-xl bg-muted/30" />
-                        <div className="h-11 flex-1 rounded-xl bg-muted/30" />
+                        <div className="bk-skeleton h-[3.25rem] flex-1 rounded-2xl" />
+                        <div className="bk-skeleton h-[3.25rem] flex-1 rounded-2xl" />
                       </div>
                     </div>
                   ))}
                 </div>
               ) : consultationQuestions.length === 0 ? (
-                <p className="text-xs text-muted-foreground italic">
+                <p className="text-sm italic text-muted-foreground">
                   No consultation questions configured.
                 </p>
               ) : (
                 groupQuestionsBySection(consultationQuestions).map((group, gi) => (
                   <section key={group.label ?? `__default__${gi}`} className="flex flex-col gap-5">
                     {group.label && (
-                      <header className="flex items-baseline justify-between border-b border-border/40 pb-2">
-                        <h5 className="text-sm font-semibold text-foreground">{group.label}</h5>
+                      <header className="bk-rule border-b pb-2">
+                        <h4 className="bk-overline">{group.label}</h4>
                       </header>
                     )}
                     <div className="flex flex-col gap-6">
@@ -920,206 +1146,45 @@ useEffect(() => {
               {!consultationLoading &&
                 consultationQuestions.length > 0 &&
                 consultationQuestions.every((q) => isAnswered(booking.consultationAnswers[q.key])) && (
-                  <p className="text-[11px] text-primary flex items-center gap-1.5">
-                    <Check className="w-3.5 h-3.5" />
+                  <p className="bk-ok flex items-center gap-1.5 text-[13px] font-medium">
+                    <Check className="h-4 w-4 shrink-0" aria-hidden="true" />
                     All questions answered — you're ready to continue.
                   </p>
                 )}
 
               {/* ---------- Additional notes ---------- */}
-              <textarea
-                id="additional-notes"
-                name="additional-notes"
-                className={`${inputClass} min-h-[60px]`}
-                placeholder="Anything else we should provide? (optional)"
-                value={booking.additionalNotes}
-                onChange={(e) => onUpdate({ additionalNotes: e.target.value })}
-              />
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="additional-notes" className="bk-label">
+                  Anything else we should know?{" "}
+                  <span className="font-normal text-muted-foreground">(optional)</span>
+                </label>
+                <textarea
+                  id="additional-notes"
+                  name="additional-notes"
+                  className={inputClass}
+                  placeholder="Preferences, access notes, anything that helps us prepare"
+                  value={booking.additionalNotes}
+                  onChange={(e) => onUpdate({ additionalNotes: e.target.value })}
+                />
+              </div>
 
               {/* ---------- Closing confirmation ---------- */}
-              <label className="flex items-start gap-2.5 text-[11px] text-muted-foreground cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={booking.consentConfirmed ?? false}
-                  onChange={(e) => onUpdate({ consentConfirmed: e.target.checked })}
-                  className="mt-0.5 w-4 h-4 rounded border-border/60 text-primary focus-visible:ring-2 focus-visible:ring-primary/40"
-                />
+              <button
+                type="button"
+                role="checkbox"
+                aria-checked={booking.consentConfirmed ?? false}
+                onClick={() => onUpdate({ consentConfirmed: !(booking.consentConfirmed ?? false) })}
+                className="flex items-start gap-3 rounded-lg text-left text-sm leading-snug text-foreground"
+              >
+                <span className="bk-mark bk-mark--square mt-px" aria-hidden="true">
+                  <Check strokeWidth={3} />
+                </span>
                 <span>I confirm the information above is accurate and complete.</span>
-              </label>
+              </button>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* Form fields */}
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className={`flex flex-col gap-3 ${!mobileServiceEnabled ? "pb-4" : ""}`}
-      >
-        {/* Full Name */}
-        <div className="relative">
-          <User className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground" />
-          <input
-            ref={nameInputRef}
-            id="booking-full-name"
-            name="full-name"
-            className={`${inputClass} pl-10 ${getValidationClass("fullName", booking.fullName)}`}
-            placeholder="Full Name *"
-            value={booking.fullName}
-            autoComplete="name"
-            onChange={(e) => {
-              onUpdate({ fullName: e.target.value });
-              markTouchedOnChange("fullName", e.target.value);
-            }}
-            onBlur={() => markTouched("fullName")}
-          />
-        </div>
-
-        {/* Phone */}
-        <div className="relative">
-          <Phone className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground" />
-          <select
-            id="booking-phone-code"
-            name="phone-code"
-            className="absolute left-9 top-0 h-full bg-transparent text-sm text-foreground appearance-none focus:outline-none pr-1 z-10 [&>option]:bg-background [&>option]:text-foreground"
-            value={booking.phoneCode}
-            onChange={(e) => onUpdate({ phoneCode: e.target.value })}
-          >
-            {phoneCodes.map((pc) => (
-              <option key={pc.code} value={pc.code}>
-                {pc.label} {pc.code}
-              </option>
-            ))}
-          </select>
-          <input
-            id="booking-phone"
-            name="phone"
-            className={`${inputClass} pl-[7.5rem] ${getValidationClass("phone", booking.phone)}`}
-            placeholder="e.g. 82 123 4567 *"
-            type="tel"
-            inputMode="tel"
-            autoComplete="tel"
-            value={booking.phone}
-            onChange={(e) => {
-              onUpdate({ phone: e.target.value });
-              markTouchedOnChange("phone", e.target.value);
-            }}
-            onBlur={() => markTouched("phone")}
-          />
-        </div>
-
-        {/* Email */}
-        <div className="relative">
-          <Mail className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground" />
-          <input
-            id="booking-email"
-            name="email"
-            className={`${inputClass} pl-10 ${getValidationClass("email", booking.email)}`}
-            type="email"
-            inputMode="email"
-            autoComplete="email"
-            placeholder="Email Address *"
-            value={booking.email}
-            onChange={(e) => {
-              onUpdate({ email: e.target.value });
-              markTouchedOnChange("email", e.target.value);
-            }}
-            onBlur={() => markTouched("email")}
-          />
-          {blockChecking && (
-            <div className="absolute right-3.5 top-3.5 z-10 w-3.5 h-3.5 border-2 border-muted-foreground/20 border-t-muted-foreground/60 rounded-full animate-spin" />
-          )}
-        </div>
-
-        {/* Address */}
-        <AnimatePresence initial={false}>
-          {mobileServiceEnabled && (
-            <motion.div
-              key="address-field"
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.25, ease: "easeInOut" }}
-              onAnimationStart={() => setAddressCollapsed(true)}
-              onAnimationComplete={(def) => {
-                if (def === "animate") setAddressCollapsed(false);
-              }}
-              className={addressCollapsed ? "overflow-hidden" : "overflow-visible"}
-            >
-              {/* Input wrapper — no overflow:hidden here so nothing clips the portal */}
-              <div className="relative">
-                <MapPin className="absolute left-3.5 top-3.5 w-4 h-4 text-muted-foreground z-10" />
-                {addressLoading && !booking.addressVerified && (
-                  <div className="absolute right-3.5 top-3.5 w-4 h-4 border-2 border-primary/40 border-t-primary rounded-full animate-spin z-10" />
-                )}
-                {booking.address.length > 0 && !addressLoading && (
-                  <button
-                    type="button"
-                    onPointerDown={(e) => {
-                      e.preventDefault();
-                      handleClearAddress();
-                    }}
-                    className="absolute right-3.5 top-3 w-5 h-5 flex items-center justify-center rounded-full text-muted-foreground hover:text-foreground transition-colors z-10"
-                    aria-label="Clear address"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
-                <input
-                  ref={addressInputRef}
-                  id="booking-address"
-                  name="address"
-                  className={`${inputClass} pl-10 pr-9 ${getAddressValidationClass()}`}
-                  placeholder="Home Address *"
-                  value={booking.address}
-                  inputMode="search"
-                  onChange={(e) => {
-                    onUpdate({ address: e.target.value, addressVerified: false, distanceKm: null });
-                    if (e.target.value.trim().length >= 2) {
-                      setTouched((prev) => ({ ...prev, address: true }));
-                    }
-                    if (e.target.value.length < 3) setShowSuggestions(false);
-                  }}
-                  onBlur={() => {
-                    markTouched("address");
-                    if (selectingRef.current) return;
-                    setTimeout(() => {
-                      if (!selectingRef.current && !suggestionsRef.current?.matches(":focus-within")) {
-                        setShowSuggestions(false);
-                      }
-                    }, 300);
-                  }}
-                  onFocus={() => {
-                    if (addressSuggestions.length > 0 && !booking.addressVerified) {
-                      setShowSuggestions(true);
-                    }
-                    if (addressScrollTimerRef.current) clearTimeout(addressScrollTimerRef.current);
-                    addressScrollTimerRef.current = setTimeout(keepAddressVisible, 250);
-                  }}
-                  autoComplete="off"
-                  autoCorrect="off"
-                  spellCheck={false}
-                />
-
-                {/* Suggestions are rendered into document.body via a portal (see suggestionsPortal below) */}
-              </div>
-
-              {suggestionsList}
-
-              {!showSuggestions && (
-                <p className="text-[10px] text-muted-foreground mt-1.5 ml-1">
-                  {booking.addressVerified
-                    ? "\u2713 Address confirmed \u2014 used to calculate your call-out fee"
-                    : "Used to calculate your call-out fee"}
-                </p>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
-
     </div>
   );
 };

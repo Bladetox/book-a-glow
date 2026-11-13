@@ -1,3 +1,4 @@
+import "@/styles/booking.css";
 import StepIndicator from "@/components/StepIndicator";
 import ServicesStep from "@/components/ServicesStep";
 import ScheduleStep from "@/components/ScheduleStep";
@@ -14,35 +15,27 @@ import { useMonthAvailability } from "@/hooks/usePublicAvailability";
 import { useSlotHold } from "@/hooks/useSlotHold";
 import { useTenantHead } from "@/hooks/useTenantHead";
 import { useBrandFont } from "@/hooks/useBrandFont";
-import { AnimatePresence, motion } from "framer-motion";
-import { useState, useCallback, useEffect } from "react";
+import { AnimatePresence, MotionConfig, motion } from "framer-motion";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { isAnswered } from "@/lib/consultationSections";
 
 const stepVariants = {
   enter: (direction: number) => ({
-    x: direction > 0 ? 80 : -80,
+    x: direction > 0 ? 28 : -28,
     opacity: 0,
-    scale: 0.98,
   }),
   center: {
     x: 0,
     opacity: 1,
-    scale: 1,
     transition: {
-      x: { type: "spring" as const, stiffness: 350, damping: 35 },
-      opacity: { duration: 0.25 },
-      scale: { duration: 0.25 },
+      x: { type: "spring" as const, stiffness: 380, damping: 36 },
+      opacity: { duration: 0.22 },
     },
   },
   exit: (direction: number) => ({
-    x: direction < 0 ? 80 : -80,
+    x: direction < 0 ? 28 : -28,
     opacity: 0,
-    scale: 0.98,
-    transition: {
-      x: { type: "spring" as const, stiffness: 350, damping: 35 },
-      opacity: { duration: 0.2 },
-      scale: { duration: 0.2 },
-    },
+    transition: { duration: 0.16 },
   }),
 };
 
@@ -79,6 +72,10 @@ const Index = () => {
   const [showSplash, setShowSplash] = useState(true);
   const [showRequiredErrors, setShowRequiredErrors] = useState(false);
   const [consultationQuestionsReady, setConsultationQuestionsReady] = useState(false);
+  // Set by ReviewStep while a payment is in flight or a booking already exists,
+  // so the guest cannot navigate away from a half-finished checkout.
+  const [reviewLocked, setReviewLocked] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const hasMissingRequiredQuestions =
     booking.isExistingClient === false &&
@@ -132,6 +129,12 @@ const Index = () => {
   const handleNext = useCallback(() => {
     if (step === 2 && hasMissingRequiredQuestions) {
       setShowRequiredErrors(true);
+      // Bring the first unanswered required question into view.
+      requestAnimationFrame(() => {
+        scrollRef.current
+          ?.querySelector('[data-question-error="true"]')
+          ?.scrollIntoView({ block: "center", behavior: "smooth" });
+      });
       return;
     }
     if (!canProceed()) return;
@@ -145,14 +148,27 @@ const Index = () => {
     prevStep();
   }, [step, prevStep]);
 
+  const goToStep = useCallback(
+    (target: number) => {
+      setDirection(target > step ? 1 : -1);
+      setStep(target);
+    },
+    [step, setStep],
+  );
+
   const handleSplashComplete = useCallback(() => {
     setShowSplash(false);
   }, []);
 
   if (tenantLoading || !tenantId) {
     return (
-      <div className="h-dvh flex items-center justify-center bg-gradient-to-br from-background to-muted">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="booking-app bk-stage grid h-dvh place-items-center">
+        <div
+          role="status"
+          aria-label="Loading"
+          className="bk-spin h-7 w-7 rounded-full border-2"
+          style={{ borderColor: "var(--bk-line)", borderTopColor: "hsl(var(--primary))" }}
+        />
       </div>
     );
   }
@@ -189,180 +205,216 @@ const Index = () => {
     } : {}),
   };
 
+  // What the guest still has to do before the bar's button unlocks. This only
+  // explains canProceed() — it never decides anything itself.
+  const proceedBlocked = !canProceed();
+  let proceedHint: string | null = null;
+  let proceedHintTone: "muted" | "danger" = "muted";
+  if (step === 0 && proceedBlocked) {
+    proceedHint = "Add a service to continue";
+  } else if (step === 1 && proceedBlocked) {
+    proceedHint = booking.selectedDate
+      ? "Choose a time to continue"
+      : "Choose a date to see times";
+  } else if (step === 2 && showRequiredErrors && hasMissingRequiredQuestions) {
+    proceedHint = "Answer the questions marked *";
+    proceedHintTone = "danger";
+  } else if (step === 2 && proceedBlocked) {
+    if (!slotHold.holdId && !slotHold.isHolding) {
+      proceedHint = "Your time hold expired. Go back and choose a time.";
+      proceedHintTone = "danger";
+    } else if (booking.fullName.trim().length < 2) {
+      proceedHint = "Enter your full name";
+    } else if (!/^\d{7,15}$/.test(booking.phone.replace(/\s/g, ""))) {
+      proceedHint = "Enter your mobile number";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(booking.email)) {
+      proceedHint = "Enter your email address";
+    } else if (config.mobileServiceEnabled === true && booking.addressVerified !== true) {
+      proceedHint = "Choose your address from the list";
+    } else if (booking.isExistingClient === null) {
+      proceedHint = "Tell us if you've booked before";
+    } else if (booking.isExistingClient === false && !consultationQuestionsReady) {
+      proceedHint = "Loading your questions…";
+    }
+  }
+
   return (
-    <>
+    <MotionConfig reducedMotion="user">
       {/*
         ── BOOKING APP SHELL ───────────────────────────────────────────────────
         h-dvh + overflow-hidden locks the viewport so only the inner body
         region scrolls. This eliminates page-level scroll, fixes the iOS
         keyboard jump, and makes every step feel like a native app screen.
+        On wide screens the column is centred on a soft tenant-coloured stage.
       */}
-      <div className="booking-app h-dvh flex flex-col overflow-hidden bg-background">
+      <div className="booking-app bk-stage h-dvh overflow-hidden">
+        <div className="bk-column flex h-full flex-col overflow-hidden">
 
-        {!showSplash && ownerId && (
-          <PrefetchAvailability durationMinutes={durationForSlots} staffId={ownerId} />
-        )}
+          {!showSplash && ownerId && (
+            <PrefetchAvailability durationMinutes={durationForSlots} staffId={ownerId} />
+          )}
 
-        {/* ── COMPACT STICKY HEADER ──────────────────────────────────────── */}
-        <div className="flex-shrink-0 flex items-center justify-between px-4 pt-[max(env(safe-area-inset-top,0px),12px)] pb-3 border-b border-border/40 bg-background backdrop-blur-xl">
-          <div className="flex items-center gap-3 min-w-0">
-            {/* Logo / abbreviation */}
-            <div
-              className="w-9 h-9 rounded-xl glass-card flex-shrink-0 overflow-hidden flex items-center justify-center"
-              style={config.logoUrl ? { padding: 0 } : {}}
-            >
-              {config.logoUrl ? (
-                <img
-                  src={config.logoUrl}
-                  alt={businessName}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <span
-                  className="font-display text-sm font-bold text-foreground"
+          {/* ── HEADER ─────────────────────────────────────────────────────── */}
+          <header className="flex flex-shrink-0 items-center justify-between gap-3 px-4 pb-3 pt-[max(env(safe-area-inset-top,0px),12px)]">
+            <div className="flex min-w-0 items-center gap-3">
+              {/* Logo / abbreviation */}
+              <div className="bk-card grid h-10 w-10 flex-shrink-0 place-items-center overflow-hidden [--bk-radius:0.875rem]">
+                {config.logoUrl ? (
+                  <img
+                    src={config.logoUrl}
+                    alt={businessName}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <span
+                    className="bk-display text-sm text-foreground"
+                    style={Object.keys(brandNameStyle).length > 0 ? brandNameStyle : {}}
+                  >
+                    {abbreviation}
+                  </span>
+                )}
+              </div>
+
+              {/* Business name + tagline */}
+              <div className="min-w-0">
+                <p
+                  className="truncate text-[15px] font-semibold leading-tight text-foreground"
                   style={Object.keys(brandNameStyle).length > 0 ? brandNameStyle : {}}
                 >
-                  {abbreviation}
-                </span>
-              )}
-            </div>
-
-            {/* Business name + tagline */}
-            <div className="min-w-0">
-              <p
-                className="text-sm font-bold leading-tight truncate"
-                style={Object.keys(brandNameStyle).length > 0 ? brandNameStyle : {}}
-              >
-                {businessName}
-              </p>
-              {config.tagline && (
-                <p className="text-[10px] text-muted-foreground font-medium tracking-wide truncate leading-tight mt-0.5">
-                  {config.tagline}
+                  {businessName}
                 </p>
-              )}
+                {config.tagline && (
+                  <p className="mt-0.5 truncate text-xs leading-tight text-muted-foreground">
+                    {config.tagline}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <ThemeToggle />
+          </header>
+
+          {/* ── STEP INDICATOR ─────────────────────────────────────────────── */}
+          <div className="bk-rule flex-shrink-0 border-b px-4 pb-2.5">
+            <StepIndicator currentStep={step} onStepSelect={goToStep} locked={reviewLocked} />
+          </div>
+
+          {/* ── SCROLLABLE STEP BODY ───────────────────────────────────────── */}
+          {/*
+            flex-1 + overflow-y-auto means ONLY this region scrolls.
+            The header, step indicator, and bottom bar are all fixed chrome.
+          */}
+          <div
+            ref={scrollRef}
+            data-booking-scroll
+            className={`flex-1 min-h-0 ${step === 0 ? "overflow-hidden" : "overflow-y-auto scrollbar-hide"}`}
+          >
+            {/* Reserve the measured fixed bottom bar height so the Services list can scroll fully clear of it. */}
+            <div
+              className={`mx-auto w-full max-w-md px-4 pt-5 ${step === 0 ? "h-full min-h-0 flex flex-col" : ""}`}
+              style={{ paddingBottom: "calc(var(--bottom-bar-height, 80px) + 16px)" }}
+            >
+              <AnimatePresence
+                mode="wait"
+                custom={direction}
+                // Each step starts at its top; without this a step inherits the
+                // scroll offset of the one before it.
+                onExitComplete={() => scrollRef.current?.scrollTo({ top: 0 })}
+              >
+                <motion.div
+                  key={step}
+                  custom={direction}
+                  variants={stepVariants}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  className={step === 0 ? "flex-1 min-h-0 flex flex-col" : undefined}
+                >
+                  {step === 0 && (
+                    <ServicesStep
+                      selectedTreatments={booking.selectedTreatments}
+                      onAdd={addTreatment}
+                      onRemove={removeTreatment}
+                    />
+                  )}
+                  {step === 1 && (
+                    <ScheduleStep
+                      selectedDate={booking.selectedDate}
+                      selectedTime={booking.selectedTime}
+                      onSelectDate={(d) => updateBooking({ selectedDate: d })}
+                      onSelectTime={(t) => updateBooking({ selectedTime: t })}
+                      totalDuration={durationForSlots}
+                      maxAdvanceDays={config.maxAdvanceDays}
+                      bookingWindowReady={!config.loading}
+                      onReviewServices={() => goToStep(0)}
+                      tenantId={tenantId}
+                      slotHold={slotHold}
+                    />
+                  )}
+                  {step === 2 && (
+                    <DetailsStep
+                      booking={booking}
+                      onUpdate={updateBooking}
+                      showRequiredErrors={showRequiredErrors}
+                      onConsultationQuestionsReady={setConsultationQuestionsReady}
+                    />
+                  )}
+                  {step === 3 && (
+                    <ReviewStep
+                      booking={booking}
+                      onUpdate={updateBooking}
+                      onGoToStep={goToStep}
+                      releaseHold={slotHold.releaseHold}
+                      holdId={slotHold.holdId}
+                      holdSecondsLeft={slotHold.secondsLeft}
+                      sessionToken={slotHold.sessionToken}
+                      resizeHold={slotHold.resizeHold}
+                      isResizing={slotHold.isResizing}
+                      onPayshapComplete={() => setShowSplash(true)}
+                      onLockChange={setReviewLocked}
+                    />
+                  )}
+                </motion.div>
+              </AnimatePresence>
+
+              <p className="mt-4 flex-shrink-0 pb-1 text-center text-[11px] leading-none text-muted-foreground">
+                {"Powered by "}
+                <a
+                  href="https://nextslot.co.za"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium underline underline-offset-2 transition-colors hover:text-foreground"
+                >
+                  {"nextslot.co.za"}
+                </a>
+              </p>
             </div>
           </div>
 
-          <ThemeToggle />
+          {/* ── BOTTOM BAR ─────────────────────────────────────────────────── */}
+          {/*
+            Fixed to the bottom of the viewport; the scroll body above pads
+            itself by the bar's measured height. The review step renders its
+            own pay bar (see ReviewStep), so this one covers steps 0–2.
+          */}
+          {step < 3 && (
+            <StickyBottomBar
+              step={step}
+              totalPrice={totalPrice}
+              totalDuration={totalDuration}
+              selectedCount={booking.selectedTreatments.length}
+              canProceed={!proceedBlocked}
+              onNext={handleNext}
+              onPrev={handlePrev}
+              currency={config.currency}
+              hint={proceedHint}
+              hintTone={proceedHintTone}
+              holdSecondsLeft={step > 0 ? slotHold.secondsLeft : 0}
+              cartItems={cartItems}
+              onRemoveOne={removeTreatment}
+            />
+          )}
         </div>
-
-        {/* ── STEP INDICATOR ─────────────────────────────────────────────── */}
-        <div className="flex-shrink-0 px-2 py-3 bg-background backdrop-blur-xl border-b border-border/20">
-          <StepIndicator currentStep={step} />
-        </div>
-
-        {/* ── SCROLLABLE STEP BODY ───────────────────────────────────────── */}
-        {/*
-          flex-1 + overflow-y-auto means ONLY this region scrolls.
-          The header, step indicator, and bottom bar are all fixed chrome.
-          AnimatePresence and stepVariants are completely unchanged.
-        */}
-        <div
-          data-booking-scroll
-          className={`flex-1 min-h-0 ${step === 0 ? "overflow-hidden" : "overflow-y-auto scrollbar-hide"}`}
-        >
-          {/* Reserve the measured fixed bottom bar height so the Services list can scroll fully clear of it. */}
-          <div
-            className={`w-full max-w-md mx-auto px-4 pt-4 ${step === 0 ? "h-full min-h-0 flex flex-col" : ""}`}
-            style={{ paddingBottom: "calc(var(--bottom-bar-height, 80px) + 16px)" }}
-          >
-            <AnimatePresence mode="wait" custom={direction}>
-              <motion.div
-                key={step}
-                custom={direction}
-                variants={stepVariants}
-                initial="enter"
-                animate="center"
-                exit="exit"
-                className={step === 0 ? "flex-1 min-h-0 flex flex-col" : undefined}
-              >
-                {step === 0 && (
-                  <ServicesStep
-                    selectedTreatments={booking.selectedTreatments}
-                    onAdd={addTreatment}
-                    onRemove={removeTreatment}
-                  />
-                )}
-                {step === 1 && (
-                  <ScheduleStep
-                    selectedDate={booking.selectedDate}
-                    selectedTime={booking.selectedTime}
-                    onSelectDate={(d) => updateBooking({ selectedDate: d })}
-                    onSelectTime={(t) => updateBooking({ selectedTime: t })}
-                    totalDuration={durationForSlots}
-                    maxAdvanceDays={config.maxAdvanceDays}
-                    bookingWindowReady={!config.loading}
-                    onReviewServices={() => {
-                      setDirection(-1);
-                      setStep(0);
-                    }}
-                    tenantId={tenantId}
-                    slotHold={slotHold}
-                  />
-                )}
-                {step === 2 && (
-                  <DetailsStep
-                    booking={booking}
-                    onUpdate={updateBooking}
-                    showRequiredErrors={showRequiredErrors}
-                    onConsultationQuestionsReady={setConsultationQuestionsReady}
-                  />
-                )}
-                {step === 3 && (
-                  <ReviewStep
-                    booking={booking}
-                    onUpdate={updateBooking}
-                    onGoToStep={(s) => {
-                      setDirection(-1);
-                      setStep(s);
-                    }}
-                    releaseHold={slotHold.releaseHold}
-                    holdId={slotHold.holdId}
-                    sessionToken={slotHold.sessionToken}
-                    resizeHold={slotHold.resizeHold}
-                    isResizing={slotHold.isResizing}
-                    onPayshapComplete={() => setShowSplash(true)}
-                  />
-                )}
-              </motion.div>
-            </AnimatePresence>
-
-            <p className="flex-shrink-0 text-[8px] text-muted-foreground/40 tracking-[0.08em] text-center mt-2 pb-1">
-              {"Powered by "}
-              <a
-                href="https://nextslot.co.za"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-muted-foreground transition-colors underline underline-offset-2"
-              >
-                {"nextslot.co.za"}
-              </a>
-            </p>
-          </div>
-        </div>
-
-        {/* ── BOTTOM BAR — flex sibling, not fixed ──────────────────────── */}
-        {/*
-          StickyBottomBar is now a flex sibling of the scrollable body.
-          It sits at the bottom of the h-dvh column naturally.
-          The useViewportFix translateY on iOS still works exactly as before
-          because the bar still reads --keyboard-height from :root.
-          On Android, interactive-widget=resizes-content shrinks the flex
-          column automatically — the bar moves up with the layout.
-        */}
-        {step < 3 && (
-          <StickyBottomBar
-            step={step}
-            totalPrice={totalPrice}
-            totalDuration={totalDuration}
-            selectedCount={booking.selectedTreatments.length}
-            canProceed={canProceed()}
-            onNext={handleNext}
-            onPrev={handlePrev}
-            cartItems={cartItems}
-            onRemoveOne={removeTreatment}
-          />
-        )}
       </div>
 
       {/* ── SPLASH SCREEN — fixed inset-0 z-[100], unaffected by shell ── */}
@@ -382,7 +434,7 @@ const Index = () => {
           </motion.div>
         )}
       </AnimatePresence>
-    </>
+    </MotionConfig>
   );
 };
 

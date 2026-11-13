@@ -1,0 +1,1182 @@
+/* ------------------------------------------------------------------------
+ * Booking app design system.
+ *
+ * One surface language for every client-facing booking screen (splash,
+ * services, schedule, details, review, payment result). Everything is
+ * derived from the tenant theme tokens that BusinessThemeProvider writes to
+ * :root (--background, --foreground, --primary, --accent ...), so each of the
+ * seven themes, and the light/dark flip of each, gets the same treatment
+ * without per-theme rules.
+ *
+ * Scoped to .booking-app. Sheets and bars that are portalled to <body> carry
+ * the same class on their own root, so they are styled identically.
+ *
+ * Imported by the booking entry points (src/pages/Book.tsx and
+ * src/pages/PaymentSuccess.tsx) so none of it loads into the marketing site
+ * or the admin app.
+ * ------------------------------------------------------------------------ */
+
+/* ===== Tokens ===== */
+.booking-app {
+  /* Cards are a lighter lift of the tenant background rather than a second
+     flat colour, so they stay in key with any theme. */
+  --bk-surface: hsl(0 0% 100% / 0.72);
+  --bk-surface-quiet: hsl(0 0% 100% / 0.4);
+  --bk-surface-selected: hsl(0 0% 100% / 0.95);
+  --bk-well: hsl(var(--foreground) / 0.05);
+  --bk-line: hsl(var(--foreground) / 0.1);
+  --bk-line-strong: hsl(var(--foreground) / 0.2);
+  --bk-tint: hsl(var(--primary) / 0.05);
+  --bk-shadow-sm: 0 1px 2px hsl(var(--foreground) / 0.05);
+  --bk-shadow: 0 1px 2px hsl(var(--foreground) / 0.04), 0 12px 28px -18px hsl(var(--foreground) / 0.28);
+  --bk-shadow-lg: 0 32px 64px -28px hsl(var(--foreground) / 0.4);
+  --bk-success: 152 58% 28%;
+  --bk-warning: 28 88% 36%;
+  --bk-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  color: hsl(var(--foreground));
+}
+
+.dark .booking-app {
+  --bk-surface: hsl(0 0% 100% / 0.06);
+  --bk-surface-quiet: hsl(0 0% 100% / 0.03);
+  --bk-surface-selected: hsl(0 0% 100% / 0.1);
+  --bk-well: hsl(0 0% 100% / 0.06);
+  --bk-line: hsl(0 0% 100% / 0.1);
+  --bk-line-strong: hsl(0 0% 100% / 0.22);
+  --bk-tint: hsl(var(--primary) / 0.14);
+  --bk-shadow-sm: 0 1px 2px hsl(0 0% 0% / 0.35);
+  --bk-shadow: 0 1px 2px hsl(0 0% 0% / 0.35), 0 14px 30px -18px hsl(0 0% 0% / 0.8);
+  --bk-shadow-lg: 0 32px 64px -24px hsl(0 0% 0% / 0.9);
+  --bk-success: 152 52% 60%;
+  --bk-warning: 38 92% 62%;
+}
+
+/* ===== Stage (desktop) and column ===== */
+.booking-app.bk-stage {
+  background: hsl(var(--background));
+}
+
+.booking-app .bk-column {
+  background:
+    radial-gradient(120% 34% at 50% -8%, hsl(var(--accent) / 0.16), transparent 70%),
+    hsl(var(--background));
+}
+
+@media (min-width: 768px) {
+  .booking-app.bk-stage {
+    background:
+      radial-gradient(60% 55% at 12% 0%, hsl(var(--accent) / 0.22), transparent 70%),
+      radial-gradient(55% 55% at 100% 100%, hsl(var(--primary) / 0.12), transparent 70%),
+      hsl(var(--background));
+  }
+
+  .booking-app .bk-column {
+    max-width: 30rem;
+    margin-inline: auto;
+    border-inline: 1px solid var(--bk-line);
+    box-shadow: var(--bk-shadow-lg);
+  }
+}
+
+/* ===== Type ===== */
+.booking-app .bk-display {
+  font-family: var(--font-display);
+  /* The weight the tenant's display face is actually loaded in. */
+  font-weight: var(--font-display-weight, 600);
+  font-synthesis: none;
+  letter-spacing: -0.015em;
+}
+
+.booking-app .bk-overline {
+  font-size: 0.6875rem;
+  line-height: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: hsl(var(--muted-foreground));
+}
+
+.booking-app .bk-num {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ===== Surfaces ===== */
+.booking-app .bk-card {
+  position: relative;
+  background: var(--bk-surface);
+  border: 1px solid var(--bk-line);
+  /* Set --bk-radius on the element to change the corner size. */
+  border-radius: var(--bk-radius, 1.25rem);
+  box-shadow: var(--bk-shadow-sm);
+}
+
+.booking-app .bk-card--raised {
+  box-shadow: var(--bk-shadow);
+}
+
+.booking-app .bk-card--interactive {
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.25s ease,
+    background-color 0.2s ease;
+}
+
+@media (hover: hover) {
+  .booking-app .bk-card--interactive:hover {
+    border-color: var(--bk-line-strong);
+    box-shadow: var(--bk-shadow);
+  }
+}
+
+.booking-app .bk-card.is-selected {
+  background: linear-gradient(var(--bk-tint), var(--bk-tint)), var(--bk-surface-selected);
+  border-color: hsl(var(--primary));
+  box-shadow: 0 0 0 0.5px hsl(var(--primary)), var(--bk-shadow);
+}
+
+.booking-app .bk-divide > * + * {
+  border-top: 1px solid var(--bk-line);
+}
+
+.booking-app .bk-rule {
+  border-color: var(--bk-line);
+}
+
+.booking-app .bk-well {
+  background: var(--bk-well);
+}
+
+/* ===== Buttons ===== */
+.booking-app .bk-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 3.375rem;
+  padding: 0 1.375rem;
+  border-radius: 9999px;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: -0.005em;
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: pointer;
+  transition:
+    transform 0.16s var(--bk-ease),
+    box-shadow 0.2s ease,
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.booking-app .bk-btn:active:not(:disabled):not([aria-disabled="true"]) {
+  transform: scale(0.975);
+}
+
+.booking-app .bk-btn--primary {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  box-shadow:
+    inset 0 1px 0 hsl(0 0% 100% / 0.14),
+    0 12px 24px -14px hsl(var(--primary) / 0.7);
+}
+
+.booking-app .bk-btn--primary:disabled,
+.booking-app .bk-btn--primary[aria-disabled="true"] {
+  background: var(--bk-well);
+  color: hsl(var(--muted-foreground) / 0.7);
+  box-shadow: inset 0 0 0 1px var(--bk-line);
+  cursor: not-allowed;
+}
+
+.booking-app .bk-btn--quiet {
+  background: var(--bk-surface);
+  color: hsl(var(--foreground));
+  border: 1px solid var(--bk-line-strong);
+  box-shadow: var(--bk-shadow-sm);
+}
+
+.booking-app .bk-btn--quiet:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.booking-app .bk-btn--sm {
+  min-height: 2.5rem;
+  padding: 0 1rem;
+  font-size: 0.875rem;
+}
+
+.booking-app .bk-btn--block {
+  width: 100%;
+}
+
+@media (hover: hover) {
+  .booking-app .bk-btn--primary:hover:not(:disabled):not([aria-disabled="true"]) {
+    box-shadow:
+      inset 0 1px 0 hsl(0 0% 100% / 0.18),
+      0 16px 30px -14px hsl(var(--primary) / 0.8);
+  }
+
+  .booking-app .bk-btn--quiet:hover:not(:disabled) {
+    border-color: hsl(var(--foreground) / 0.36);
+  }
+}
+
+/* Small square icon control (theme toggle, sheet close, quantity steppers). */
+.booking-app .bk-icon-btn {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 9999px;
+  color: hsl(var(--muted-foreground));
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.booking-app .bk-icon-btn--outline {
+  border: 1px solid var(--bk-line-strong);
+  background: var(--bk-surface);
+  color: hsl(var(--foreground));
+}
+
+.booking-app .bk-icon-btn--solid {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+.booking-app .bk-icon-btn--sm {
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+.booking-app .bk-icon-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+@media (hover: hover) {
+  .booking-app .bk-icon-btn:hover:not(:disabled):not(.bk-icon-btn--solid) {
+    background: var(--bk-well);
+    color: hsl(var(--foreground));
+  }
+}
+
+.booking-app .bk-link {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+  text-decoration: underline;
+  text-decoration-color: hsl(var(--foreground) / 0.3);
+  text-underline-offset: 4px;
+  transition: text-decoration-color 0.2s ease;
+}
+
+.booking-app .bk-link:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+@media (hover: hover) {
+  .booking-app .bk-link:hover:not(:disabled) {
+    text-decoration-color: currentColor;
+  }
+}
+
+/* ===== Chips (category tabs, referral options) ===== */
+.booking-app .bk-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  flex: none;
+  min-height: 2.5rem;
+  padding: 0 1rem;
+  border-radius: 9999px;
+  border: 1px solid var(--bk-line);
+  background: var(--bk-surface-quiet);
+  color: hsl(var(--muted-foreground));
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.booking-app .bk-chip.is-active {
+  background: hsl(var(--primary));
+  border-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  box-shadow: 0 8px 18px -12px hsl(var(--primary) / 0.7);
+}
+
+.booking-app .bk-chip.is-error {
+  border-color: hsl(var(--destructive) / 0.5);
+}
+
+.booking-app .bk-chip__count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.3rem;
+  border-radius: 9999px;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  font-size: 0.6875rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.booking-app .bk-chip.is-active .bk-chip__count {
+  background: hsl(var(--primary-foreground));
+  color: hsl(var(--primary));
+}
+
+@media (hover: hover) {
+  .booking-app .bk-chip:hover:not(.is-active) {
+    border-color: var(--bk-line-strong);
+    color: hsl(var(--foreground));
+  }
+}
+
+/* ===== Selectable options (client type, consultation answers, payment) ===== */
+.booking-app .bk-option {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 3.25rem;
+  padding: 0.75rem 1rem;
+  border-radius: 1rem;
+  border: 1px solid var(--bk-line-strong);
+  background: var(--bk-surface);
+  color: hsl(var(--foreground));
+  font-size: 0.9375rem;
+  line-height: 1.35;
+  text-align: left;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.booking-app .bk-option[aria-checked="true"] {
+  background: linear-gradient(var(--bk-tint), var(--bk-tint)), var(--bk-surface-selected);
+  border-color: hsl(var(--primary));
+  box-shadow: 0 0 0 0.5px hsl(var(--primary)), var(--bk-shadow-sm);
+}
+
+/* Icon and indicator on one row, label underneath: fits long tenant labels. */
+.booking-app .bk-option--stack {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.625rem;
+  padding-block: 0.875rem;
+}
+
+.booking-app .bk-option:disabled {
+  cursor: not-allowed;
+}
+
+@media (hover: hover) {
+  .booking-app .bk-option:hover:not([aria-checked="true"]) {
+    border-color: hsl(var(--foreground) / 0.36);
+  }
+}
+
+/* Radio / checkbox indicator. Shows its check when the parent is checked. */
+.booking-app .bk-mark {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 1.375rem;
+  height: 1.375rem;
+  border-radius: 9999px;
+  border: 1.5px solid var(--bk-line-strong);
+  color: hsl(var(--primary-foreground));
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.booking-app .bk-mark--square {
+  border-radius: 0.4375rem;
+}
+
+.booking-app .bk-mark > svg {
+  width: 0.875rem;
+  height: 0.875rem;
+  opacity: 0;
+  transform: scale(0.5);
+  transition:
+    opacity 0.15s ease,
+    transform 0.25s var(--bk-ease);
+}
+
+.booking-app [aria-checked="true"] .bk-mark {
+  background: hsl(var(--primary));
+  border-color: hsl(var(--primary));
+}
+
+.booking-app [aria-checked="true"] .bk-mark > svg {
+  opacity: 1;
+  transform: none;
+}
+
+/* ===== Fields ===== */
+.booking-app .bk-label {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+}
+
+.booking-app .bk-input {
+  display: block;
+  width: 100%;
+  min-height: 3.25rem;
+  padding: 0.875rem 1rem;
+  border-radius: 1rem;
+  border: 1px solid var(--bk-line-strong);
+  background: var(--bk-surface);
+  color: hsl(var(--foreground));
+  font-size: max(16px, 1rem);
+  line-height: 1.4;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.booking-app textarea.bk-input {
+  min-height: 5.5rem;
+  resize: vertical;
+}
+
+/* A field made of an icon, an input and a status mark sharing one border. */
+.booking-app .bk-input--group {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0 1rem;
+}
+
+.booking-app .bk-input--group input,
+.booking-app .bk-input--group select {
+  min-width: 0;
+  min-height: calc(3.25rem - 2px);
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-size: max(16px, 1rem);
+}
+
+.booking-app .bk-input--group input {
+  flex: 1 1 0%;
+}
+
+.booking-app .bk-input::placeholder,
+.booking-app .bk-input--group input::placeholder {
+  color: hsl(var(--muted-foreground) / 0.72);
+}
+
+.booking-app .bk-input:focus,
+.booking-app .bk-input--group:focus-within {
+  outline: none;
+  border-color: hsl(var(--primary));
+  box-shadow: 0 0 0 4px hsl(var(--primary) / 0.14);
+}
+
+.booking-app .bk-input.is-invalid {
+  border-color: hsl(var(--destructive));
+}
+
+.booking-app .bk-input.is-invalid:focus,
+.booking-app .bk-input--group.is-invalid:focus-within {
+  box-shadow: 0 0 0 4px hsl(var(--destructive) / 0.14);
+}
+
+.booking-app .bk-field-error {
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  color: hsl(var(--destructive));
+}
+
+.booking-app .bk-field-hint {
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  color: hsl(var(--muted-foreground));
+}
+
+.booking-app .bk-ok {
+  color: hsl(var(--bk-success));
+}
+
+/* ===== Notices ===== */
+.booking-app .bk-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border-radius: 1rem;
+  border: 1px solid var(--bk-line);
+  background: var(--bk-surface);
+  font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+.booking-app .bk-note--danger {
+  border-color: hsl(var(--destructive) / 0.35);
+  background: hsl(var(--destructive) / 0.08);
+}
+
+.booking-app .bk-note--warning {
+  border-color: hsl(var(--bk-warning) / 0.4);
+  background: hsl(var(--bk-warning) / 0.1);
+}
+
+.booking-app .bk-note--warning > svg {
+  color: hsl(var(--bk-warning));
+}
+
+/* Slot-hold countdown pill in the bottom bar. */
+.booking-app .bk-hold {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  height: 1.75rem;
+  padding: 0 0.625rem;
+  border-radius: 9999px;
+  background: var(--bk-well);
+  color: hsl(var(--muted-foreground));
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.booking-app .bk-hold b {
+  color: hsl(var(--foreground));
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.booking-app .bk-hold.is-urgent {
+  background: hsl(var(--bk-warning) / 0.14);
+  color: hsl(var(--bk-warning));
+}
+
+.booking-app .bk-hold.is-urgent b {
+  color: inherit;
+}
+
+/* ===== Progress ===== */
+.booking-app .bk-step {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.375rem 0 0.25rem;
+  text-align: left;
+}
+
+.booking-app .bk-step:disabled {
+  cursor: default;
+}
+
+.booking-app .bk-step__bar {
+  position: relative;
+  display: block;
+  height: 3px;
+  border-radius: 9999px;
+  background: var(--bk-line);
+  overflow: hidden;
+}
+
+.booking-app .bk-step__bar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: hsl(var(--primary));
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.5s var(--bk-ease);
+}
+
+.booking-app .bk-step[data-state="done"] .bk-step__bar::after,
+.booking-app .bk-step[data-state="current"] .bk-step__bar::after {
+  transform: scaleX(1);
+}
+
+.booking-app .bk-step__label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+  font-weight: 500;
+  color: hsl(var(--muted-foreground) / 0.8);
+  transition: color 0.3s ease;
+}
+
+.booking-app .bk-step[data-state="done"] .bk-step__label {
+  color: hsl(var(--muted-foreground));
+}
+
+.booking-app .bk-step[data-state="current"] .bk-step__label {
+  color: hsl(var(--foreground));
+  font-weight: 600;
+}
+
+.booking-app .bk-meter {
+  height: 4px;
+  border-radius: 9999px;
+  background: var(--bk-line);
+  overflow: hidden;
+}
+
+/* ===== Calendar and time slots ===== */
+.booking-app .bk-day {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 9999px;
+  font-size: 0.9375rem;
+  font-variant-numeric: tabular-nums;
+  color: hsl(var(--muted-foreground) / 0.45);
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.booking-app .bk-day:disabled {
+  cursor: not-allowed;
+}
+
+.booking-app .bk-day[data-available="true"] {
+  background: var(--bk-well);
+  color: hsl(var(--foreground));
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.booking-app .bk-day[data-today="true"]::after {
+  content: "";
+  position: absolute;
+  bottom: 14%;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  border-radius: 9999px;
+  background: currentColor;
+  opacity: 0.7;
+}
+
+.booking-app .bk-day[aria-pressed="true"] {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  box-shadow: 0 10px 20px -12px hsl(var(--primary) / 0.8);
+}
+
+@media (hover: hover) {
+  .booking-app .bk-day[data-available="true"]:not([aria-pressed="true"]):hover {
+    background: hsl(var(--foreground) / 0.12);
+  }
+}
+
+.booking-app .bk-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  min-height: 3rem;
+  border-radius: 0.875rem;
+  border: 1px solid var(--bk-line-strong);
+  background: var(--bk-surface);
+  color: hsl(var(--foreground));
+  font-size: 0.9375rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.booking-app .bk-slot[aria-pressed="true"] {
+  background: hsl(var(--primary));
+  border-color: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  font-weight: 600;
+  box-shadow: 0 10px 20px -12px hsl(var(--primary) / 0.8);
+}
+
+.booking-app .bk-slot:disabled {
+  cursor: wait;
+}
+
+.booking-app .bk-slot:disabled:not([data-pending="true"]):not([aria-pressed="true"]) {
+  opacity: 0.5;
+}
+
+@media (hover: hover) {
+  .booking-app .bk-slot:hover:not(:disabled):not([aria-pressed="true"]) {
+    border-color: hsl(var(--foreground) / 0.4);
+  }
+}
+
+/* ===== Bottom action bar ===== */
+.booking-app.bk-bar,
+.booking-app .bk-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  padding-bottom: env(safe-area-inset-bottom);
+  background: hsl(var(--background));
+  box-shadow:
+    0 -1px 0 var(--bk-line),
+    0 -14px 28px -24px hsl(var(--foreground) / 0.22);
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dark .booking-app.bk-bar,
+.dark .booking-app .bk-bar {
+  box-shadow:
+    0 -1px 0 var(--bk-line),
+    0 -18px 32px -22px hsl(0 0% 0% / 0.9);
+}
+
+@media (min-width: 768px) {
+  .booking-app.bk-bar,
+  .booking-app .bk-bar {
+    max-width: calc(30rem - 2px);
+    margin-inline: auto;
+  }
+}
+
+/* ===== Sheets and dialogs (portalled) ===== */
+.booking-app.bk-backdrop {
+  position: fixed;
+  inset: 0;
+  background: hsl(0 0% 0% / 0.5);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+
+.booking-app.bk-sheet {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: hsl(var(--background));
+  border: 1px solid var(--bk-line);
+  box-shadow: var(--bk-shadow-lg);
+}
+
+.booking-app.bk-sheet--bottom {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  max-width: 30rem;
+  max-height: min(88dvh, 44rem);
+  margin-inline: auto;
+  border-bottom: 0;
+  border-radius: 1.75rem 1.75rem 0 0;
+}
+
+.booking-app.bk-sheet--center {
+  inset: 0;
+  width: calc(100% - 2rem);
+  max-width: 28rem;
+  height: fit-content;
+  max-height: min(calc(100dvh - 2rem), 44rem);
+  margin: auto;
+  border-radius: 1.75rem;
+}
+
+.booking-app .bk-grabber {
+  flex: none;
+  width: 2.25rem;
+  height: 0.25rem;
+  margin: 0.625rem auto 0;
+  border-radius: 9999px;
+  background: hsl(var(--foreground) / 0.18);
+}
+
+/* ===== Payment gateway marks =====
+   Gateway logos are full-colour artwork: they sit on their own white chip so
+   they keep their real colours on any theme, light or dark. */
+.booking-app .bk-paymark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  height: 1.625rem;
+  padding: 0 0.4375rem;
+  border-radius: 0.5rem;
+  background: #fff;
+  box-shadow: 0 0 0 1px hsl(0 0% 0% / 0.08);
+}
+
+.booking-app .bk-paymark img {
+  display: block;
+  width: auto;
+  height: 0.9375rem;
+  object-fit: contain;
+}
+
+.booking-app .bk-paymark--tall img {
+  height: 1.375rem;
+}
+
+/* ===== Splash =====
+   A two-tone cover: the business name set large on the tenant background, and
+   the "where did you hear about us" question on a solid block of the tenant's
+   primary colour, so the one thing the guest has to do is the boldest thing
+   on the screen. */
+.booking-app.bk-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  overflow: hidden;
+}
+
+.booking-app .bk-splash__column {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background: hsl(var(--background));
+}
+
+@media (min-width: 768px) {
+  .booking-app .bk-splash__column {
+    max-width: 30rem;
+    margin-inline: auto;
+    border-inline: 1px solid var(--bk-line);
+    box-shadow: var(--bk-shadow-lg);
+  }
+}
+
+/* Slow-moving fields of tenant colour behind the name. */
+.booking-app .bk-splash__glow {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.booking-app .bk-splash__glow::before,
+.booking-app .bk-splash__glow::after {
+  content: "";
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(64px);
+}
+
+.booking-app .bk-splash__glow::before {
+  top: -9rem;
+  left: -10rem;
+  width: 28rem;
+  height: 28rem;
+  background: hsl(var(--accent) / 0.5);
+  animation: bk-drift-a 18s ease-in-out infinite alternate;
+}
+
+.booking-app .bk-splash__glow::after {
+  top: 26%;
+  right: -11rem;
+  width: 22rem;
+  height: 22rem;
+  background: hsl(var(--primary) / 0.2);
+  animation: bk-drift-b 24s ease-in-out infinite alternate;
+}
+
+.dark .booking-app .bk-splash__glow::before {
+  background: hsl(var(--accent) / 0.34);
+}
+
+@keyframes bk-drift-a {
+  to {
+    transform: translate3d(3.5rem, 2.5rem, 0) scale(1.12);
+  }
+}
+
+@keyframes bk-drift-b {
+  to {
+    transform: translate3d(-3rem, -2rem, 0) scale(0.92);
+  }
+}
+
+/* Oversized ring, cropped by the edge of the screen. */
+.booking-app .bk-splash__ring {
+  position: absolute;
+  top: -7rem;
+  right: -9rem;
+  width: 24rem;
+  height: 24rem;
+  border-radius: 9999px;
+  border: 1.5px solid hsl(var(--foreground) / 0.1);
+  pointer-events: none;
+}
+
+.booking-app .bk-splash__ring::after {
+  content: "";
+  position: absolute;
+  inset: 3.25rem;
+  border-radius: inherit;
+  border: 1.5px solid hsl(var(--foreground) / 0.06);
+}
+
+.booking-app .bk-splash__brand {
+  position: relative;
+  display: flex;
+  flex: 1 1 0%;
+  min-height: 0;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1.25rem;
+  padding: max(env(safe-area-inset-top, 0px), 1.75rem) 1.5rem 1.75rem;
+}
+
+.booking-app .bk-splash__brand .bk-overline {
+  letter-spacing: 0.22em;
+}
+
+.booking-app .bk-splash__logo {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 4rem;
+  height: 4rem;
+  overflow: hidden;
+  border-radius: 1.25rem;
+  background: var(--bk-surface);
+  border: 1px solid var(--bk-line);
+  box-shadow: var(--bk-shadow);
+}
+
+.booking-app .bk-splash__name {
+  font-size: clamp(2.5rem, min(14.5vw, 9.5vh), 4.5rem);
+  line-height: 0.98;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+  color: hsl(var(--foreground));
+}
+
+.booking-app .bk-splash__panel {
+  position: relative;
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  padding: 1.5rem 1.5rem max(env(safe-area-inset-bottom, 0px), 1.125rem);
+  border-radius: 2rem 2rem 0 0;
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  box-shadow: 0 -28px 60px -34px hsl(var(--primary) / 0.75);
+}
+
+.booking-app .bk-splash__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  max-height: min(11.5rem, 30vh);
+  overflow-y: auto;
+  /* Room for the focus ring, which the scroll container would otherwise clip. */
+  margin: -0.25rem;
+  padding: 0.25rem;
+}
+
+.booking-app .bk-splash__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-height: 2.75rem;
+  padding: 0 1.125rem;
+  border-radius: 9999px;
+  border: 1.5px solid hsl(var(--primary-foreground) / 0.3);
+  background: hsl(var(--primary-foreground) / 0.07);
+  color: hsl(var(--primary-foreground));
+  font-size: 0.9375rem;
+  font-weight: 500;
+  white-space: nowrap;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.booking-app .bk-splash__chip[aria-pressed="true"] {
+  background: hsl(var(--primary-foreground));
+  border-color: hsl(var(--primary-foreground));
+  color: hsl(var(--primary));
+  font-weight: 600;
+}
+
+.booking-app .bk-splash__panel.is-error .bk-splash__chip:not([aria-pressed="true"]) {
+  border-color: hsl(var(--primary-foreground) / 0.8);
+}
+
+.booking-app .bk-splash__cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 3.5rem;
+  padding: 0 1.5rem;
+  border-radius: 9999px;
+  background: hsl(var(--primary-foreground));
+  color: hsl(var(--primary));
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  cursor: pointer;
+  transition:
+    background-color 0.25s ease,
+    color 0.25s ease,
+    box-shadow 0.25s ease,
+    transform 0.16s var(--bk-ease);
+}
+
+.booking-app .bk-splash__cta:active {
+  transform: scale(0.98);
+}
+
+/* Until a source is chosen the button is an outline: it still responds to a
+   tap (to explain what is missing) but no longer looks ready. */
+.booking-app .bk-splash__cta[aria-disabled="true"] {
+  background: transparent;
+  color: hsl(var(--primary-foreground) / 0.6);
+  box-shadow: inset 0 0 0 1.5px hsl(var(--primary-foreground) / 0.3);
+}
+
+/* The panel is the tenant's primary colour, so its focus rings use the colour
+   that is guaranteed to contrast with it. */
+.booking-app .bk-splash__panel button:focus-visible,
+.booking-app .bk-splash__panel a:focus-visible {
+  outline: 2px solid hsl(var(--primary-foreground));
+  outline-offset: 2px;
+}
+
+@media (max-height: 600px) {
+  .booking-app .bk-splash__logo {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 1rem;
+  }
+
+  .booking-app .bk-splash__brand {
+    gap: 0.75rem;
+    padding-bottom: 1.125rem;
+  }
+
+  .booking-app .bk-splash__panel {
+    padding-top: 1.125rem;
+  }
+}
+
+/* ===== Utilities ===== */
+.booking-app .bk-fade-bottom {
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 1.75rem), transparent);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 1.75rem), transparent);
+}
+
+.booking-app .bk-fade-right {
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 2rem), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 2rem), transparent);
+}
+
+.booking-app .bk-skeleton {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0.625rem;
+  background: var(--bk-well);
+}
+
+.booking-app .bk-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, hsl(var(--foreground) / 0.07), transparent);
+  animation: bk-shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes bk-shimmer {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+.booking-app .bk-spin {
+  animation: bk-spin 0.8s linear infinite;
+}
+
+@keyframes bk-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.booking-app .scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.booking-app .scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* ===== Focus ===== */
+.booking-app button,
+.booking-app [role="button"] {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.booking-app button:focus-visible,
+.booking-app [role="button"]:focus-visible,
+.booking-app a:focus-visible,
+.booking-app select:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+/* Fields draw their own focus ring on the shared border. */
+.booking-app .bk-input:focus-visible,
+.booking-app .bk-input--group input:focus-visible,
+.booking-app .bk-input--group select:focus-visible {
+  outline: none;
+}
+
+/* ===== Motion preference ===== */
+@media (prefers-reduced-motion: reduce) {
+  .booking-app *,
+  .booking-app *::before,
+  .booking-app *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

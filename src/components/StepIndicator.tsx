@@ -1,43 +1,56 @@
+import { Check } from "lucide-react";
+
 interface StepIndicatorProps {
   currentStep: number;
+  /** Called with the index of a completed step when the guest taps it. */
+  onStepSelect?: (step: number) => void;
+  /** Blocks navigation, e.g. while a payment is being submitted. */
+  locked?: boolean;
 }
 
-const steps = [
-  { label: "Services", number: 1 },
-  { label: "Schedule", number: 2 },
-  { label: "Details", number: 3 },
-  { label: "Review", number: 4 },
-];
+const steps = ["Services", "Schedule", "Details", "Review"];
 
-const StepIndicator = ({ currentStep }: StepIndicatorProps) => {
+/**
+ * Four-segment progress bar. Completed steps are buttons, so a guest can jump
+ * straight back to fix something instead of stepping back one screen at a time.
+ */
+const StepIndicator = ({ currentStep, onStepSelect, locked = false }: StepIndicatorProps) => {
   return (
-    <div className="flex items-center justify-between w-full px-4">
-      {steps.map((s, i) => {
-        const status =
-          i < currentStep ? "completed" : i === currentStep ? "active" : "upcoming";
-        return (
-          <div key={s.number} className="flex flex-col items-center gap-1.5 flex-1">
-            {/* Progress line */}
-            <div className="w-full flex items-center">
-              <div
-                className={`h-0.5 flex-1 transition-colors duration-300 ${
-                  i === 0 ? "bg-transparent" : i <= currentStep ? "bg-primary" : "bg-muted"
-                }`}
-              />
-              <div className={`step-indicator ${status}`}>{s.number}</div>
-              <div
-                className={`h-0.5 flex-1 transition-colors duration-300 ${
-                  i === steps.length - 1 ? "bg-transparent" : i < currentStep ? "bg-primary" : "bg-muted"
-                }`}
-              />
-            </div>
-            <span className="text-[10px] font-semibold tracking-widest uppercase text-muted-foreground">
-              {s.label}
-            </span>
-          </div>
-        );
-      })}
-    </div>
+    <nav aria-label="Booking progress">
+      <ol className="grid grid-cols-4 gap-2">
+        {steps.map((label, index) => {
+          const state =
+            index < currentStep ? "done" : index === currentStep ? "current" : "upcoming";
+          const canSelect = state === "done" && !!onStepSelect && !locked;
+
+          return (
+            <li key={label}>
+              <button
+                type="button"
+                className="bk-step"
+                data-state={state}
+                disabled={!canSelect}
+                aria-current={state === "current" ? "step" : undefined}
+                aria-label={
+                  state === "done"
+                    ? `${label}, completed${canSelect ? ". Go back to this step" : ""}`
+                    : state === "current"
+                      ? `${label}, current step`
+                      : `${label}, not started`
+                }
+                onClick={() => canSelect && onStepSelect?.(index)}
+              >
+                <span className="bk-step__bar" aria-hidden="true" />
+                <span className="bk-step__label">
+                  {state === "done" && <Check className="h-3 w-3" strokeWidth={3} aria-hidden="true" />}
+                  {label}
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
   );
 };
 

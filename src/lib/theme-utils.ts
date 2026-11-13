@@ -38,6 +38,61 @@ function invertLightness(l: number, isDarkTarget: boolean): number {
   }
 }
 
+/** WCAG relative luminance of an "H S% L%" colour */
+function luminance(hsl: string): number {
+  const { h, s, l } = parseHSL(hsl);
+  const sat = s / 100;
+  const light = l / 100;
+  const a = sat * Math.min(light, 1 - light);
+  const channel = (n: number) => {
+    const k = (n + h / 30) % 12;
+    const c = light - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  };
+  return 0.2126 * channel(0) + 0.7152 * channel(8) + 0.0722 * channel(4);
+}
+
+/** WCAG contrast ratio between two "H S% L%" colours */
+export function contrastRatio(a: string, b: string): number {
+  const la = luminance(a);
+  const lb = luminance(b);
+  return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
+}
+
+/**
+ * Secondary text sits in the mid-range that invertLightness leaves alone, so a
+ * straight flip puts ~35% grey on a ~8% background. Pin it to a lightness that
+ * stays readable on the flipped background instead.
+ */
+function flipMutedForeground(hsl: string, isDarkTarget: boolean): string {
+  const { h, s } = parseHSL(hsl);
+  return toHSL(h, s, isDarkTarget ? 66 : 36);
+}
+
+/**
+ * A coloured primary (e.g. deep berry at 32% lightness) is also mid-range. On a
+ * dark background it has to lighten until it stands out, the way it does on
+ * the light background it was designed for.
+ */
+function flipPrimary(hsl: string, background: string, isDarkTarget: boolean): string {
+  const { h, s, l } = parseHSL(hsl);
+  let next = invertLightness(l, isDarkTarget);
+  if (isDarkTarget) {
+    while (next < 80 && contrastRatio(toHSL(h, s, next), background) < 4.5) next += 2;
+  }
+  return toHSL(h, s, next);
+}
+
+/** Picks whichever candidate reads best on `surface`, falling back to near-black/white. */
+function readableOn(surface: string, candidates: string[]): string {
+  const { h, s } = parseHSL(candidates[0]);
+  const ranked = [...candidates, toHSL(h, s, 97), toHSL(h, Math.min(s, 25), 8)]
+    .map((colour) => ({ colour, ratio: contrastRatio(colour, surface) }));
+  const firstReadable = ranked.slice(0, candidates.length).find((c) => c.ratio >= 4.5);
+  if (firstReadable) return firstReadable.colour;
+  return ranked.sort((x, y) => y.ratio - x.ratio)[0].colour;
+}
+
 /** Invert a single HSL string */
 function invertHSLString(hsl: string, isDarkTarget: boolean): string {
   const { h, s, l } = parseHSL(hsl);
@@ -76,19 +131,27 @@ export function getThemeVariant(
 
   const invertColor = (hsl: string) => invertHSLString(hsl, isDarkTarget);
 
+  const background = invertColor(theme.colors.background);
+  const primary = flipPrimary(theme.colors.primary, background, isDarkTarget);
+
   const newColors: BusinessThemeColors = {
-    background:          invertColor(theme.colors.background),
+    background,
     foreground:          invertColor(theme.colors.foreground),
     card:                invertColor(theme.colors.card),
     cardForeground:      invertColor(theme.colors.cardForeground),
-    primary:             invertColor(theme.colors.primary),
-    primaryForeground:   invertColor(theme.colors.primaryForeground),
+    primary,
+    // The label follows whatever the primary ended up as, not a blind flip:
+    // a primary that keeps its lightness must keep its original label colour.
+    primaryForeground:   readableOn(primary, [
+      theme.colors.primaryForeground,
+      invertColor(theme.colors.primaryForeground),
+    ]),
     secondary:           invertColor(theme.colors.secondary),
     secondaryForeground: invertColor(theme.colors.secondaryForeground),
     muted:               invertColor(theme.colors.muted),
-    mutedForeground:     invertColor(theme.colors.mutedForeground),
+    mutedForeground:     flipMutedForeground(theme.colors.mutedForeground, isDarkTarget),
     accent:              theme.colors.accent,             // accents stay identical
-    accentForeground:    invertColor(theme.colors.accentForeground),
+    accentForeground:    theme.colors.accentForeground,   // ...and so does the text on them
     border:              invertColor(theme.colors.border),
     input:               invertColor(theme.colors.input),
     ring:                theme.colors.ring,               // ring/accent stays identical

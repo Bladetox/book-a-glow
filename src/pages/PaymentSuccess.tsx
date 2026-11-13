@@ -1,7 +1,8 @@
+import "@/styles/booking.css";
 import React, { useEffect, useRef, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { CheckCircle2, XCircle, Loader2, Star, MapPin, X } from "lucide-react";
+import { Check, Loader2, Star, MapPin, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
 import { useBusinessTheme } from "@/contexts/BusinessThemeProvider";
@@ -181,16 +182,74 @@ const PaymentSuccess = () => {
   };
   const hasBrand = Object.keys(brandNameStyle).length > 0;
 
+  const shell = "booking-app bk-stage relative flex min-h-dvh items-center justify-center px-6 py-10";
+
+  /** Date / time / location rows shared by both success screens. */
+  const appointmentRows = (
+    <>
+      {displayDate && (
+        <div className="flex justify-between gap-4 py-3 text-sm">
+          <dt className="text-muted-foreground">Date</dt>
+          <dd className="text-right font-medium text-foreground">{displayDate}</dd>
+        </div>
+      )}
+      {displayTime && (
+        <div className="flex justify-between gap-4 py-3 text-sm">
+          <dt className="text-muted-foreground">Time</dt>
+          <dd className="bk-num text-right font-medium text-foreground">{displayTime}</dd>
+        </div>
+      )}
+      {showSalonAddress && (
+        <div className="flex justify-between gap-4 py-3 text-sm">
+          <dt className="shrink-0 text-muted-foreground">Location</dt>
+          <dd className="text-right font-medium text-foreground">
+            {mapsHref ? (
+              <a
+                href={mapsHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-start gap-1 underline decoration-[hsl(var(--foreground)/0.3)] underline-offset-4"
+              >
+                <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                {config.salonAddress}
+              </a>
+            ) : (
+              <span className="inline-flex items-start gap-1">
+                <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+                {config.salonAddress}
+              </span>
+            )}
+          </dd>
+        </div>
+      )}
+    </>
+  );
+
+  const successBadge = (
+    <motion.div
+      initial={{ scale: 0 }}
+      animate={{ scale: 1 }}
+      transition={{ type: "spring", stiffness: 280, damping: 18, delay: 0.1 }}
+      className="grid h-16 w-16 place-items-center rounded-full bg-primary text-primary-foreground"
+    >
+      <Check className="h-8 w-8" strokeWidth={2.5} aria-hidden="true" />
+    </motion.div>
+  );
+
   // ── CANCELLED ─────────────────────────────────────────────────────────────
   if (isCancelled) {
     return (
-      <div className="booking-app min-h-screen flex items-center justify-center p-6 bg-background">
+      <div className={shell}>
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col items-center gap-4 text-center max-w-sm">
-          <XCircle className="w-14 h-14 text-destructive" />
-          <h2 className="font-display text-2xl font-bold text-foreground">Payment Cancelled</h2>
-          <p className="text-sm text-muted-foreground">Your booking has not been confirmed. No payment was taken.</p>
-          <a href={`/?tenant=${tenant}`} className="btn-next mt-2 inline-flex items-center gap-2">Try Again</a>
+          className="flex w-full max-w-sm flex-col items-center gap-5 text-center">
+          <div className="grid h-16 w-16 place-items-center rounded-full border-2 border-destructive text-destructive">
+            <X className="h-8 w-8" strokeWidth={2.5} aria-hidden="true" />
+          </div>
+          <div className="flex flex-col gap-2">
+            <h2 className="bk-display text-2xl leading-tight text-foreground">Payment cancelled</h2>
+            <p className="text-sm leading-relaxed text-muted-foreground">Your booking has not been confirmed. No payment was taken.</p>
+          </div>
+          <a href={`/?tenant=${tenant}`} className="bk-btn bk-btn--primary bk-btn--block mt-1">Try again</a>
         </motion.div>
       </div>
     );
@@ -204,44 +263,39 @@ const PaymentSuccess = () => {
       : (displayDeposit ?? displayTotal);
 
     return (
-      <div className="booking-app relative min-h-screen flex items-center justify-center p-6 bg-background">
+      <div className={shell}>
 
         {/* ── Close / dismiss button ── */}
         <button
+          type="button"
           onClick={() => navigate(`/?tenant=${tenant}`)}
           aria-label="Close"
-          className="absolute top-4 right-4 p-2 rounded-full text-muted-foreground hover:text-foreground hover:bg-surface-offset transition"
+          className="bk-icon-btn absolute right-3 top-[max(env(safe-area-inset-top,0px),12px)]"
         >
-          <X className="w-5 h-5" />
+          <X className="h-5 w-5" />
         </button>
 
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, ease: "easeOut" }}
-          className="flex flex-col items-center gap-6 text-center max-w-sm w-full"
+          className="flex w-full max-w-sm flex-col items-center gap-6 text-center"
         >
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: "spring", stiffness: 280, damping: 18, delay: 0.1 }}
-          >
-            <CheckCircle2 className="w-16 h-16 text-primary" />
-          </motion.div>
+          {successBadge}
 
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.25 }}
-            className="flex flex-col gap-1"
+            className="flex flex-col gap-1.5"
           >
             <h2
-              className="font-display text-2xl font-bold"
-              style={hasBrand ? brandNameStyle : { color: undefined }}
+              className="bk-display text-[1.75rem] leading-tight text-foreground"
+              style={hasBrand ? brandNameStyle : undefined}
             >
               Thank you. 💛
             </h2>
-            <p className="text-sm text-muted-foreground italic">
+            <p className="text-sm text-muted-foreground">
               {type === "full"
                 ? "Full payment received — nothing due on the day."
                 : "Full payment received. You're all settled."}
@@ -252,54 +306,22 @@ const PaymentSuccess = () => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.38 }}
-            className="glass-card-service rounded-2xl p-5 w-full text-left flex flex-col gap-4"
+            className="bk-card bk-card--raised flex w-full flex-col gap-4 p-5 text-left"
           >
             {type === "full" && (displayDate || displayTime || paidAmount != null) && (
-              <div className="flex flex-col gap-2 pb-3 border-b border-border/30">
-                {displayDate && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Date</span>
-                    <span className="text-foreground font-medium">{displayDate}</span>
-                  </div>
-                )}
-                {displayTime && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Time</span>
-                    <span className="text-foreground font-medium">{displayTime}</span>
-                  </div>
-                )}
-                {showSalonAddress && (
-                  <div className="flex justify-between text-sm gap-2">
-                    <span className="text-muted-foreground shrink-0">Location</span>
-                    {mapsHref ? (
-                      <a
-                        href={mapsHref}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1 text-primary font-medium text-right hover:underline"
-                      >
-                        <MapPin className="w-3.5 h-3.5 shrink-0" />
-                        {config.salonAddress}
-                      </a>
-                    ) : (
-                      <span className="flex items-center gap-1 text-foreground font-medium text-right">
-                        <MapPin className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
-                        {config.salonAddress}
-                      </span>
-                    )}
-                  </div>
-                )}
+              <dl className="bk-divide bk-rule -mt-2 border-b pb-1">
+                {appointmentRows}
                 {paidAmount != null && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Total paid</span>
-                    <span className="text-primary font-semibold">{config.currency}{paidAmount}</span>
+                  <div className="flex justify-between gap-4 py-3 text-sm">
+                    <dt className="text-muted-foreground">Total paid</dt>
+                    <dd className="bk-num font-semibold text-foreground">{config.currency}{paidAmount}</dd>
                   </div>
                 )}
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Balance due</span>
-                  <span className="text-emerald-400 font-semibold">{config.currency}0.00</span>
+                <div className="flex justify-between gap-4 py-3 text-sm">
+                  <dt className="text-muted-foreground">Balance due</dt>
+                  <dd className="bk-ok bk-num font-semibold">{config.currency}0.00</dd>
                 </div>
-              </div>
+              </dl>
             )}
 
             {/* ── Body copy — branched by tenant ── */}
@@ -324,11 +346,9 @@ const PaymentSuccess = () => {
                 href={reviewLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="mt-4 flex items-center justify-center gap-2 w-full px-4 py-3 rounded-2xl
-                           bg-white/[0.06] border border-white/[0.08] text-sm font-semibold text-white/70
-                           hover:bg-white/[0.1] transition-colors"
+                className="bk-btn bk-btn--quiet bk-btn--block"
               >
-                <Star className="w-4 h-4 text-yellow-400" />
+                <Star className="h-4 w-4 fill-amber-400 text-amber-400" aria-hidden="true" />
                 Share your experience on Google
               </a>
             )}
@@ -353,8 +373,8 @@ const PaymentSuccess = () => {
             transition={{ delay: 0.55 }}
             className="w-full"
           >
-            <p className="text-xs text-muted-foreground/60 mb-3">Ready to treat yourself again?</p>
-            <a href={bookingAppUrl} className="btn-next w-full inline-flex items-center justify-center gap-2 text-sm">Book Again</a>
+            <p className="mb-3 text-[13px] text-muted-foreground">Ready to treat yourself again?</p>
+            <a href={bookingAppUrl} className="bk-btn bk-btn--primary bk-btn--block">Book again</a>
           </motion.div>
         </motion.div>
       </div>
@@ -363,31 +383,29 @@ const PaymentSuccess = () => {
 
   // ── DEPOSIT SUCCESS — with countdown ──────────────────────────────────────
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-background">
+    <div className={shell}>
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col items-center gap-5 text-center max-w-sm w-full"
+        className="flex w-full max-w-sm flex-col items-center gap-5 text-center"
       >
         {loading ? (
-          <>
-            <Loader2 className="w-12 h-12 text-primary animate-spin" />
+          <div className="flex flex-col items-center gap-4" role="status">
+            <Loader2 className="h-10 w-10 animate-spin text-foreground" aria-hidden="true" />
             <p className="text-sm text-muted-foreground">Confirming your payment...</p>
-          </>
+          </div>
         ) : (
           <>
-            <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 300, damping: 20 }}>
-              <CheckCircle2 className="w-16 h-16 text-primary" />
-            </motion.div>
+            {successBadge}
 
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-1.5">
               <h2
-                className="font-display text-2xl font-bold"
-                style={hasBrand ? brandNameStyle : { color: undefined }}
+                className="bk-display text-[1.75rem] leading-tight text-foreground"
+                style={hasBrand ? brandNameStyle : undefined}
               >
                 {config.confirmationTitle || "Deposit Paid"}
               </h2>
-              <p className="text-sm text-muted-foreground italic">You're all confirmed.</p>
+              <p className="text-sm text-muted-foreground">You're all confirmed.</p>
             </div>
 
             {config.confirmationIntro && (
@@ -395,48 +413,16 @@ const PaymentSuccess = () => {
             )}
 
             {(displayDate || displayTime || displayDeposit != null || showSalonAddress) && (
-              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-                className="glass-card-service rounded-2xl p-4 w-full flex flex-col gap-2 text-left">
-                {displayDate && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Date</span>
-                    <span className="text-foreground font-medium">{displayDate}</span>
-                  </div>
-                )}
-                {displayTime && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Time</span>
-                    <span className="text-foreground font-medium">{displayTime}</span>
-                  </div>
-                )}
-                {showSalonAddress && (
-                  <div className="flex justify-between text-sm gap-2">
-                    <span className="text-muted-foreground shrink-0">Location</span>
-                    {mapsHref ? (
-                      <a
-                        href={mapsHref}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1 text-primary font-medium text-right hover:underline"
-                      >
-                        <MapPin className="w-3.5 h-3.5 shrink-0" />
-                        {config.salonAddress}
-                      </a>
-                    ) : (
-                      <span className="flex items-center gap-1 text-foreground font-medium text-right">
-                        <MapPin className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
-                        {config.salonAddress}
-                      </span>
-                    )}
-                  </div>
-                )}
+              <motion.dl initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+                className="bk-card bk-card--raised bk-divide w-full px-4 py-1 text-left">
+                {appointmentRows}
                 {displayDeposit != null && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Deposit paid</span>
-                    <span className="text-primary font-semibold">{config.currency}{displayDeposit}</span>
+                  <div className="flex justify-between gap-4 py-3 text-sm">
+                    <dt className="text-muted-foreground">Deposit paid</dt>
+                    <dd className="bk-num font-semibold text-foreground">{config.currency}{displayDeposit}</dd>
                   </div>
                 )}
-              </motion.div>
+              </motion.dl>
             )}
 
             {config.confirmationOutro && (
@@ -446,9 +432,9 @@ const PaymentSuccess = () => {
               <p className="text-sm font-semibold text-foreground">{config.signOff}</p>
             )}
 
-            <p className="text-xs text-muted-foreground mt-2">A confirmation email is on its way to you.</p>
-            <p className="text-xs text-muted-foreground/60">
-              Redirecting you back in <span className="font-semibold text-muted-foreground">{countdown}</span>s…
+            <p className="mt-2 text-[13px] text-muted-foreground">A confirmation email is on its way to you.</p>
+            <p className="bk-num text-[13px] text-muted-foreground">
+              Redirecting you back in <span className="font-semibold text-foreground">{countdown}</span>s…
             </p>
           </>
         )}

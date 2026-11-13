@@ -181,19 +181,25 @@ export const BusinessThemeProvider: React.FC<{ children: React.ReactNode }> = ({
     // Default: Inter for all tenants and marketing site
     let fontDisplay = "Inter, system-ui, sans-serif";
     let fontBody    = "Inter, system-ui, sans-serif";
+    // Heaviest weight the display face is actually loaded in (see index.html).
+    // Booking headings read this so they never fall back to a synthesised bold.
+    let fontDisplayWeight = "600";
 
     if (tenantSlug === "phenomebeauty" || tenantSlug === "sister-studios") {
       // Phenomebeauty & Sister Studios — preserve existing brand typography
       fontDisplay = '"Abril Fatface", system-ui, serif';
       fontBody    = "Montserrat, system-ui, sans-serif";
+      fontDisplayWeight = "400";
     } else if (tenantSlug === "zo-beauty-bar") {
       // Zo Beauty Bar — elegant serif headings + clean sans body (matches menu branding)
       fontDisplay = '"Cormorant Garamond", system-ui, serif';
       fontBody    = "Montserrat, system-ui, sans-serif";
+      fontDisplayWeight = "500";
     }
 
     root.style.setProperty("--font-display", fontDisplay);
     root.style.setProperty("--font-body", fontBody);
+    root.style.setProperty("--font-display-weight", fontDisplayWeight);
   }, [tenantSlug, adminPath]);
 
   // Persist base theme id — skipped on admin routes
