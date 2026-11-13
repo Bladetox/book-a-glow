@@ -4,13 +4,13 @@
 **Branch:** `feature/video-consultations`  
 **Base:** `main`  
 **Repository:** `Bladetox/book-a-glow`  
-**Scope:** Video consultation bookings delivered through WhatsApp. This document is a build specification, not a record of completed implementation.
+**Scope:** Video-call services booked through NextSlot, with calls initiated by the tenant through WhatsApp/device calling. This document is a build specification, not a record of completed implementation.
 
 ---
 
 ## 1. Product definition
 
-Video call service is a service delivery option within the existing NextSlot booking platform.
+A video-call service is a service delivery option within the existing NextSlot booking platform.
 
 A tenant creates an additional service in the existing admin app under Catalogues and enables the **Video call** toggle. This marks the service as a video-call service. The tenant can configure dedicated dates and times for video calls independently of their physical-service availability. The service uses the existing payment choices: full payment or the tenant's currently supported deposit percentage/options.
 
@@ -108,7 +108,7 @@ The exact storage representation (for example, an availability type on existing 
 
 ### 4.3 Public booking flow
 
-Video consultation services must be bookable through the existing public booking journey.
+Video-call services must be bookable through the existing public booking journey.
 
 Requirements:
 
@@ -121,20 +121,20 @@ Requirements:
 - A video-call service must be booked as a standalone service, not combined in one booking/cart with physical services. Enforce this in the UI and canonical booking RPC so mixed-mode bookings cannot bypass the correct availability or payment rules.
 - Preserve existing physical-service multi-service booking behaviour.
 
-### 4.4 Full upfront payment
+### 4.4 Existing payment choices
 
-Video consultation bookings require 100% payment upfront.
+Video-call services use the same payment choices already supported by NextSlot. The tenant/client can select full payment or the existing configured deposit/percentage option.
 
 Requirements:
 
-- Enforce the rule on the server in the canonical booking/pricing path. UI-only enforcement is insufficient.
-- Calculate the required payment as the full authoritative booking total.
-- Ensure the resulting booking has no outstanding balance when payment is confirmed.
-- Do not change the tenant's general `deposit_percent` setting.
-- Do not change physical-service deposit calculations.
+- Do not force 100% payment because the service is a video call.
+- Preserve the existing full-payment/deposit selection and percentage behaviour.
+- Ensure the selected option is carried consistently from booking review through the canonical booking calculation, checkout and provider confirmation/webhook.
+- The canonical booking function must calculate the authoritative total and deposit server-side; do not trust browser-supplied totals or deposit amounts.
+- Do not change the tenant's general `deposit_percent` setting or physical-service deposit calculations.
 - Preserve existing payment-provider selection, checkout creation, webhook confirmation, pending-payment expiry and hold-release behaviour.
-- A failed, abandoned or expired payment must not become a confirmed paid consultation.
-- Confirm how consistency pricing or discounts interact with the video service; the authoritative full-payment amount must be the final server-calculated amount.
+- A failed, abandoned or expired payment must not be treated as paid.
+- Keep existing consistency pricing and discount behaviour unless a separate product decision is approved.
 - Do not create a special payment provider or a separate checkout path.
 
 ### 4.5 Booking emails and calendar invitation
@@ -170,10 +170,10 @@ The WhatsApp hyperlink gives the tenant a direct route to the client's contact. 
 
 ### 4.7 Booking lifecycle, dashboard and reporting
 
-- Video consultations remain ordinary bookings and use existing booking statuses.
+- Video-call bookings remain ordinary bookings and use existing booking statuses.
 - Existing confirmation, cancellation, completion, no-show, rescheduling and payment lifecycle rules remain authoritative.
 - Do not add a meeting lifecycle or meeting status.
-- Video consultations must continue appearing in tenant booking lists, calendar views, dashboard totals, revenue and service reporting.
+- Video-call bookings must continue appearing in tenant booking lists, calendar views, dashboard totals, revenue and service reporting.
 - Where a service-level breakdown is shown, identify video-call services using the service flag or existing booking-item/service relationship.
 - Do not double-count bookings or revenue.
 - Do not change Nexty recommendations or metrics unless a verified reporting defect requires it.
@@ -245,7 +245,7 @@ The WhatsApp hyperlink gives the tenant a direct route to the client's contact. 
 - [ ] Existing services default to `is_video_consultation = false`.
 - [ ] Tenant can create and edit a video-call service.
 - [ ] Video consultation can be enabled without changing tenant-wide deposit settings.
-- [ ] Tenant can configure video-call dates and times independently of physical-service hours.
+- [ ] Tenant can configure additional video-call dates and times independently of physical-service hours, including on the same day.
 - [ ] Enabling Video call automatically disables Is call-out for that service.
 - [ ] No call-out fee, distance calculation or call-out waiver is applied to a video-call service.
 - [ ] Weekly schedules and date overrides work for both modes.
@@ -255,9 +255,10 @@ The WhatsApp hyperlink gives the tenant a direct route to the client's contact. 
 ### Booking and payment
 - [ ] Client can book a video-call service as a guest.
 - [ ] Public slot list contains only video-call-eligible slots.
-- [ ] Server rejects a consultation booking outside video-call availability.
+- [ ] Server rejects a video-call booking outside its dedicated video-call availability.
 - [ ] Server rejects a mixed physical/video-call service booking.
-- [ ] Video booking requires the full server-calculated total upfront.
+- [ ] Video-call booking supports the existing full-payment and deposit/percentage options.
+- [ ] The selected payment option is reflected consistently in the booking record, checkout and provider confirmation.
 - [ ] Physical booking deposit amount remains unchanged under the same tenant settings.
 - [ ] Failed or expired payment follows the existing release/expiry behaviour and is not confirmed as paid.
 - [ ] Existing guest identity matching and consultation form writes continue to work.
@@ -294,7 +295,7 @@ The WhatsApp hyperlink gives the tenant a direct route to the client's contact. 
 
 ## 10. Final scope boundary
 
-The feature is complete when a tenant can create a service in Catalogues, enable the Video call toggle (which disables Is call-out), configure dedicated video-call dates and times, accept bookings using the existing payment choices, see the booking in the normal NextSlot workflow, and click the client's linked phone number to initiate the call on the appointment day.
+The feature is complete when a tenant can create an additional service in Catalogues, enable the Video call toggle (which disables Is call-out), configure dedicated video-call dates and times, accept bookings using the existing payment choices, see the booking in the normal NextSlot workflow, and click the client's linked phone number to initiate the call on the appointment day.
 
 **No meeting infrastructure. No new payment system. No new messaging platform. No parallel booking architecture.**
 
@@ -390,7 +391,7 @@ Verified live behaviour:
 
 **Correction to the earlier build assumption:** setting `services.deposit_percent = 100` alone will not enforce full payment in the live booking path. That column is not the authority used by the active pricing and booking functions.
 
-#### Required full-payment implementation
+#### Required payment compatibility
 
 The canonical booking function must derive whether the selected service is a video-call service by reading the persisted service record. It must preserve the existing payment choice and percentage calculation for that booking. The server must not accept a client-supplied total or deposit amount as authoritative; it should validate the selected payment intent and amount using the same rules as ordinary services.
 
@@ -416,9 +417,9 @@ The deployed checkout and webhook paths were inspected read-only.
 
 | Provider | Checkout amount source | Full-payment webhook behaviour | Video-specific guard required |
 |---|---|---|---|
-| Yoco | Server reads booking; `full` uses `total_amount`, `deposit` uses `deposit_amount` | `full` sets full-payment flags; `deposit` only sets deposit-paid and recalculates balance | Yes |
-| PayFast | Server reads booking; `full` uses `total_amount`, `deposit` uses `deposit_amount` | `full` sets full-payment flags; `deposit` only marks deposit paid | Yes |
-| iKhokha | Server recalculates expected amount from booking and ignores mismatched browser amount | `full` sets full-payment flags; `deposit` only marks deposit paid | Yes |
+| Yoco | Server reads booking; `full` uses `total_amount`, `deposit` uses `deposit_amount` | `full` sets full-payment flags; `deposit` only sets deposit-paid and recalculates balance | Validate selected payment type and amount against the booking |
+| PayFast | Server reads booking; `full` uses `total_amount`, `deposit` uses `deposit_amount` | `full` sets full-payment flags; `deposit` only marks deposit paid | Validate selected payment type and amount against the booking |
+| iKhokha | Server recalculates expected amount from booking and ignores mismatched browser amount | `full` sets full-payment flags; `deposit` only marks deposit paid | Validate selected payment type and amount against the booking |
 | PayShap | Manual tenant verification; booking amounts determine full/deposit outcome | Confirmation hook recognises full payment when the deposit equals the total or the balance is zero | Pass the selected full/deposit intent and preserve the existing amount-based confirmation behaviour |
 
 **Provider consistency requirement:** The selected payment type must match the amount charged and the webhook branch used to settle the booking. The earlier proposal to force full payment for video calls is withdrawn.
@@ -440,7 +441,7 @@ Therefore:
 5. Update `get_booking_horizon_availability`, `get_available_slots`, `check_availability`, `acquire_slot_hold`, `resize_slot_hold`, and `reschedule_booking` in a coordinated migration. Keep cross-mode booking/hold collisions shared.
 6. Update the canonical booking RPC to derive video-call mode from the service record, reject mixed physical/video-call bookings, ensure call-out is disabled for video-call services, and validate dedicated video-call availability.
 7. Keep the existing pricing and payment choice behaviour. Update quote, checkout and payment-intent handling only where needed to ensure the selected full/deposit option remains consistent through provider settlement.
-9. Run physical booking and all payment-provider regression tests before the PhenomeBeauty pilot.
+8. Run physical booking and all payment-provider regression tests before the PhenomeBeauty pilot.
 
 ### 11.7 Additional acceptance tests from the live trace
 
