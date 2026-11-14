@@ -1,17 +1,17 @@
 # Graph Report - book-a-glow  (2026-11-14)
 
 ## Corpus Check
-- 578 files · ~384,035 words
+- 578 files · ~384,031 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 15 file(s) not represented in the graph (top: .css 6, (none) 2, .example 1)
 
 ## Summary
-- 3010 nodes · 6080 edges · 322 communities (149 shown, 173 thin omitted)
+- 3009 nodes · 6079 edges · 312 communities (135 shown, 177 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 42 edges (avg confidence: 0.89)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `ea6d2465`
+- Built from commit: `1d76ebe3`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -19,7 +19,7 @@
 - AdminCalendar.tsx
 - AdminSharedUI.tsx
 - lucide-react
-- AdminClientManagement.tsx
+- AdminLoyalty.tsx
 - ref_https
 - AdminSidebar.tsx
 - feature-flags/SAFeatureFlags.tsx
@@ -40,11 +40,11 @@
 - LoyaltyClientCard.tsx
 - SuperAdminShell.tsx
 - AdminSidebar.tsx
-- AdminSpecialOccasions.tsx
-- @tanstack/react-query
+- AdminClientManagement.tsx
+- AdminMetricExplanation.tsx
 - AdminBilling.tsx
 - tokens.ts
-- AdminCommunications.tsx
+- homepage-journey.test.tsx
 - platform-monthly-billing/index.ts
 - bookings
 - SARevenue.tsx
@@ -58,27 +58,27 @@
 - Phase 1: NextSlot Marketing Website Baseline Audit
 - AdminIntegrations.tsx
 - Onboarding.tsx
-- useSupabaseAvailability.ts
+- use-admin-viewport.ts
 - send-billing-receipt/index.ts
 - public.bookings
 - use-toast.ts
 - send-booking-email/index.ts
 - components.json
-- Pricing.tsx
+- Homepage Journey Interaction Map
 - AdminMetricExplanation.tsx
 - Book.tsx
-- SeoLandingPage
+- broadcast-email/index.ts
 - vitest
 - AdminConsultations.tsx
 - AdminRecommendations.tsx
 - Login.tsx
 - compilerOptions
-- Index.tsx
+- @dnd-kit/sortable
 - generate-seo-pages.mjs
 - staff_availability
 - public.staff_availability
-- LoyaltyBulkBar.tsx
-- SAGrowth.tsx
+- @dnd-kit/utilities
+- @hcaptcha/react-hcaptcha@^1.11.0
 - cn
 - usePayshapPayments.ts
 - functions/_shared/security.ts
@@ -88,7 +88,7 @@
 - activate-tenant/index.ts
 - create-tenant/index.ts
 - middleware.ts
-- NotificationBell.tsx
+- supabase
 - RevenueTrendCard.tsx
 - SATenants.tsx
 - public.booking_items
@@ -110,23 +110,23 @@
 - app_settings
 - payfast-itn/index.ts
 - Call-out fee waiver
-- 11. Deeper live trace — production database and payment paths
-- 4. Functional build scope
-- react
-- HomePricingPreview.tsx
+- next-themes@^0.3.0
+- @radix-ui/react-accordion@^1.2.11
+- class-variance-authority
+- Index.tsx
 - scripts
 - sheet.tsx
-- usePublicServices.ts
+- @radix-ui/react-aspect-ratio@^1.1.7
 - AdminSettings.tsx
 - create-calendar-event/index.ts
-- StockScanModal.tsx
+- @radix-ui/react-avatar@^1.1.10
 - SAUsers.tsx
 - update-gcal-event/index.ts
 - 4. Bug #2: protect_booking_financial_fields Trigger
 - 7. Bug #5: RLS Policies Not Bound to service_role
 - allowScripts
-- lucide-react
-- SAAuditLog.tsx
+- react
+- @radix-ui/react-scroll-area@^1.2.9
 - 20260308214728_abe41b98-2217-4182-8511-10a994985858.sql
 - platform-billing-checkout/index.ts
 - vercel.json
@@ -136,7 +136,7 @@
 - 5. Bug #3: queue_calendar_event Missing tenant_id
 - 6. Bug #4: send-booking-email Function Missing
 - 8. Bug #6: Address Autocomplete & Distance Calculation
-- 8. Acceptance criteria
+- @radix-ui/react-select@^2.2.5
 - book-a-glow — NextSlot
 - payments
 - display-cards.tsx
@@ -158,48 +158,38 @@
 - calendar.tsx
 - 20260403214318_platform_events_and_mrr_engine.sql
 - 20260524135812_platform_billing_followup_fixes.sql
-- useClientAlerts.ts
+- InactiveClient
 - ikhokha-webhook/index.ts
 - platform-payment-webhook/index.ts
 - reply-to-review/index.ts
 - IntegrationsGuidePanel.tsx
 - @hookform/resolvers@^3.10.0
-- date-fns
+- @radix-ui/react-tabs@^1.1.12
 - AdminLoyalty.tsx
 - FirstBookingCelebration.tsx
-- AdminLogin.tsx
+- @radix-ui/react-toggle-group@^1.1.10
 - notifications
-- SASystemHealth.tsx
+- react-day-picker
 - DashboardPreview.tsx
-- @radix-ui/react-progress@^1.1.7
-- useSlotHold.ts
+- react-hook-form@^7.61.1
+- zod@^3.25.76
 - 20261029202959_restore_call_out_fee.sql
 - AdminErrorBoundary
-- confirm-booking/index.ts
-- delete-gcal-event/index.ts
 - billing_queue
 - 20260929231952_guest_consultations_stage1.sql
-- cmdk@^1.1.1
 - vite-env.d.ts
 - public.blocked_clients
 - public.get_tenant_secret
 - 20260516165820_normalise_booking_phones.sql
-- @dnd-kit/core
 - register-yoco-webhook/index.ts
 - protect_booking_fields_trigger
 - 20260817095419_blocked_email_domains.sql
 - staff_availability_unique_slot
-- @radix-ui/react-menubar@^1.1.15
-- @radix-ui/react-navigation-menu@^1.2.13
 - @radix-ui/react-popover
-- @radix-ui/react-context-menu@^2.2.15
 - @radix-ui/react-hover-card@^1.1.14
-- @radix-ui/react-radio-group@^1.3.7
-- @radix-ui/react-slot
 - pending/README.md
 - 20261029195844_log_stale_balance_webhook_events.sql
 - 20261107034436_internal_cron_secrets.sql
-- @radix-ui/react-tooltip
 - tailwindcss-animate@^1.0.7
 
 ## God Nodes (most connected - your core abstractions)
@@ -217,19 +207,19 @@
 ## Surprising Connections (you probably didn't know these)
 - `2. Real-world proof arrives late in the homepage sequence` --references--> `CaseStudySection()`  [INFERRED]
   docs/marketing-website-phase-1-audit.md → src/components/home/CaseStudySection.tsx
+- `1. Add a homepage-only journey index` --references--> `Pricing()`  [INFERRED]
+  docs/homepage-journey-interaction-map.md → src/pages/Pricing.tsx
 - `Secondary Cause: Hardcoded Address` --references--> `usePublicBusinessConfig()`  [INFERRED]
   docs/debugging-session-2026-03-11.md → src/hooks/usePublicBusinessConfig.ts
-- `3. Give the five destinations stable IDs` --references--> `CaseStudySection()`  [INFERRED]
-  docs/homepage-journey-interaction-map.md → src/components/home/CaseStudySection.tsx
-- `Existing implementation findings` --references--> `CaseStudySection()`  [INFERRED]
-  docs/homepage-journey-interaction-map.md → src/components/home/CaseStudySection.tsx
-- `3. Give the five destinations stable IDs` --references--> `FeaturesSection()`  [INFERRED]
-  docs/homepage-journey-interaction-map.md → src/components/home/FeaturesSection.tsx
+- `Existing implementation findings` --references--> `HeatmapSection()`  [INFERRED]
+  docs/homepage-journey-interaction-map.md → src/components/home/HeatmapSection.tsx
+- `Existing implementation findings` --references--> `SiteFooter()`  [INFERRED]
+  docs/homepage-journey-interaction-map.md → src/components/site/SiteFooter.tsx
 
 ## Import Cycles
 - None detected.
 
-## Communities (322 total, 173 thin omitted)
+## Communities (312 total, 177 thin omitted)
 
 ### Community 0 - "AdminCalendar.tsx"
 Cohesion: 0.16
@@ -237,55 +227,55 @@ Nodes (28): addDays(), AdminCalendar(), AvailabilityRow, CalendarBooking, Calend
 
 ### Community 1 - "AdminSharedUI.tsx"
 Cohesion: 0.10
-Nodes (31): AdminBlockedClients(), BlockedClientRow, AdminConsistencyPricing(), daysAgo(), GuestStatusRow, NumberField(), ProgramRow, ProgramServiceRow (+23 more)
+Nodes (28): AdminConsistencyPricing(), daysAgo(), GuestStatusRow, NumberField(), ProgramRow, ProgramServiceRow, ServiceRow, UnavailableService (+20 more)
 
 ### Community 2 - "lucide-react"
 Cohesion: 0.17
 Nodes (29): BillingProvider, BillingProviderCard(), fetchBillingConfig(), updateBillingProvider(), fetchSettings(), IkhokhaKeysCard(), Mode, upsertSetting() (+21 more)
 
-### Community 3 - "AdminClientManagement.tsx"
-Cohesion: 0.15
-Nodes (21): AdminBlockedClients, AdminClientManagement(), AdminConsultations, AdminSpecialOccasions, AlertChip, AlertModalType, ProactiveAlertBanner(), Tab (+13 more)
+### Community 3 - "AdminLoyalty.tsx"
+Cohesion: 0.12
+Nodes (21): AdminLoyaltyProps, LOYALTY_INSIGHT_IDS, PRIORITY_STYLES, SettingCardProps, DEFAULT_LOYALTY_SETTINGS, DEFAULT_TENANT_CRITERIA, LOYALTY_SETTING_KEYS, PILL_LABEL (+13 more)
 
 ### Community 4 - "ref_https"
 Cohesion: 0.05
-Nodes (17): corsHeaders, corsHeaders, corsHeaders, TYPE_LABELS, CORS_HEADERS, corsHeaders, supabase, CORS_HEADERS (+9 more)
+Nodes (17): corsHeaders, corsHeaders, CORS_HEADERS, corsHeaders, corsHeaders, corsHeaders, supabase, CORS_HEADERS (+9 more)
 
 ### Community 5 - "AdminSidebar.tsx"
 Cohesion: 0.12
-Nodes (15): AdminMobileNavProps, mobileIconMap, NAV_GROUPS, ADMIN_NAV_GROUPS, AvailabilityIcon(), BookingsIcon(), ClientManagementIcon(), DashboardIcon() (+7 more)
+Nodes (16): AdminMobileNav(), AdminMobileNavProps, mobileIconMap, NAV_GROUPS, ADMIN_NAV_GROUPS, AvailabilityIcon(), BookingsIcon(), ClientManagementIcon() (+8 more)
 
 ### Community 6 - "feature-flags/SAFeatureFlags.tsx"
 Cohesion: 0.10
 Nodes (37): FeatureToggleRow(), LifetimeBanner(), LoadingBlock(), PlanSections(), RefreshButton(), SavedButton(), SaveStatus, TenantOption (+29 more)
 
 ### Community 7 - "useTenant"
-Cohesion: 0.10
-Nodes (32): framer-motion, sonner, AddServiceModal(), AddServiceModalProps, BookingItem, Service, AdminBookings(), AdminBookingsProps (+24 more)
+Cohesion: 0.11
+Nodes (34): sonner, AddServiceModal(), AddServiceModalProps, BookingItem, Service, AdminBlockedClients(), BlockedClientRow, AdminBookings() (+26 more)
 
 ### Community 8 - "dependencies"
-Cohesion: 0.04
-Nodes (46): dependencies, class-variance-authority@^0.7.1, clsx@^2.1.1, embla-carousel-react@^8.6.0, framer-motion@^12.35.1, @hcaptcha/react-hcaptcha@^1.11.0, input-otp@^1.4.2, lucide-react@^0.462.0 (+38 more)
+Cohesion: 0.05
+Nodes (41): dependencies, date-fns@^3.6.0, @dnd-kit/core@^6.3.1, framer-motion@^12.35.1, input-otp@^1.4.2, lucide-react@^0.462.0, @radix-ui/react-alert-dialog@^1.1.14, @radix-ui/react-checkbox@^1.3.2 (+33 more)
 
 ### Community 9 - "devDependencies"
 Cohesion: 0.06
 Nodes (35): devDependencies, autoprefixer@^10.4.21, eslint@^9.32.0, @eslint/js@^9.32.0, eslint-plugin-react-hooks@^5.2.0, eslint-plugin-react-refresh@^0.4.20, globals@^15.15.0, jsdom@^20.0.3 (+27 more)
 
 ### Community 10 - "App.tsx"
-Cohesion: 0.07
-Nodes (43): About, Admin, App(), AuthRecoveryHandler(), BillingSuccess, Book, BookingSoftwareSouthAfrica, BusinessAnalytics (+35 more)
+Cohesion: 0.06
+Nodes (50): About, Admin, App(), AuthRecoveryHandler(), BillingSuccess, Book, BookingSoftwareSouthAfrica, BusinessAnalytics (+42 more)
 
 ### Community 11 - "useTenant"
-Cohesion: 0.20
-Nodes (23): AdminServices(), EditingService, emptyService(), RuleEditor(), RuleEditorProps, ServiceOption, ServiceReorderRow(), ServiceReorderRowProps (+15 more)
+Cohesion: 0.15
+Nodes (25): AdminServices(), EditingService, emptyService(), RuleEditor(), RuleEditorProps, ServiceOption, ServiceReorderRow(), ServiceReorderRowProps (+17 more)
 
 ### Community 12 - "FeaturesSection.tsx"
-Cohesion: 0.15
-Nodes (16): Eyebrow(), FeaturesSection(), GROUPS, Card(), FigmaDashboardPreview(), Heatmap(), MetricCard(), MobileFrame() (+8 more)
+Cohesion: 0.21
+Nodes (13): Card(), FigmaDashboardPreview(), Heatmap(), MetricCard(), MobileFrame(), HEAT_ROWS, HeatmapSection(), TIME_LABELS (+5 more)
 
 ### Community 13 - "SeoLandingPage.tsx"
-Cohesion: 0.12
-Nodes (27): react-router-dom, PrimaryCTA(), SiteFooter(), navLinks, SiteHeader(), About(), CaseStudy(), NotFound() (+19 more)
+Cohesion: 0.08
+Nodes (45): react-router-dom, CaseStudy, Resources, SiteTerms, PrimaryCTA(), MK, SECTION, MarketingLayout() (+37 more)
 
 ### Community 14 - "useNextyInsights.ts"
 Cohesion: 0.09
@@ -293,59 +283,59 @@ Nodes (31): AttachRateRow, BasketTrendRow, ChannelRoiRow, DAY_NAMES, dayBefore()
 
 ### Community 15 - "Admin.tsx"
 Cohesion: 0.10
-Nodes (32): AdminDashboard(), AdminMobileNav(), ArrearsBanner(), Props, tiers, TrialExpiredPaywall(), Tenant, TenantSubscription (+24 more)
+Nodes (34): AdminDashboard(), AdminLogin(), getTenantSlugFromUrl(), ArrearsBanner(), NotificationBell(), SectionLabel(), TrialExpiredPaywall(), Tenant (+26 more)
 
 ### Community 16 - "ReviewStep.tsx"
-Cohesion: 0.11
-Nodes (14): friendlyBookingError(), PaymentChoice, phaseLabel(), redirectToPayfast(), ReviewStep(), ReviewStepProps, SubmitPhase, ConsistencyQuote (+6 more)
+Cohesion: 0.08
+Nodes (33): friendlyBookingError(), PaymentChoice, phaseLabel(), redirectToPayfast(), ReviewStep(), ReviewStepProps, SubmitPhase, getStaffId() (+25 more)
 
 ### Community 17 - "profiles"
 Cohesion: 0.05
 Nodes (31): idx_profiles_email, idx_profiles_role, profiles, update_profiles_updated_at, update_updated_at_column(), idx_services_active, idx_services_category, services (+23 more)
 
 ### Community 18 - "AdminDashboard.tsx"
-Cohesion: 0.08
-Nodes (38): AdminDashboardView(), ALL_SECTIONS, Appointment, AppointmentsList(), ClientMiniCard(), daysInMonth(), fadeUp, getVisibility() (+30 more)
+Cohesion: 0.10
+Nodes (27): AdminDashboardView(), ALL_SECTIONS, Appointment, AppointmentsList(), ClientMiniCard(), daysInMonth(), fadeUp, getVisibility() (+19 more)
 
 ### Community 19 - "package.json"
-Cohesion: 0.06
-Nodes (32): @dnd-kit/sortable@^8.0.0, @dnd-kit/utilities@^3.2.2, @radix-ui/react-alert-dialog@^1.1.14, @radix-ui/react-aspect-ratio@^1.1.7, @radix-ui/react-collapsible@^1.1.11, @radix-ui/react-dialog@^1.1.14, @radix-ui/react-dropdown-menu@^2.1.15, @radix-ui/react-separator@^1.1.7 (+24 more)
+Cohesion: 0.07
+Nodes (28): clsx@^2.1.1, cmdk@^1.1.1, embla-carousel-react@^8.6.0, pdfjs-dist@^4.4.168, @radix-ui/react-context-menu@^2.2.15, @radix-ui/react-label@^2.1.7, @radix-ui/react-radio-group@^1.3.7, @radix-ui/react-slot@^1.2.3 (+20 more)
 
 ### Community 20 - "DashboardViews.tsx"
 Cohesion: 0.13
 Nodes (27): allBookings, AvailabilityContent(), BookingsContent(), ConsultationsContent(), DashboardContent(), heatmapData, heatmapSlots, IntegrationsContent() (+19 more)
 
 ### Community 21 - "LoyaltyClientCard.tsx"
-Cohesion: 0.13
-Nodes (20): AVATAR_COLOURS, avatarColour(), getStatusMeta(), initials(), InlineBirthdayEditor(), InlineClientEditor(), InlineNotesEditor(), InlineStatusEditor() (+12 more)
+Cohesion: 0.21
+Nodes (13): AVATAR_COLOURS, avatarColour(), getStatusMeta(), initials(), InlineBirthdayEditor(), InlineClientEditor(), InlineNotesEditor(), InlineStatusEditor() (+5 more)
 
 ### Community 22 - "SuperAdminShell.tsx"
-Cohesion: 0.13
-Nodes (26): ALL_NAV, NAV_GROUPS, NavGroup, NavItem, NavItemButton(), NavItemButtonProps, SAAuditLog, SABookings (+18 more)
+Cohesion: 0.09
+Nodes (33): ALL_NAV, NAV_GROUPS, NavGroup, NavItem, NavItemButton(), NavItemButtonProps, SAAuditLog, SABookings (+25 more)
 
 ### Community 23 - "AdminSidebar.tsx"
-Cohesion: 0.12
-Nodes (17): AdminSidebar(), AdminSidebarProps, AdminSidebarView(), AdminSidebarViewProps, groupIconMap, iconMap, NAV, NavItem (+9 more)
+Cohesion: 0.15
+Nodes (14): AdminSidebar(), AdminSidebarProps, AdminSidebarView(), AdminSidebarViewProps, groupIconMap, iconMap, NAV, NavItem (+6 more)
 
-### Community 24 - "AdminSpecialOccasions.tsx"
-Cohesion: 0.11
-Nodes (26): AddOccasionForm(), AdminSpecialOccasions(), daysUntil(), FILTER_CHIPS, FilterChip, formatOccasionShort(), nextOccurrence(), OccasionCard() (+18 more)
+### Community 24 - "AdminClientManagement.tsx"
+Cohesion: 0.05
+Nodes (78): AdminBlockedClients, AdminClientManagement(), AdminConsultations, AdminSpecialOccasions, AlertChip, AlertModalType, ProactiveAlertBanner(), Tab (+70 more)
 
-### Community 25 - "@tanstack/react-query"
+### Community 25 - "AdminMetricExplanation.tsx"
 Cohesion: 0.16
-Nodes (18): @tanstack/react-query, getStaffId(), ScheduleStep(), PublicTenantContext, PublicTenantData, usePublicTenant(), getStaffId(), MonthDateAvailability (+10 more)
+Nodes (16): AdminMetricExplanation(), AdminMetricExplanationLine, AdminMetricExplanationProps, MetricExplanationBody(), AdminIconButton, BusinessHealthProps, BusinessHealthSection(), cardAlertClass() (+8 more)
 
 ### Community 26 - "AdminBilling.tsx"
-Cohesion: 0.11
-Nodes (27): AdminBilling(), currentBillingMonth(), daysLeft(), formatDate(), PLAN_FEATURES, PLAN_LABELS, PLAN_ORDER, PLAN_PRICES (+19 more)
+Cohesion: 0.18
+Nodes (15): CancelSubscriptionFlow(), DATA_RETENTION_DAYS, deletionDateLabel(), Step, buildGuestRows(), csvCell(), download(), exportGuestData() (+7 more)
 
 ### Community 27 - "tokens.ts"
 Cohesion: 0.16
-Nodes (16): CaseStudySection(), ChartTooltipProps, CustomTooltip(), DATA, RevenueChart(), BP, C, FONT_BODY (+8 more)
+Nodes (14): Privacy, ChartTooltipProps, CustomTooltip(), DATA, C, FONT_BODY, FONT_DISPLAY, RADIUS (+6 more)
 
-### Community 28 - "AdminCommunications.tsx"
-Cohesion: 0.20
-Nodes (22): AdminCommunications(), PREVIEW_DATA, buildDefaultWhatsAppMessage(), buildWhatsAppMessage(), clean(), DEFAULT_WHATSAPP_TONE, getWhatsAppTemplateDefault(), MessageData (+14 more)
+### Community 28 - "homepage-journey.test.tsx"
+Cohesion: 0.29
+Nodes (5): @testing-library/react@^16.0.0, @testing-library/react, HomeJourneyNav(), HomeJourneyNavProps, ITEMS
 
 ### Community 29 - "platform-monthly-billing/index.ts"
 Cohesion: 0.12
@@ -356,8 +346,8 @@ Cohesion: 0.07
 Nodes (31): bookings, idx_bookings_client, idx_bookings_created, idx_bookings_date, idx_bookings_staff, idx_bookings_status, update_bookings_updated_at, public.update_booking_status() (+23 more)
 
 ### Community 31 - "SARevenue.tsx"
-Cohesion: 0.19
-Nodes (21): ChartTooltipProps, CopyLinkButton(), CreateInvoiceModal(), CustomTooltip(), daysUntil(), fmtDate(), GlassCard(), MarkPaidModal() (+13 more)
+Cohesion: 0.09
+Nodes (36): recharts@^2.15.4, recharts, BookingRaw, BookingStat, ChartTooltipProps, CustomTooltip(), daysUntil(), fmtCurrency() (+28 more)
 
 ### Community 32 - "BusinessThemeProvider.tsx"
 Cohesion: 0.19
@@ -380,28 +370,28 @@ Cohesion: 0.10
 Nodes (20): name, runs-on, steps, VITE_SUPABASE_ANON_KEY, VITE_SUPABASE_URL, jobs, build, name (+12 more)
 
 ### Community 37 - "useSupabaseDashboard.ts"
-Cohesion: 0.13
-Nodes (20): AllTimeBooking, AvailabilityRow, BookingItemRow, buildHeatSlots(), buildTopServices(), CLIENT_TYPE_LABELS, ClientNameFields, DashboardBooking (+12 more)
+Cohesion: 0.12
+Nodes (22): AllTimeBooking, AvailabilityRow, BookingItemRow, buildHeatSlots(), buildTopServices(), CLIENT_TYPE_LABELS, ClientNameFields, DashboardBooking (+14 more)
 
 ### Community 38 - "DetailsStep.tsx"
 Cohesion: 0.11
-Nodes (23): BookingConfirmation(), BookingConfirmationProps, ConsultationQRendererProps, DetailsStepProps, phoneCodes, PlaceSuggestion, validators, BookingState (+15 more)
+Nodes (25): BookingConfirmation(), BookingConfirmationProps, ConsultationQRenderer(), ConsultationQRendererProps, DetailsStep(), DetailsStepProps, phoneCodes, PlaceSuggestion (+17 more)
 
 ### Community 39 - "Phase 1: NextSlot Marketing Website Baseline Audit"
 Cohesion: 0.11
 Nodes (18): 1. Homepage does not answer all five questions, 2. Real-world proof arrives late in the homepage sequence, 3. Global navigation terminology differs from the agreed visitor language, 4. The five-question navigation needs a mobile-safe interaction design, 5. Audience breadth could be more explicit, 6. Pricing and trial statements should be consistent across pages, 7. Repeated final CTA patterns deserve a consistency pass, Brand and implementation guardrails (+10 more)
 
 ### Community 40 - "AdminIntegrations.tsx"
-Cohesion: 0.20
-Nodes (21): AdminIntegrations(), Field(), FieldProps, GoogleCalendarCard(), GoogleCalendarCardProps, IntegrationCard(), IntegrationCardProps, isConfigured() (+13 more)
+Cohesion: 0.18
+Nodes (20): AdminIntegrations(), Field(), FieldProps, GoogleCalendarCard(), GoogleCalendarCardProps, IntegrationCard(), IntegrationCardProps, isConfigured() (+12 more)
 
 ### Community 41 - "Onboarding.tsx"
 Cohesion: 0.14
 Nodes (18): Onboarding, businessThemes, getThemeCssVars(), OnboardingTheme, SuggestedService, availabilityPresets, BLANK_SERVICE, clearPendingPayload() (+10 more)
 
-### Community 42 - "useSupabaseAvailability.ts"
-Cohesion: 0.23
-Nodes (13): AVAILABILITY_SELECT, AvailabilitySlot, fetchAllAvailability(), normaliseSlot(), normaliseSlotList(), ownerIdForTenant(), resolveAvailabilityForDate(), resolveAvailabilityRows() (+5 more)
+### Community 42 - "use-admin-viewport.ts"
+Cohesion: 0.60
+Nodes (3): ADMIN_VIEWPORT_BREAKPOINTS, getAdminViewport(), useAdminViewport()
 
 ### Community 43 - "send-billing-receipt/index.ts"
 Cohesion: 0.14
@@ -412,7 +402,7 @@ Cohesion: 0.08
 Nodes (21): idx_bookings_booking_date, idx_bookings_client_id, idx_bookings_date_start, idx_bookings_staff_date, idx_bookings_status, idx_bookings_tenant_id, idx_bookings_yoco_checkout, idx_webhook_queue_created (+13 more)
 
 ### Community 45 - "use-toast.ts"
-Cohesion: 0.15
+Cohesion: 0.18
 Nodes (14): Action, ActionType, actionTypes, addToRemoveQueue(), dispatch(), genId(), listeners, memoryState (+6 more)
 
 ### Community 46 - "send-booking-email/index.ts"
@@ -423,25 +413,21 @@ Nodes (7): buildConsistencyEmailSection(), ConsistencyEmailContext, corsHeaders,
 Cohesion: 0.12
 Nodes (16): aliases, components, hooks, lib, ui, utils, rsc, $schema (+8 more)
 
-### Community 48 - "Pricing.tsx"
-Cohesion: 0.09
-Nodes (24): 1. Add a homepage-only journey index, 2. Make the hero CTA initiate the journey, 4. Use the smallest layout adjustments possible, Acceptance criteria, Agreed experience, Expected file touchpoints, Homepage Journey Interaction Map, Important implementation recommendation (+16 more)
+### Community 48 - "Homepage Journey Interaction Map"
+Cohesion: 0.20
+Nodes (9): 1. Add a homepage-only journey index, 2. Make the hero CTA initiate the journey, 4. Use the smallest layout adjustments possible, Acceptance criteria, Agreed experience, Expected file touchpoints, Homepage Journey Interaction Map, Important implementation recommendation (+1 more)
 
 ### Community 49 - "AdminMetricExplanation.tsx"
-Cohesion: 0.19
-Nodes (20): AccordionCard(), AdminHelp(), Callout(), Code(), FaqItem(), FAQS, GoogleCalGuide(), Link() (+12 more)
+Cohesion: 0.25
+Nodes (15): AccordionCard(), AdminHelp(), Callout(), Code(), FaqItem(), FAQS, GoogleCalGuide(), Link() (+7 more)
 
 ### Community 50 - "Book.tsx"
-Cohesion: 0.16
-Nodes (20): ConsultationQRenderer(), DetailsStep(), SplashScreen(), SplashScreenProps, StepIndicator(), StepIndicatorProps, steps, ThemeToggle() (+12 more)
-
-### Community 51 - "SeoLandingPage"
-Cohesion: 0.14
-Nodes (13): PageContent, PageData, Section, SeoLandingPage(), usePageSEO(), BookingSoftwareSouthAfrica(), BusinessAnalytics(), BusinessGrowth() (+5 more)
+Cohesion: 0.09
+Nodes (32): framer-motion, ServicesStep(), ServicesStepProps, SplashScreen(), SplashScreenProps, StepIndicator(), StepIndicatorProps, steps (+24 more)
 
 ### Community 52 - "vitest"
-Cohesion: 0.12
-Nodes (15): vite-plugin-pwa@0.21.1, lovable-tagger@^1.1.13, vite@^5.4.19, @vitejs/plugin-legacy@^5.4.3, @vitejs/plugin-react-swc@^3.11.0, vitest@^3.2.4, lovable-tagger, vite (+7 more)
+Cohesion: 0.13
+Nodes (12): vite-plugin-pwa@0.21.1, lovable-tagger@^1.1.13, vite@^5.4.19, @vitejs/plugin-legacy@^5.4.3, @vitejs/plugin-react-swc@^3.11.0, vitest@^3.2.4, lovable-tagger, vite (+4 more)
 
 ### Community 53 - "AdminConsultations.tsx"
 Cohesion: 0.23
@@ -452,16 +438,12 @@ Cohesion: 0.21
 Nodes (14): InsightIcon(), NextyLoyaltyPanel(), AdminNextyOrb(), AdminNextyOrbProps, AdminRecommendations(), getFilterKey(), InsightFilterKey, InsightIcon() (+6 more)
 
 ### Community 55 - "Login.tsx"
-Cohesion: 0.18
-Nodes (13): buildAdminUrl(), edgeFunctionHeaders(), edgeFunctionUrl(), LOVABLE_DOMAINS, MAIN_DOMAINS, SUPABASE_ANON_KEY, SUPABASE_URL, TenantResolution (+5 more)
+Cohesion: 0.12
+Nodes (18): Login, HOME_STYLES, MARKETING_BG, useMarketingShell(), MarketingLayoutProps, buildAdminUrl(), edgeFunctionHeaders(), edgeFunctionUrl() (+10 more)
 
 ### Community 56 - "compilerOptions"
 Cohesion: 0.12
 Nodes (15): compilerOptions, allowImportingTsExtensions, isolatedModules, lib, module, moduleDetection, moduleResolution, noEmit (+7 more)
-
-### Community 57 - "Index.tsx"
-Cohesion: 0.19
-Nodes (13): 3. Give the five destinations stable IDs, Existing implementation findings, CTASection(), HeroSection(), HOME_STYLES, ITEMS, ProofTicker(), MARKETING_BG (+5 more)
 
 ### Community 58 - "generate-seo-pages.mjs"
 Cohesion: 0.16
@@ -475,17 +457,9 @@ Nodes (23): idx_staff_availability_date, idx_staff_availability_day, idx_staff_a
 Cohesion: 0.08
 Nodes (22): idx_staff_avail_staff_date, idx_staff_avail_staff_day, public.acquire_slot_hold(), public.get_available_slots(), public.save_staff_daily_override(), public.get_month_availability(), public.get_month_availability(), public.check_availability() (+14 more)
 
-### Community 61 - "LoyaltyBulkBar.tsx"
-Cohesion: 0.31
-Nodes (10): BulkBarProps, FallbackModal(), LoyaltyBulkBar(), useSequentialWaSend(), LoyaltyClientCardProps, WaButton(), buildWaMessage(), LoyaltyRow (+2 more)
-
-### Community 62 - "SAGrowth.tsx"
-Cohesion: 0.21
-Nodes (13): BookingRaw, BookingStat, ChartTooltipProps, CustomTooltip(), daysUntil(), fmtCurrency(), GlassCard(), median() (+5 more)
-
 ### Community 63 - "cn"
-Cohesion: 0.20
-Nodes (15): Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle, DialogContent, DialogContentProps (+7 more)
+Cohesion: 0.17
+Nodes (17): Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle, DialogContent, DialogContentProps (+9 more)
 
 ### Community 64 - "usePayshapPayments.ts"
 Cohesion: 0.31
@@ -496,12 +470,12 @@ Cohesion: 0.19
 Nodes (5): VAULT_KEYS, buildCorsHeaders(), json(), timingSafeEqual(), verifyWebhookSignature()
 
 ### Community 66 - "Video call service — Full Build Scope & Blast-Radius Review"
-Cohesion: 0.15
-Nodes (12): 10. Final scope boundary, 12. Verified production state (read-only checks, 14 November 2026), 1. Product definition, 2. Explicit non-goals, 3. Existing architecture findings, 5. Blast-radius matrix, 6. Security and data integrity requirements, 7. Implementation sequence (+4 more)
+Cohesion: 0.06
+Nodes (33): 10. Final scope boundary, 11.2 Availability security and compatibility, 11.3 Payment — verified live calculation path, 11.4 Payment — verified UI and provider behaviour, 11.5 Payment — deployed Edge Function and webhook behaviour, 11.6 Confirmed implementation order after the trace, 11.7 Additional acceptance tests from the live trace, 11. Deeper live trace — production database and payment paths (+25 more)
 
 ### Community 67 - "toast.tsx"
-Cohesion: 0.27
-Nodes (11): Toast, ToastAction, ToastActionElement, ToastClose, ToastDescription, ToastProps, ToastTitle, toastVariants (+3 more)
+Cohesion: 0.20
+Nodes (12): PwaUpdater(), Toast, ToastAction, ToastActionElement, ToastClose, ToastDescription, ToastProps, ToastTitle (+4 more)
 
 ### Community 68 - "SATenantHealth.tsx"
 Cohesion: 0.24
@@ -519,9 +493,9 @@ Nodes (7): CATEGORY_MAP, corsHeaders, DAY_OF_WEEK, THEME_COLORS, THEME_COPY, The
 Cohesion: 0.33
 Nodes (9): config, esc(), fetchTenant(), MAIN_DOMAINS, middleware(), nextResponse(), patchMetaName(), patchMetaProp() (+1 more)
 
-### Community 72 - "NotificationBell.tsx"
-Cohesion: 0.22
-Nodes (10): react-dom@^18.3.1, react-dom, FALLBACK_CONFIG, NotificationBell(), SectionLabel(), TYPE_CONFIG, useClientAlerts(), AppNotification (+2 more)
+### Community 72 - "supabase"
+Cohesion: 0.12
+Nodes (18): date-fns, react-dom, @tanstack/react-query, FALLBACK_CONFIG, TYPE_CONFIG, parseInvoiceText(), pdfToImages(), Props (+10 more)
 
 ### Community 73 - "RevenueTrendCard.tsx"
 Cohesion: 0.25
@@ -560,8 +534,8 @@ Cohesion: 0.10
 Nodes (13): public.get_nexty_business_context(), public.get_no_show_leakage(), public.get_quiet_day_analysis(), public.get_rebooking_rate_analysis(), public.get_no_show_leakage(), public.sync_tenant_business_name(), trg_sync_business_name, public.check_availability() (+5 more)
 
 ### Community 82 - "AdminAvailability.tsx"
-Cohesion: 0.22
-Nodes (12): 11.1 Availability — verified live details, Availability implementation consequences, AdminAvailability(), ALL_SLOTS, DayConfig, normaliseSlot(), normaliseSlots(), DailyOverrides (+4 more)
+Cohesion: 0.15
+Nodes (24): 11.1 Availability — verified live details, Availability implementation consequences, AdminAvailability(), ALL_SLOTS, DayConfig, normaliseSlot(), normaliseSlots(), AvailabilitySlot (+16 more)
 
 ### Community 83 - "loyalty_tracker"
 Cohesion: 0.09
@@ -580,8 +554,8 @@ Cohesion: 0.29
 Nodes (8): addMonths(), BookingRow, CohortMonth, labelForKey(), retentionColor(), SACohortRetention(), TenantRow, toYearMonth()
 
 ### Community 87 - "client.ts"
-Cohesion: 0.07
-Nodes (34): Broadcast, BROADCAST_TYPES, BType, TYPE_COLOR, ENV_INFO, GlassCard(), NOTIF_LABELS, NotifPrefs (+26 more)
+Cohesion: 0.09
+Nodes (29): ENV_INFO, GlassCard(), NOTIF_LABELS, NotifPrefs, SASettings(), SectionHeader(), Booking, DiagIssue (+21 more)
 
 ### Community 88 - "SABookings.tsx"
 Cohesion: 0.25
@@ -607,41 +581,25 @@ Nodes (5): corsHeaders, ipToInt(), isIpInCidr(), isValidPayfastIp(), PAYFAST_VAL
 Cohesion: 0.25
 Nodes (7): Audit, Call-out fee waiver, Eligibility and safeguards, Financial behaviour, Purpose, Restoration, Security and scope
 
-### Community 94 - "11. Deeper live trace — production database and payment paths"
-Cohesion: 0.25
-Nodes (8): 11.2 Availability security and compatibility, 11.3 Payment — verified live calculation path, 11.4 Payment — verified UI and provider behaviour, 11.5 Payment — deployed Edge Function and webhook behaviour, 11.6 Confirmed implementation order after the trace, 11.7 Additional acceptance tests from the live trace, 11. Deeper live trace — production database and payment paths, Required payment compatibility
+### Community 96 - "class-variance-authority"
+Cohesion: 0.32
+Nodes (6): class-variance-authority@^0.7.1, class-variance-authority, Label, labelVariants, Toggle, toggleVariants
 
-### Community 95 - "4. Functional build scope"
-Cohesion: 0.25
-Nodes (8): 4.1 Service configuration, 4.2 Dedicated video-call availability, 4.3 Public booking flow, 4.4 Existing payment choices, 4.5 Booking emails and calendar invitation, 4.6 Tenant booking view and WhatsApp contact, 4.7 Booking lifecycle, dashboard and reporting, 4. Functional build scope
-
-### Community 96 - "react"
-Cohesion: 0.18
-Nodes (8): class-variance-authority, react, Input, Label, labelVariants, Separator, Toggle, toggleVariants
-
-### Community 97 - "HomePricingPreview.tsx"
-Cohesion: 0.12
-Nodes (9): @testing-library/react@^16.0.0, @testing-library/react, CarouselDots(), HomeJourneyNav(), HomeJourneyNavProps, ITEMS, HomePricingPreview(), PLANS (+1 more)
+### Community 97 - "Index.tsx"
+Cohesion: 0.11
+Nodes (19): 3. Give the five destinations stable IDs, Existing implementation findings, CarouselDots(), CaseStudySection(), CTASection(), Eyebrow(), FeaturesSection(), GROUPS (+11 more)
 
 ### Community 98 - "scripts"
 Cohesion: 0.25
 Nodes (8): scripts, build, build:dev, dev, lint, preview, test, test:watch
 
 ### Community 99 - "sheet.tsx"
-Cohesion: 0.28
-Nodes (8): SheetContent, SheetContentProps, SheetDescription, SheetFooter(), SheetHeader(), SheetOverlay, SheetTitle, sheetVariants
-
-### Community 100 - "usePublicServices.ts"
-Cohesion: 0.23
-Nodes (11): ServicesStep(), ServicesStepProps, StickyBottomBar(), StickyBottomBarProps, categoryLabel(), PublicService, ServiceCategory, usePublicCategories() (+3 more)
+Cohesion: 0.22
+Nodes (10): @radix-ui/react-dialog@^1.1.14, @radix-ui/react-dialog, SheetContent, SheetContentProps, SheetDescription, SheetFooter(), SheetHeader(), SheetOverlay (+2 more)
 
 ### Community 101 - "AdminSettings.tsx"
 Cohesion: 0.14
-Nodes (20): AdminSettings(), Collapsible(), DEPOSIT_PRESETS, isAcquisitionChannel(), LEAD_TIME_PRESETS, MAX_DAYS_PRESETS, MIN_NOTICE_PRESETS, OVERRUN_PRESETS (+12 more)
-
-### Community 103 - "StockScanModal.tsx"
-Cohesion: 0.22
-Nodes (10): pdfjs-dist@^4.4.168, tesseract.js@^5.1.1, pdfjs-dist, tesseract.js, parseInvoiceText(), pdfToImages(), Props, ScannedRow (+2 more)
+Nodes (21): AdminSettings(), Collapsible(), DEPOSIT_PRESETS, isAcquisitionChannel(), LEAD_TIME_PRESETS, MAX_DAYS_PRESETS, MIN_NOTICE_PRESETS, OVERRUN_PRESETS (+13 more)
 
 ### Community 104 - "SAUsers.tsx"
 Cohesion: 0.38
@@ -659,13 +617,9 @@ Nodes (6): 7. Bug #5: RLS Policies Not Bound to service_role, Fix Applied — bo
 Cohesion: 0.33
 Nodes (6): allowScripts, core-js@3.50.0, esbuild@0.21.5, esbuild@0.25.0, @swc/core@1.13.2, tesseract.js@5.1.1
 
-### Community 109 - "lucide-react"
-Cohesion: 0.26
-Nodes (8): lucide-react, SuperAdmin, SuperAdminLogin(), GlassCard(), SAOverview(), Stats, useShellBackground(), SuperAdmin()
-
-### Community 110 - "SAAuditLog.tsx"
-Cohesion: 0.40
-Nodes (5): ACTION_COLOR, ACTION_ICON, AuditLog, fmtDate(), SAAuditLog()
+### Community 109 - "react"
+Cohesion: 0.10
+Nodes (20): lucide-react, react, SuperAdmin, AdminLoginProps, View, BlockClientModalProps, Props, tiers (+12 more)
 
 ### Community 111 - "20260308214728_abe41b98-2217-4182-8511-10a994985858.sql"
 Cohesion: 0.11
@@ -703,10 +657,6 @@ Nodes (5): 6. Bug #4: send-booking-email Function Missing, Commit, Fix Applied, 
 Cohesion: 0.40
 Nodes (5): 8. Bug #6: Address Autocomplete & Distance Calculation, Historical Issue, How It Works, Investigation, Status: Working (no code bug found)
 
-### Community 120 - "8. Acceptance criteria"
-Cohesion: 0.40
-Nodes (5): 8. Acceptance criteria, Booking and payment, Email and WhatsApp, Regression, security and reporting, Service and availability
-
 ### Community 121 - "book-a-glow — NextSlot"
 Cohesion: 0.40
 Nodes (4): book-a-glow — NextSlot, Environment Variables, Local Development, Stack
@@ -736,12 +686,12 @@ Cohesion: 0.50
 Nodes (4): 13. Remaining Tasks, Immediate (Before Going Live), Known Limitations, Short Term
 
 ### Community 129 - "SetupChecklistPaymentGate.tsx"
-Cohesion: 0.17
-Nodes (14): Props, SetupChecklistPaymentGate(), TenantPaymentFields, useTenantPaymentFields(), useUpsertAppSetting(), getPlanLabel(), getPlanPaymentFocus(), hasCompletedPaymentSetup() (+6 more)
+Cohesion: 0.18
+Nodes (13): Props, SetupChecklistPaymentGate(), TenantPaymentFields, useTenantPaymentFields(), getPlanLabel(), getPlanPaymentFocus(), hasCompletedPaymentSetup(), isLifetimeFree() (+5 more)
 
 ### Community 130 - "TenantContext.tsx"
-Cohesion: 0.25
-Nodes (7): LOADING_CTX, resolveSubdomainTenantId(), TenantContext, TenantContextValue, TenantProvider(), TenantProviderProps, TenantRenderProps
+Cohesion: 0.11
+Nodes (22): AdminBilling(), currentBillingMonth(), daysLeft(), formatDate(), PLAN_FEATURES, PLAN_LABELS, PLAN_ORDER, PLAN_PRICES (+14 more)
 
 ### Community 131 - "public.payments"
 Cohesion: 0.14
@@ -771,45 +721,29 @@ Nodes (6): idx_mrr_snapshots_month, idx_platform_events_event, idx_platform_even
 Cohesion: 0.20
 Nodes (5): public.is_super_admin(), public.sa_platform_billing_overview, platform_invoices_due_status_idx, platform_invoices_tenant_billing_month_uidx, public.platform_billing_config
 
-### Community 142 - "useClientAlerts.ts"
-Cohesion: 0.33
-Nodes (7): AdminDashboardViewProps, ClientAlertsModalProps, ClientAlerts, InactiveClient, OverdueLoyaltyClient, buildClientIdentityKeys(), ClientIdentityRow
+### Community 142 - "InactiveClient"
+Cohesion: 0.67
+Nodes (4): AdminDashboardViewProps, ClientAlertsModalProps, InactiveClient, OverdueLoyaltyClient
 
 ### Community 146 - "IntegrationsGuidePanel.tsx"
 Cohesion: 0.47
 Nodes (9): Callout(), FieldRef(), GoogleCalGuide(), GuidePanelProps, IntegrationsGuidePanel(), SectionHeader(), SmtpGuide(), Step() (+1 more)
 
-### Community 148 - "date-fns"
-Cohesion: 0.47
-Nodes (5): date-fns@^3.6.0, date-fns, getDaysLeft(), TrialCountdownNudge(), getAccountState()
-
 ### Community 149 - "AdminLoyalty.tsx"
-Cohesion: 0.12
-Nodes (32): AdminLoyalty(), AdminLoyaltyProps, CandidatesBar(), FloatingSaveBar(), LOYALTY_INSIGHT_IDS, PRIORITY_STYLES, SettingCard(), SettingCardProps (+24 more)
+Cohesion: 0.17
+Nodes (18): AdminLoyalty(), CandidatesBar(), FloatingSaveBar(), SettingCard(), effectiveStatus(), excelToDate(), excelToISO(), exportCSV() (+10 more)
 
 ### Community 150 - "FirstBookingCelebration.tsx"
 Cohesion: 0.53
 Nodes (4): fireConfetti(), FirstBookingCelebration(), loadConfetti(), seenKey()
 
-### Community 151 - "AdminLogin.tsx"
-Cohesion: 0.50
-Nodes (4): AdminLogin(), AdminLoginProps, getTenantSlugFromUrl(), View
-
 ### Community 152 - "notifications"
 Cohesion: 0.24
 Nodes (8): booking_notification_trigger, notifications, notifications_tenant_id_created_at_idx, notify_on_booking_event(), idx_loyalty_tracker_tenant_id, idx_notifications_tenant_id, idx_payments_tenant_id, idx_profiles_tenant_id
 
-### Community 153 - "SASystemHealth.tsx"
-Cohesion: 0.60
-Nodes (4): Check, GlassCard(), pingTable(), SASystemHealth()
-
 ### Community 154 - "DashboardPreview.tsx"
 Cohesion: 0.25
 Nodes (6): DashboardPreviewProps, kpiData, maxRev, revenueWeeks, sources, topServices
-
-### Community 156 - "useSlotHold.ts"
-Cohesion: 0.50
-Nodes (4): ScheduleStepProps, getSessionToken(), SlotHoldState, useSlotHold()
 
 ### Community 157 - "20261029202959_restore_call_out_fee.sql"
 Cohesion: 0.33
@@ -828,22 +762,22 @@ Cohesion: 0.70
 Nodes (4): blocked_clients_email_idx, blocked_clients_phone_idx, blocked_clients_tenant_id_idx, public.blocked_clients
 
 ## Knowledge Gaps
-- **173 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **177 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `react` connect `react` to `AdminCalendar.tsx`, `AdminSharedUI.tsx`, `SetupChecklistPaymentGate.tsx`, `AdminClientManagement.tsx`, `lucide-react`, `AdminSidebar.tsx`, `feature-flags/SAFeatureFlags.tsx`, `useTenant`, `dependencies`, `TenantContext.tsx`, `App.tsx`, `useTenant`, `calendar.tsx`, `SeoLandingPage.tsx`, `Admin.tsx`, `ReviewStep.tsx`, `AdminDashboard.tsx`, `package.json`, `IntegrationsGuidePanel.tsx`, `AdminLoyalty.tsx`, `FirstBookingCelebration.tsx`, `AdminLogin.tsx`, `AdminSidebar.tsx`, `AdminSpecialOccasions.tsx`, `AdminBilling.tsx`, `LoyaltyClientCard.tsx`, `AdminCommunications.tsx`, `date-fns`, `tokens.ts`, `@tanstack/react-query`, `SARevenue.tsx`, `SASystemHealth.tsx`, `BusinessThemeProvider.tsx`, `useSlotHold.ts`, `useSupabaseDashboard.ts`, `DetailsStep.tsx`, `AdminIntegrations.tsx`, `Onboarding.tsx`, `use-toast.ts`, `Pricing.tsx`, `AdminMetricExplanation.tsx`, `Book.tsx`, `SeoLandingPage`, `AdminConsultations.tsx`, `AdminRecommendations.tsx`, `Login.tsx`, `Index.tsx`, `LoyaltyBulkBar.tsx`, `SAGrowth.tsx`, `cn`, `usePayshapPayments.ts`, `toast.tsx`, `SATenantHealth.tsx`, `NotificationBell.tsx`, `RevenueTrendCard.tsx`, `SATenants.tsx`, `AdminAvailability.tsx`, `SACohortRetention.tsx`, `client.ts`, `SABookings.tsx`, `SAFeatureAdoption.tsx`, `ConsultationFormBuilder.tsx`, `HomePricingPreview.tsx`, `sheet.tsx`, `usePublicServices.ts`, `AdminSettings.tsx`, `DashboardViews.tsx`, `StockScanModal.tsx`, `SAUsers.tsx`, `lucide-react`, `SAAuditLog.tsx`, `SuperAdminShell.tsx`?**
-  _High betweenness centrality (0.105) - this node is a cross-community bridge._
+- **Why does `react` connect `react` to `AdminCalendar.tsx`, `AdminSharedUI.tsx`, `TenantContext.tsx`, `AdminLoyalty.tsx`, `SetupChecklistPaymentGate.tsx`, `AdminSidebar.tsx`, `feature-flags/SAFeatureFlags.tsx`, `useTenant`, `dependencies`, `lucide-react`, `App.tsx`, `useTenant`, `calendar.tsx`, `SeoLandingPage.tsx`, `Admin.tsx`, `ReviewStep.tsx`, `AdminDashboard.tsx`, `package.json`, `IntegrationsGuidePanel.tsx`, `LoyaltyClientCard.tsx`, `FirstBookingCelebration.tsx`, `AdminSidebar.tsx`, `AdminClientManagement.tsx`, `DashboardViews.tsx`, `AdminBilling.tsx`, `SuperAdminShell.tsx`, `homepage-journey.test.tsx`, `tokens.ts`, `SARevenue.tsx`, `BusinessThemeProvider.tsx`, `useSupabaseDashboard.ts`, `DetailsStep.tsx`, `AdminIntegrations.tsx`, `Onboarding.tsx`, `use-admin-viewport.ts`, `use-toast.ts`, `AdminMetricExplanation.tsx`, `Book.tsx`, `AdminConsultations.tsx`, `AdminRecommendations.tsx`, `Login.tsx`, `cn`, `usePayshapPayments.ts`, `toast.tsx`, `SATenantHealth.tsx`, `supabase`, `RevenueTrendCard.tsx`, `SATenants.tsx`, `AdminAvailability.tsx`, `SACohortRetention.tsx`, `client.ts`, `SABookings.tsx`, `SAFeatureAdoption.tsx`, `ConsultationFormBuilder.tsx`, `class-variance-authority`, `Index.tsx`, `sheet.tsx`, `AdminSettings.tsx`, `SAUsers.tsx`?**
+  _High betweenness centrality (0.110) - this node is a cross-community bridge._
 - **Should `AdminSharedUI.tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.0953058321479374 - nodes in this community are weakly interconnected._
-- **Why does `lucide-react` connect `lucide-react` to `AdminCalendar.tsx`, `AdminSharedUI.tsx`, `SetupChecklistPaymentGate.tsx`, `AdminClientManagement.tsx`, `lucide-react`, `feature-flags/SAFeatureFlags.tsx`, `useTenant`, `dependencies`, `App.tsx`, `useTenant`, `calendar.tsx`, `SeoLandingPage.tsx`, `Admin.tsx`, `ReviewStep.tsx`, `AdminDashboard.tsx`, `package.json`, `IntegrationsGuidePanel.tsx`, `AdminLoyalty.tsx`, `FirstBookingCelebration.tsx`, `AdminLogin.tsx`, `AdminSidebar.tsx`, `AdminSpecialOccasions.tsx`, `AdminBilling.tsx`, `LoyaltyClientCard.tsx`, `AdminCommunications.tsx`, `date-fns`, `@tanstack/react-query`, `DashboardPreview.tsx`, `SARevenue.tsx`, `SASystemHealth.tsx`, `tokens.ts`, `DetailsStep.tsx`, `AdminIntegrations.tsx`, `Onboarding.tsx`, `Pricing.tsx`, `AdminMetricExplanation.tsx`, `Book.tsx`, `SeoLandingPage`, `AdminConsultations.tsx`, `AdminRecommendations.tsx`, `Login.tsx`, `LoyaltyBulkBar.tsx`, `SAGrowth.tsx`, `cn`, `usePayshapPayments.ts`, `toast.tsx`, `SATenantHealth.tsx`, `NotificationBell.tsx`, `RevenueTrendCard.tsx`, `SATenants.tsx`, `AdminAvailability.tsx`, `SACohortRetention.tsx`, `client.ts`, `SABookings.tsx`, `SAFeatureAdoption.tsx`, `ConsultationFormBuilder.tsx`, `HomePricingPreview.tsx`, `sheet.tsx`, `usePublicServices.ts`, `AdminSettings.tsx`, `DashboardViews.tsx`, `StockScanModal.tsx`, `SAUsers.tsx`, `SAAuditLog.tsx`, `SuperAdminShell.tsx`, `display-cards.tsx`?**
-  _High betweenness centrality (0.087) - this node is a cross-community bridge._
+  _Cohesion score 0.09682539682539683 - nodes in this community are weakly interconnected._
+- **Why does `lucide-react` connect `react` to `AdminCalendar.tsx`, `AdminSharedUI.tsx`, `TenantContext.tsx`, `AdminLoyalty.tsx`, `SetupChecklistPaymentGate.tsx`, `lucide-react`, `feature-flags/SAFeatureFlags.tsx`, `useTenant`, `dependencies`, `App.tsx`, `useTenant`, `calendar.tsx`, `SeoLandingPage.tsx`, `Admin.tsx`, `ReviewStep.tsx`, `AdminDashboard.tsx`, `package.json`, `IntegrationsGuidePanel.tsx`, `LoyaltyClientCard.tsx`, `FirstBookingCelebration.tsx`, `AdminSidebar.tsx`, `AdminClientManagement.tsx`, `AdminMetricExplanation.tsx`, `AdminBilling.tsx`, `DashboardPreview.tsx`, `homepage-journey.test.tsx`, `DashboardViews.tsx`, `SuperAdminShell.tsx`, `SARevenue.tsx`, `tokens.ts`, `DetailsStep.tsx`, `AdminIntegrations.tsx`, `Onboarding.tsx`, `AdminMetricExplanation.tsx`, `Book.tsx`, `AdminConsultations.tsx`, `AdminRecommendations.tsx`, `Login.tsx`, `cn`, `usePayshapPayments.ts`, `toast.tsx`, `SATenantHealth.tsx`, `supabase`, `RevenueTrendCard.tsx`, `SATenants.tsx`, `AdminAvailability.tsx`, `SACohortRetention.tsx`, `client.ts`, `SABookings.tsx`, `SAFeatureAdoption.tsx`, `ConsultationFormBuilder.tsx`, `sheet.tsx`, `AdminSettings.tsx`, `SAUsers.tsx`, `display-cards.tsx`?**
+  _High betweenness centrality (0.075) - this node is a cross-community bridge._
+- **Should `AdminLoyalty.tsx` be split into smaller, more focused modules?**
+  _Cohesion score 0.12333333333333334 - nodes in this community are weakly interconnected._
+- **Why does `supabase` connect `supabase` to `AdminCalendar.tsx`, `AdminSharedUI.tsx`, `TenantContext.tsx`, `AdminLoyalty.tsx`, `SetupChecklistPaymentGate.tsx`, `lucide-react`, `feature-flags/SAFeatureFlags.tsx`, `useTenant`, `App.tsx`, `useTenant`, `SeoLandingPage.tsx`, `useNextyInsights.ts`, `Admin.tsx`, `ReviewStep.tsx`, `LoyaltyClientCard.tsx`, `FirstBookingCelebration.tsx`, `SuperAdminShell.tsx`, `AdminClientManagement.tsx`, `AdminBilling.tsx`, `SARevenue.tsx`, `BusinessThemeProvider.tsx`, `useSupabaseDashboard.ts`, `DetailsStep.tsx`, `AdminIntegrations.tsx`, `Onboarding.tsx`, `Book.tsx`, `AdminConsultations.tsx`, `AdminRecommendations.tsx`, `Login.tsx`, `usePayshapPayments.ts`, `SATenantHealth.tsx`, `SATenants.tsx`, `AdminAvailability.tsx`, `SACohortRetention.tsx`, `client.ts`, `SABookings.tsx`, `SAFeatureAdoption.tsx`, `ConsultationFormBuilder.tsx`, `AdminSettings.tsx`, `SAUsers.tsx`, `react`?**
+  _High betweenness centrality (0.034) - this node is a cross-community bridge._
 - **Should `ref_https` be split into smaller, more focused modules?**
-  _Cohesion score 0.04878048780487805 - nodes in this community are weakly interconnected._
-- **Why does `supabase` connect `client.ts` to `AdminCalendar.tsx`, `AdminSharedUI.tsx`, `SetupChecklistPaymentGate.tsx`, `AdminClientManagement.tsx`, `lucide-react`, `TenantContext.tsx`, `feature-flags/SAFeatureFlags.tsx`, `useTenant`, `App.tsx`, `useTenant`, `useClientAlerts.ts`, `useNextyInsights.ts`, `ReviewStep.tsx`, `Admin.tsx`, `AdminLoyalty.tsx`, `FirstBookingCelebration.tsx`, `AdminLogin.tsx`, `AdminSpecialOccasions.tsx`, `LoyaltyClientCard.tsx`, `AdminBilling.tsx`, `@tanstack/react-query`, `AdminCommunications.tsx`, `SASystemHealth.tsx`, `useSlotHold.ts`, `SARevenue.tsx`, `BusinessThemeProvider.tsx`, `useSupabaseDashboard.ts`, `DetailsStep.tsx`, `AdminIntegrations.tsx`, `Onboarding.tsx`, `useSupabaseAvailability.ts`, `Pricing.tsx`, `Book.tsx`, `AdminConsultations.tsx`, `AdminRecommendations.tsx`, `Login.tsx`, `SAGrowth.tsx`, `usePayshapPayments.ts`, `SATenantHealth.tsx`, `NotificationBell.tsx`, `SATenants.tsx`, `SACohortRetention.tsx`, `SABookings.tsx`, `SAFeatureAdoption.tsx`, `ConsultationFormBuilder.tsx`, `usePublicServices.ts`, `AdminSettings.tsx`, `StockScanModal.tsx`, `SAUsers.tsx`, `lucide-react`, `SAAuditLog.tsx`, `AdminSidebar.tsx`?**
-  _High betweenness centrality (0.037) - this node is a cross-community bridge._
+  _Cohesion score 0.045454545454545456 - nodes in this community are weakly interconnected._
 - **Should `AdminSidebar.tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.12380952380952381 - nodes in this community are weakly interconnected._
-- **Should `feature-flags/SAFeatureFlags.tsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.09988385598141696 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.11688311688311688 - nodes in this community are weakly interconnected._

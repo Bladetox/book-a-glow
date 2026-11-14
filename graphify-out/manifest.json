@@ -930,9 +930,9 @@
     "semantic_hash": ""
   },
   "src/contexts/TenantContext.tsx": {
-    "mtime": 1794649689.7465162,
-    "seen": 1794687193.6961648,
-    "ast_hash": "2efbc3e2d7ca6bae83a6b82e83980e65",
+    "mtime": 1794689449.411556,
+    "seen": 1794689501.4713602,
+    "ast_hash": "37e33672c82708919ef354a453775800",
     "semantic_hash": ""
   },
   "src/data/bookingData.ts": {
@@ -1098,9 +1098,9 @@
     "semantic_hash": ""
   },
   "src/hooks/useSupabaseAvailability.ts": {
-    "mtime": 1794649689.747249,
-    "seen": 1794687193.6962032,
-    "ast_hash": "a51113bac7a1810d396897dc20f25e58",
+    "mtime": 1794689449.4120994,
+    "seen": 1794689501.4714053,
+    "ast_hash": "c72c75a5a6fc9e151e53d2e498113f22",
     "semantic_hash": ""
   },
   "src/hooks/useSupabaseBookings.ts": {
@@ -1116,9 +1116,9 @@
     "semantic_hash": ""
   },
   "src/hooks/useSupabaseServices.ts": {
-    "mtime": 1794689108.7196805,
-    "seen": 1794689132.1566753,
-    "ast_hash": "7b819b5ff4f7f411a0e7c08cfc8e93c1",
+    "mtime": 1794689449.4125073,
+    "seen": 1794689501.47141,
+    "ast_hash": "7d684c08b783f3a73811ea2afc9ba1ec",
     "semantic_hash": ""
   },
   "src/hooks/useSupabaseSettings.ts": {
@@ -1158,9 +1158,9 @@
     "semantic_hash": ""
   },
   "src/integrations/supabase/types.ts": {
-    "mtime": 1794649689.7497935,
-    "seen": 1794687193.696227,
-    "ast_hash": "016eec5e566eafe602569c669aed0b87",
+    "mtime": 1794689452.5892894,
+    "seen": 1794689501.47142,
+    "ast_hash": "bd3aff0aa208fce5259c566c435b9eb5",
     "semantic_hash": ""
   },
   "src/lib/clientIdentity.ts": {

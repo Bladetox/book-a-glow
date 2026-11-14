@@ -2106,6 +2106,7 @@ export type Database = {
           is_addon: boolean
           is_archived: boolean
           is_call_out_available: boolean | null
+          is_video_consultation: boolean
           name: string
           price: number
           tags: string[] | null
@@ -2125,6 +2126,7 @@ export type Database = {
           is_addon?: boolean
           is_archived?: boolean
           is_call_out_available?: boolean | null
+          is_video_consultation?: boolean
           name: string
           price: number
           tags?: string[] | null
@@ -2144,6 +2146,7 @@ export type Database = {
           is_addon?: boolean
           is_archived?: boolean
           is_call_out_available?: boolean | null
+          is_video_consultation?: boolean
           name?: string
           price?: number
           tags?: string[] | null
