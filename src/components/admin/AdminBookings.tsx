@@ -29,6 +29,7 @@ import { useTenant } from "@/contexts/TenantContext";
 import { toast } from "sonner";
 import { buildWhatsAppMessage, waLink } from "@/lib/whatsapp";
 import { useWhatsAppTone, useWhatsAppTemplates } from "@/hooks/useWhatsAppTone";
+import { useTenantFeatureFlags } from "@/hooks/useTenantFeatureFlags";
 
 const filters = ["All", "Today", "Pending", "Confirmed", "Completed", "Cancelled"] as const;
 type FilterType = typeof filters[number];
@@ -334,6 +335,7 @@ interface AdminBookingsProps {
 const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => {
   const { data: bookings = [], isLoading } = useSupabaseBookings();
   const { tenantId } = useTenant();
+  const flags = useTenantFeatureFlags();
   const whatsappTone = useWhatsAppTone();
   const whatsappTemplates = useWhatsAppTemplates();
   const { data: appSettings = {} } = useAppSettings();
@@ -1203,6 +1205,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                               <span className="text-xs">via Email</span>
                             </button>
                             {/* WhatsApp button */}
+                            {flags.whatsapp_balance && (
                             <button
                               disabled={isSendingWhatsAppBalance || !b.phone}
                               onClick={e => handleWhatsAppBalance(b, e)}
@@ -1211,6 +1214,7 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                               {isSendingWhatsAppBalance ? <Loader2 className="w-4 h-4 animate-spin" /> : <WhatsAppIcon className="w-4 h-4" />}
                               <span className="text-xs">via WhatsApp</span>
                             </button>
+                            )}
                           </div>
                         </div>
                       );

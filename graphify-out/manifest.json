@@ -138,9 +138,9 @@
     "semantic_hash": ""
   },
   "src/components/admin/AdminBookings.tsx": {
-    "mtime": 1794693772.415801,
-    "seen": 1794693887.0613031,
-    "ast_hash": "b413cc0fe5ef96b609fd705866e28ab4",
+    "mtime": 1794694746.702193,
+    "seen": 1794694853.9008524,
+    "ast_hash": "38d7c0aa4439e5b6092f86d39ffb0861",
     "semantic_hash": ""
   },
   "src/components/admin/AdminCalendar.tsx": {
@@ -264,9 +264,9 @@
     "semantic_hash": ""
   },
   "src/components/admin/AdminStock.tsx": {
-    "mtime": 1794689658.1100323,
-    "seen": 1794689730.215623,
-    "ast_hash": "395e3b87b8fa06dc7e1638563c786177",
+    "mtime": 1794694737.8759317,
+    "seen": 1794694853.900876,
+    "ast_hash": "b5f26d317010d7ed9721787514e61a3e",
     "semantic_hash": ""
   },
   "src/components/admin/AdminTerms.tsx": {
@@ -660,9 +660,9 @@
     "semantic_hash": ""
   },
   "src/components/superadmin/feature-flags/FeatureFlagParts.tsx": {
-    "mtime": 1794694180.81346,
-    "seen": 1794694420.007626,
-    "ast_hash": "8619c56a564dc80ae51e7a426dbcd476",
+    "mtime": 1794694695.6778355,
+    "seen": 1794694853.9009535,
+    "ast_hash": "fb67a841cd2cde8ae7896c265d2ec98c",
     "semantic_hash": ""
   },
   "src/components/superadmin/feature-flags/SAFeatureFlags.tsx": {
@@ -672,9 +672,9 @@
     "semantic_hash": ""
   },
   "src/components/superadmin/feature-flags/planFeatureMap.ts": {
-    "mtime": 1794649689.742874,
-    "seen": 1794687193.6961071,
-    "ast_hash": "5a3a7a957399701560dbf7ec840b1f92",
+    "mtime": 1794694647.5836902,
+    "seen": 1794694853.9009557,
+    "ast_hash": "fcd768eb2259746dcf75060fe6bb571c",
     "semantic_hash": ""
   },
   "src/components/superadmin/views/SAAuditLog.tsx": {
@@ -1014,9 +1014,9 @@
     "semantic_hash": ""
   },
   "src/hooks/useFeatureFlags.ts": {
-    "mtime": 1794694170.9444537,
-    "seen": 1794694420.0078437,
-    "ast_hash": "6dd757f64fcb4f949204c2c394f29a5c",
+    "mtime": 1794694647.5764003,
+    "seen": 1794694853.9010208,
+    "ast_hash": "87a5045897a16cee466d25b45ae0f916",
     "semantic_hash": ""
   },
   "src/hooks/useNextyInsights.ts": {
@@ -1182,15 +1182,15 @@
     "semantic_hash": ""
   },
   "src/lib/featureFlags/registry.test.ts": {
-    "mtime": 1794694413.0170865,
-    "seen": 1794694420.007968,
-    "ast_hash": "4ea8a26ee02de0646625d0d43bdeb2b3",
+    "mtime": 1794694647.5771048,
+    "seen": 1794694853.9010553,
+    "ast_hash": "c85a61074467228211b173b874582929",
     "semantic_hash": ""
   },
   "src/lib/featureFlags/registry.ts": {
-    "mtime": 1794694170.9442651,
-    "seen": 1794694420.0079718,
-    "ast_hash": "f5564024babc29f3e9c17e8c41c1ac18",
+    "mtime": 1794694846.9340851,
+    "seen": 1794694853.9010563,
+    "ast_hash": "d506236d9273e43ae967979666d4ecfb",
     "semantic_hash": ""
   },
   "src/lib/nextyTenantProfile.test.ts": {
@@ -3741,6 +3741,12 @@
     "mtime": 1794694223.567761,
     "seen": 1794694420.007935,
     "ast_hash": "08666aaf9267328a56c0823209d034fe",
+    "semantic_hash": ""
+  },
+  "src/hooks/useTenantFeatureFlags.ts": {
+    "mtime": 1794694737.8559318,
+    "seen": 1794694853.9010413,
+    "ast_hash": "82225a354e54c5053b9b53d750788f30",
     "semantic_hash": ""
   },
   "package-lock.json": {

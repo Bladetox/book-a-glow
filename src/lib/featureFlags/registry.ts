@@ -18,7 +18,7 @@ export const FEATURE_REGISTRY = [
   { key: "deposit_payments", plan: "starter", status: "live", wired: "none", label: "Deposit Payments", desc: "Deposit-only checkout; remainder at appointment." },
   { key: "email_confirmations", plan: "starter", status: "unwired", wired: "none", label: "Email Confirmations", desc: "Transactional emails from send-booking-email. Function does not check the flag." },
   { key: "whatsapp_reminders", plan: "starter", status: "unwired", wired: "none", label: "WhatsApp Reminders", desc: "Manual wa.me link from the booking panel. Flag has no reader." },
-  { key: "whatsapp_balance", plan: "starter", status: "unwired", wired: "none", label: "WhatsApp Balance Request", desc: "Manual wa.me balance message. Flag has no reader." },
+  { key: "whatsapp_balance", plan: "starter", status: "live", wired: "ui", label: "WhatsApp Balance Request", desc: "Manual wa.me balance message from the booking panel. Default on; off only when set to false." },
   { key: "add_to_calendar", plan: "starter", status: "live", wired: "backend", label: "Add to Calendar (Client)", desc: ".ics attached to client email. Read directly inside send-booking-email; global/tenant precedence is not confirmed to match the hook." },
   { key: "integrations_tab", plan: "starter", status: "live", wired: "ui", label: "Integrations Tab", desc: "Setup tab in admin. Required by card-provider configuration." },
   { key: "pwa_prompt", plan: "starter", status: "unwired", wired: "none", label: "PWA Install Prompt", desc: "Add-to-home-screen nudge. No consumer found." },
@@ -32,17 +32,14 @@ export const FEATURE_REGISTRY = [
   { key: "blocked_clients", plan: "flow", status: "partial", wired: "none", label: "Blocked Clients", desc: "check-guest-blocked runs for all tenants; this flag has no reader." },
   { key: "suggested_addons", plan: "professional", status: "unwired", wired: "none", label: "Smart Add-on Suggestions", desc: "Rule-based upsell (not AI). Flag has no reader." },
   { key: "special_occasions", plan: "professional", status: "partial", wired: "ui", label: "Special Occasions", desc: "Birthday / anniversary tracker. Sidebar item gated; the Client Management tab always renders." },
-  { key: "client_alerts", plan: "professional", status: "unwired", wired: "none", label: "Re-engagement Alerts", desc: "Inactive 90+ days, overdue loyalty, upcoming birthdays. Flag has no reader." },
+  { key: "client_alerts", plan: "professional", status: "unwired", wired: "none", label: "Re-engagement Alerts", desc: "Inactive 90+ days, overdue loyalty, upcoming birthdays. Triggers in the dashboard and client pages are not gated yet." },
   { key: "loyalty_module", plan: "professional", status: "partial", wired: "ui", label: "Loyalty Tracker", desc: "Sidebar item gated; the DB trigger writes tracker rows for all tenants." },
   { key: "consistency_pricing", plan: "professional", status: "partial", wired: "none", label: "Consistency Pricing", desc: "Pricing path reads its own config; enforcement of this flag is not yet traced." },
   { key: "ai_insights", plan: "professional", status: "partial", wired: "ui", label: "Nexty Business Insights", desc: "SQL analytics (not LLM). Sidebar entry gated; dashboard KPI queries remain." },
   { key: "custom_domain", plan: "professional", status: "unwired", wired: "none", label: "Custom Domain", desc: "register-custom-domain deployed but never invoked; flag has no reader." },
   { key: "stock_module", plan: "operations", status: "partial", wired: "ui", label: "Stock Management", desc: "Gates the Stock view in admin; route-level enforcement not tested." },
-  { key: "stock_barcode_scan", plan: "operations", status: "unwired", wired: "none", label: "Stock Barcode Scan", desc: "Scan modal in inventory. Flag has no reader." },
-  { key: "stock_alerts", plan: "operations", status: "unwired", wired: "none", label: "Low-Stock Alerts", desc: "Alert UI exists; this flag is not read. Bundle under stock_module or wire it." },
-  { key: "multi_staff", plan: "platform", status: "internal", wired: "none", label: "Multi-Staff Support", desc: "Not implemented. Only tenants.owner_id is used. Do not sell." },
-  { key: "gmb_integration", plan: "platform", status: "internal", wired: "none", label: "Google My Business", desc: "Edge functions deployed, no UI in repo. Do not sell yet." },
-  { key: "broadcast_email", plan: "platform", status: "internal", wired: "none", label: "Broadcast Email", desc: "SuperAdmin-triggered only. Not a tenant feature." },
+  { key: "stock_barcode_scan", plan: "operations", status: "live", wired: "ui", label: "Stock Barcode Scan", desc: "Scan modal in inventory. Default on; off only when set to false." },
+  { key: "stock_alerts", plan: "operations", status: "partial", wired: "ui", label: "Low-Stock Alerts", desc: "Gates the stock alert banner. The dashboard stock card and count tiles are not gated yet." },
   { key: "video_consultations", plan: "professional", status: "partial", wired: "ui", label: "Video Call Services", desc: "Per-tenant opt-in only, set in Tenant Overrides. Shows video-call services and video hours on the public booking page and in admin. Not part of global defaults." },
 ] as const satisfies readonly FeatureDef[];
 
@@ -53,6 +50,10 @@ export const flagSettingKey = (k: FlagKey) => `feature_flag_${k}`;
 export const PLATFORM_TENANT_ID = "00000000-0000-0000-0000-000000000000";
 export const FLAG_KEYS: readonly FlagKey[] = FEATURE_REGISTRY.map(f => f.key);
 /** Flags that are set per tenant only. They never take global defaults or trial/plan defaults. */
+/** Flags for features that already exist. A missing row keeps the feature on, so wiring a flag does not switch it off for existing tenants. */
+export const DEFAULT_ON_FLAGS: ReadonlySet<FlagKey> = new Set<FlagKey>([
+  "client_alerts", "stock_barcode_scan", "stock_alerts", "whatsapp_balance",
+]);
 export const TENANT_ONLY_FLAGS: ReadonlySet<FlagKey> = new Set<FlagKey>(["video_consultations"]);
 export const GLOBAL_FLAG_KEYS: readonly FlagKey[] = FLAG_KEYS.filter(k => !TENANT_ONLY_FLAGS.has(k));
 export const ALL_FLAGS = FLAG_KEYS;
@@ -65,11 +66,12 @@ export const PLAN_META: Record<PlanId, { label: string; subtitle: string }> = {
   operations: { label: "Operations · Decision", subtitle: "Doesn't fit the three themes — keep Professional or leave in Studio" },
   platform: { label: "Platform · Internal", subtitle: "Not tenant-facing — do not sell" },
 };
-export const PLAN_ORDER: PlanId[] = ["starter", "flow", "professional", "operations", "platform"];
+// "platform" (internal flags) was removed: those flags had no reader.
+export const PLAN_ORDER: PlanId[] = ["starter", "flow", "professional", "operations"];
 
 export function parseFlagRows(rows: { key: string; value: string }[], fallback = false): FeatureFlags {
   const map = {} as FeatureFlags;
-  for (const k of FLAG_KEYS) map[k] = fallback;
+  for (const k of FLAG_KEYS) map[k] = DEFAULT_ON_FLAGS.has(k) ? true : fallback;
   for (const row of rows) {
     const k = row.key.replace("feature_flag_", "");
     if (!(k in map)) continue;

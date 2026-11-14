@@ -9,8 +9,8 @@ const EXPECTED_KEYS = [
   "payfast_payments", "google_calendar_sync", "review_generation", "blocked_clients",
   "suggested_addons", "special_occasions", "client_alerts", "loyalty_module",
   "consistency_pricing", "ai_insights", "custom_domain", "stock_module",
-  "stock_barcode_scan", "stock_alerts", "multi_staff", "gmb_integration",
-  "broadcast_email", "video_consultations",
+  "stock_barcode_scan", "stock_alerts",
+  "video_consultations",
 ] as const;
 
 describe("feature-flag registry", () => {

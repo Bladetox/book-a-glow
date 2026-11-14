@@ -13,8 +13,7 @@ export function FeatureToggleRow({
 }) {
   const badge =
     feature.status === "partial"  ? "partial wiring" :
-    feature.status === "unwired"  ? "not yet wired"  :
-    feature.status === "internal" ? "internal only"  : null;
+    feature.status === "unwired"  ? "not yet wired"  : null;
 
   return (
     <div className={`flex items-center justify-between px-5 py-4 transition-opacity ${dimmed ? "opacity-40" : ""}`}>

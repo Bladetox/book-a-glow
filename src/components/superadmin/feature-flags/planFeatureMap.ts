@@ -79,9 +79,6 @@ export const PLAN_GROUPS: PlanGroup[] = [
     label: "Platform · Internal",
     subtitle: "Not tenant-facing — do not sell",
     features: [
-      { key: "multi_staff",     label: "Multi-Staff Support",  desc: "Flag exists; only tenants.owner_id is ever used as staff", status: "internal" },
-      { key: "gmb_integration", label: "Google My Business",   desc: "Edge functions deployed but no UI in repo",                status: "internal" },
-      { key: "broadcast_email", label: "Broadcast Email",      desc: "SuperAdmin-triggered only; not a tenant feature",          status: "internal" },
     ],
   },
 ];
