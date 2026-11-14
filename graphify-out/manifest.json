@@ -3690,9 +3690,9 @@
     "semantic_hash": ""
   },
   "supabase/pending/tests/20_availability_assertions.sql": {
-    "mtime": 1794691661.317366,
-    "seen": 1794691663.2540689,
-    "ast_hash": "468d7d50e35facf06e97696c4af5f255",
+    "mtime": 1794691669.702504,
+    "seen": 1794691675.5646942,
+    "ast_hash": "e8328f8b14132ac913eb0d3de7a2e48c",
     "semantic_hash": ""
   },
   "supabase/pending/video_consultation_availability_functions.sql": {
