@@ -56,7 +56,7 @@ const ScheduleStep = ({
 }: ScheduleStepProps) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [calendarOpen, setCalendarOpen] = useState(true);
-  const [availabilityNotice, setAvailabilityNotice] = useState<"insufficient_time" | "fully_booked" | "restricted" | null>(null);
+  const [availabilityNotice, setAvailabilityNotice] = useState<"available" | "insufficient_time" | "fully_booked" | "restricted" | null>(null);
   const [refreshingAvailability, setRefreshingAvailability] = useState(false);
   const [availabilityRefreshError, setAvailabilityRefreshError] = useState(false);
   const [acquiringSlot, setAcquiringSlot] = useState(false);
@@ -115,7 +115,7 @@ const ScheduleStep = ({
 
   const releaseHold = slotHold.releaseHold;
 
-  const showAvailabilityNotice = useCallback((status: "insufficient_time" | "fully_booked" | "restricted") => {
+  const showAvailabilityNotice = useCallback((status: "available" | "insufficient_time" | "fully_booked" | "restricted") => {
     if (popupTimerRef.current) clearTimeout(popupTimerRef.current);
     setAvailabilityRefreshError(false);
     setCalendarOpen(false);

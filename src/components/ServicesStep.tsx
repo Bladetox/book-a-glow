@@ -23,7 +23,7 @@ const ServicesStep = ({ selectedTreatments, onAdd, onRemove }: ServicesStepProps
   }, [categories, activeCategory]);
 
   const servicesHeading: string =
-    (config as Record<string, string>)["services_step_heading"] ?? "Select a service";
+    (config as unknown as Record<string, string | undefined>)["services_step_heading"] ?? "Select a service";
 
   if (loadingServices || loadingCats) {
     return (

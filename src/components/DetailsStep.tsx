@@ -528,7 +528,7 @@ useEffect(() => {
   const existingClientLabel = config.clientLabelExisting;
   const newClientLabel = config.clientLabelNew;
   const existingClientNotesPlaceholder: string =
-    (config as Record<string, string>)["client_type_existing_notes_placeholder"] ??
+    (config as unknown as Record<string, string | undefined>)["client_type_existing_notes_placeholder"] ??
     "e.g. any changes since your last visit, preferences\u2026";
 
   useEffect(() => {

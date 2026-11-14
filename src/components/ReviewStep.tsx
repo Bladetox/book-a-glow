@@ -579,8 +579,8 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, holdId, sessio
             <div key={svc.id} className="flex items-center justify-between px-4 py-2.5">
               <div>
                 <p className="text-sm font-medium text-foreground">{svc.name}{qty > 1 ? ` x${qty}` : ""}</p>
-                {svc.duration_minutes && (
-                  <p className="text-[11px] text-muted-foreground">{svc.duration_minutes} min</p>
+                {svc.duration && (
+                  <p className="text-[11px] text-muted-foreground">{svc.duration} min</p>
                 )}
               </div>
               <p className="text-sm font-semibold text-foreground">{cur}{(svc.price * qty).toLocaleString()}</p>
@@ -988,8 +988,8 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, holdId, sessio
                             >
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm font-semibold text-foreground leading-snug">{svc.name}</p>
-                                {svc.duration_minutes && (
-                                  <p className="text-[11px] text-muted-foreground mt-0.5">{svc.duration_minutes} min</p>
+                                {svc.duration && (
+                                  <p className="text-[11px] text-muted-foreground mt-0.5">{svc.duration} min</p>
                                 )}
                                 <p className="text-sm font-bold text-primary mt-1">{cur}{svc.price.toLocaleString()}</p>
                                 {qty > 0 && (
