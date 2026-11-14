@@ -3660,9 +3660,9 @@
     "semantic_hash": ""
   },
   "supabase/pending/README.md": {
-    "mtime": 1794693009.0680149,
-    "seen": 1794693076.606971,
-    "ast_hash": "1ded34b1868ec3d469126eeb30c23dff",
+    "mtime": 1794693327.5918481,
+    "seen": 1794693330.562912,
+    "ast_hash": "8e7970eb07c8c0a73c3e01b4f18243c9",
     "semantic_hash": ""
   },
   "supabase/pending/tests/00_base_tables.sql": {
@@ -3705,6 +3705,18 @@
     "mtime": 1794693011.8961523,
     "seen": 1794693076.6069596,
     "ast_hash": "9e1847065690350a75b54a5b8192f5ea",
+    "semantic_hash": ""
+  },
+  "supabase/pending/tests/30_booking_assertions.sql": {
+    "mtime": 1794693314.406871,
+    "seen": 1794693330.5628648,
+    "ast_hash": "74bcf595df6895e60d838364e3fc7d34",
+    "semantic_hash": ""
+  },
+  "supabase/pending/video_consultation_booking_functions.sql": {
+    "mtime": 1794693267.0638444,
+    "seen": 1794693330.5628715,
+    "ast_hash": "577683c57fa90a1e38ff1542359f3871",
     "semantic_hash": ""
   },
   "package-lock.json": {
