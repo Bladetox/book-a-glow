@@ -335,37 +335,37 @@ const AdminAvailability = () => {
             ? "Set your default weekly hours. Toggle days on/off and tap slots to mark available or blocked."
             : "Tap a date to override its availability. Override dates show a dot on the calendar."
         }
-        action={
-          <div className="flex flex-wrap gap-2">
-            {videoEnabled && scheduleModes.map(({ value, label }) => (
-              <button
-                key={value}
-                onClick={() => switchScheduleMode(value)}
-                className={`whitespace-nowrap rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-wider transition-all ${
-                  scheduleMode === value
-                    ? "border border-white/[0.15] bg-white/[0.12] text-white"
-                    : "border border-white/[0.06] text-white/35 hover:text-white/60"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-            {views.map((value) => (
-              <button
-                key={value}
-                onClick={() => setView(value)}
-                className={`whitespace-nowrap rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-wider transition-all ${
-                  view === value
-                    ? "border border-white/[0.15] bg-white/[0.12] text-white"
-                    : "border border-white/[0.06] text-white/35 hover:text-white/60"
-                }`}
-              >
-                {value}
-              </button>
-            ))}
-          </div>
-        }
       />
+
+      {/* Mode and view switches sit on their own row so the header text keeps its width on phones. */}
+        <div className="flex flex-wrap gap-2">
+          {videoEnabled && scheduleModes.map(({ value, label }) => (
+            <button
+              key={value}
+              onClick={() => switchScheduleMode(value)}
+              className={`whitespace-nowrap rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-wider transition-all ${
+                scheduleMode === value
+                  ? "border border-white/[0.15] bg-white/[0.12] text-white"
+                  : "border border-white/[0.06] text-white/35 hover:text-white/60"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+          {views.map((value) => (
+            <button
+              key={value}
+              onClick={() => setView(value)}
+              className={`whitespace-nowrap rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-wider transition-all ${
+                view === value
+                  ? "border border-white/[0.15] bg-white/[0.12] text-white"
+                  : "border border-white/[0.06] text-white/35 hover:text-white/60"
+              }`}
+            >
+              {value}
+            </button>
+          ))}
+        </div>
 
       {isError && (
         <pre className="whitespace-pre-wrap rounded-2xl border border-red-500/30 bg-red-950/40 p-4 text-xs text-red-200">
