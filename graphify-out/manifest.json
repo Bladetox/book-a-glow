@@ -3666,9 +3666,9 @@
     "semantic_hash": ""
   },
   "supabase/pending/README.md": {
-    "mtime": 1794689998.1780524,
-    "seen": 1794690000.9121065,
-    "ast_hash": "07f1467daefd6c2f465eb003aad2c756",
+    "mtime": 1794691650.2541506,
+    "seen": 1794691653.265966,
+    "ast_hash": "fed46d0dacfe9587d4ae35928b3b5582",
     "semantic_hash": ""
   },
   "supabase/pending/tests/00_base_tables.sql": {
@@ -3684,9 +3684,21 @@
     "semantic_hash": ""
   },
   "docs/FUNCTION_AUDIT_2026-11-14.md": {
-    "mtime": 1794691155.9151962,
-    "seen": 1794691162.1165829,
-    "ast_hash": "e755f6a35fa50fbadde04270f2087b60",
+    "mtime": 1794691548.7339492,
+    "seen": 1794691653.2659538,
+    "ast_hash": "c02b6d275d8ea24c7f205bfa0f483695",
+    "semantic_hash": ""
+  },
+  "supabase/pending/tests/20_availability_assertions.sql": {
+    "mtime": 1794691650.226208,
+    "seen": 1794691653.2659366,
+    "ast_hash": "3573405d671e082d4922d88519b12e8d",
+    "semantic_hash": ""
+  },
+  "supabase/pending/video_consultation_availability_functions.sql": {
+    "mtime": 1794691604.6761258,
+    "seen": 1794691653.2659388,
+    "ast_hash": "f0578b50fe80dd8fc53c04feb105be2c",
     "semantic_hash": ""
   },
   "package-lock.json": {
