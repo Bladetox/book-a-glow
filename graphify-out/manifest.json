@@ -72,21 +72,21 @@
     "semantic_hash": ""
   },
   "src/components/ReviewStep.tsx": {
-    "mtime": 1794689866.6852334,
-    "seen": 1794689898.222697,
-    "ast_hash": "ff614c9189bc211ee3ceb3b3d3ce0e4d",
+    "mtime": 1794693579.5597346,
+    "seen": 1794693887.061287,
+    "ast_hash": "7a8519a05763d49e3b57bfaa8be54264",
     "semantic_hash": ""
   },
   "src/components/ScheduleStep.tsx": {
-    "mtime": 1794689866.685796,
-    "seen": 1794689898.2226987,
-    "ast_hash": "2a36ead79e4ddf68b3883f461a469fdc",
+    "mtime": 1794693644.0636683,
+    "seen": 1794693887.0612884,
+    "ast_hash": "e7e929afc7c82d61f2f2378d65836d57",
     "semantic_hash": ""
   },
   "src/components/ServicesStep.tsx": {
-    "mtime": 1794689866.6865265,
-    "seen": 1794689898.2226999,
-    "ast_hash": "dde4a039601a0a49eeb2710e5c2f478d",
+    "mtime": 1794693614.794699,
+    "seen": 1794693887.0612898,
+    "ast_hash": "08ea4fb3759990d1fecb9de2936fd828",
     "semantic_hash": ""
   },
   "src/components/SplashScreen.tsx": {
@@ -120,9 +120,9 @@
     "semantic_hash": ""
   },
   "src/components/admin/AdminAvailability.tsx": {
-    "mtime": 1794649689.733867,
-    "seen": 1794687193.6959827,
-    "ast_hash": "a21fa95d6fd628eb0d81a0e0d1100da1",
+    "mtime": 1794693706.5318706,
+    "seen": 1794693887.0612986,
+    "ast_hash": "ab1121b5c8765364553e41fb8a46e277",
     "semantic_hash": ""
   },
   "src/components/admin/AdminBilling.tsx": {
@@ -138,9 +138,9 @@
     "semantic_hash": ""
   },
   "src/components/admin/AdminBookings.tsx": {
-    "mtime": 1794689658.1100323,
-    "seen": 1794689730.2155814,
-    "ast_hash": "e9e0fef05ab6b82614b88436164adef1",
+    "mtime": 1794693772.415801,
+    "seen": 1794693887.0613031,
+    "ast_hash": "b413cc0fe5ef96b609fd705866e28ab4",
     "semantic_hash": ""
   },
   "src/components/admin/AdminCalendar.tsx": {
@@ -1038,21 +1038,21 @@
     "semantic_hash": ""
   },
   "src/hooks/usePublicAvailability.ts": {
-    "mtime": 1794649689.747249,
-    "seen": 1794687193.6961899,
-    "ast_hash": "d48c7e003a48a39a47100f08c7419a71",
+    "mtime": 1794693517.1241908,
+    "seen": 1794693887.061496,
+    "ast_hash": "9d8bc1860928cdc442c8d202fe8d1645",
     "semantic_hash": ""
   },
   "src/hooks/usePublicBusinessConfig.ts": {
-    "mtime": 1794649689.747249,
-    "seen": 1794687193.6961915,
-    "ast_hash": "52a9191e50e4201d4cfec4aa91fa70d9",
+    "mtime": 1794693474.4598002,
+    "seen": 1794693887.0614974,
+    "ast_hash": "fb9fa7ed5bf241a88d2afe2b652a58a7",
     "semantic_hash": ""
   },
   "src/hooks/usePublicServices.ts": {
-    "mtime": 1794649689.747249,
-    "seen": 1794687193.6961927,
-    "ast_hash": "6512f1320f042f7b7d158d979b9e1109",
+    "mtime": 1794693474.460169,
+    "seen": 1794693887.0614984,
+    "ast_hash": "ecf585af9b4bf4917da5262bac9c11bc",
     "semantic_hash": ""
   },
   "src/hooks/usePublicTerms.ts": {
@@ -1080,9 +1080,9 @@
     "semantic_hash": ""
   },
   "src/hooks/useSlotHold.ts": {
-    "mtime": 1794649689.747249,
-    "seen": 1794687193.6961994,
-    "ast_hash": "28404669c19ca25872604e5c9e566f9d",
+    "mtime": 1794693519.2473717,
+    "seen": 1794693887.0615046,
+    "ast_hash": "d891a87163ae8748dcb373fddda868ba",
     "semantic_hash": ""
   },
   "src/hooks/useStockAlerts.ts": {
@@ -1098,15 +1098,15 @@
     "semantic_hash": ""
   },
   "src/hooks/useSupabaseAvailability.ts": {
-    "mtime": 1794689664.4180326,
-    "seen": 1794689730.2159052,
-    "ast_hash": "c72c75a5a6fc9e151e53d2e498113f22",
+    "mtime": 1794693679.0548482,
+    "seen": 1794693887.0615084,
+    "ast_hash": "e8bcb6e953b8ae11b4a0151e6134094e",
     "semantic_hash": ""
   },
   "src/hooks/useSupabaseBookings.ts": {
-    "mtime": 1794649689.7483637,
-    "seen": 1794687193.696205,
-    "ast_hash": "4925bb929b4a4c64327772e430fec183",
+    "mtime": 1794693772.4149337,
+    "seen": 1794693887.0615268,
+    "ast_hash": "7717653dce12e9ab583e73c0cbdfc124",
     "semantic_hash": ""
   },
   "src/hooks/useSupabaseDashboard.ts": {
@@ -1272,9 +1272,9 @@
     "semantic_hash": ""
   },
   "src/pages/Book.tsx": {
-    "mtime": 1794649689.7520387,
-    "seen": 1794687193.6962547,
-    "ast_hash": "e201148062325dfdec70b9eaf64d8d71",
+    "mtime": 1794693579.5600002,
+    "seen": 1794693887.061573,
+    "ast_hash": "f70c1b12e6e253686d8abfcb23455774",
     "semantic_hash": ""
   },
   "src/pages/BookingSoftwareSouthAfrica.tsx": {
@@ -3642,15 +3642,15 @@
     "semantic_hash": ""
   },
   "src/lib/videoConsultation.test.ts": {
-    "mtime": 1794689022.5963743,
-    "seen": 1794689132.156721,
-    "ast_hash": "521c26c484e29e57da52a2e03b737b94",
+    "mtime": 1794693467.8918564,
+    "seen": 1794693887.0615618,
+    "ast_hash": "fb3ef69ef2d2398d0746e0a74139ec98",
     "semantic_hash": ""
   },
   "src/lib/videoConsultation.ts": {
-    "mtime": 1794689018.6079643,
-    "seen": 1794689132.156724,
-    "ast_hash": "21e27f828c183d5073b80580698cbbf5",
+    "mtime": 1794693467.8918564,
+    "seen": 1794693887.061564,
+    "ast_hash": "ec9996dee391506fca9d8d8ea4af9f0a",
     "semantic_hash": ""
   },
   "supabase/pending/video_consultation_availability_schedule_type.sql": {
@@ -3717,6 +3717,18 @@
     "mtime": 1794693267.0638444,
     "seen": 1794693330.5628715,
     "ast_hash": "577683c57fa90a1e38ff1542359f3871",
+    "semantic_hash": ""
+  },
+  "docs/rollback/functions_before_video_release.sql": {
+    "mtime": 1794693879.1078176,
+    "seen": 1794693887.061266,
+    "ast_hash": "aa4772881b6147a9323458d71d6eaafa",
+    "semantic_hash": ""
+  },
+  "docs/ROLLBACK_PLAN_AVAILABILITY_BOOKING.md": {
+    "mtime": 1794693879.112273,
+    "seen": 1794693887.0620086,
+    "ast_hash": "264c52b59a8a15d1d29d7a1ea4c5c7ec",
     "semantic_hash": ""
   },
   "package-lock.json": {
