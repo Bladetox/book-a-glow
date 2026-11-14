@@ -65,7 +65,7 @@
 @media (min-width: 768px) {
   .booking-app.bk-stage {
     background:
-      radial-gradient(60% 55% at 12% 0%, hsl(var(--accent) / 0.22), transparent 70%),
+      radial-gradient(60% 55% at 12% 0%, hsl(var(--primary) / 0.1), transparent 70%),
       radial-gradient(55% 55% at 100% 100%, hsl(var(--primary) / 0.12), transparent 70%),
       hsl(var(--background));
   }
@@ -849,10 +849,12 @@
 }
 
 /* ===== Splash =====
-   A two-tone cover: the business name set large on the tenant background, and
-   the "where did you hear about us" question on a solid block of the tenant's
-   primary colour, so the one thing the guest has to do is the boldest thing
-   on the screen. */
+   Matches the "Booking Splash" frame in the NextSlot Figma file (390 x 844).
+   Every colour comes from the tenant theme tokens, so the splash follows each
+   theme and its light/dark flip: a faint primary wash over the theme background,
+   the monogram tile top right, the name anchored to the bottom of the hero, and
+   the lead-source question on a solid block of the tenant's primary colour. Motion is driven by framer-motion
+   in SplashScreen.tsx; the only CSS animations here are the slow ambient glow. */
 .booking-app.bk-splash {
   position: fixed;
   inset: 0;
@@ -878,7 +880,18 @@
   }
 }
 
-/* Slow-moving fields of tenant colour behind the name. */
+/* A faint wash of the tenant's primary over its own background. No accent. */
+.booking-app .bk-splash__hero {
+  position: relative;
+  flex: 1 1 0%;
+  min-height: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(110% 70% at 0% 0%, hsl(var(--primary) / 0.1) 0%, transparent 70%),
+    hsl(var(--background));
+}
+
+/* Slow ambient glow inside the hero. Purely decorative. */
 .booking-app .bk-splash__glow {
   position: absolute;
   inset: 0;
@@ -886,117 +899,159 @@
   pointer-events: none;
 }
 
-.booking-app .bk-splash__glow::before,
-.booking-app .bk-splash__glow::after {
+.booking-app .bk-splash__glow::before {
   content: "";
   position: absolute;
+  top: -8rem;
+  left: -9rem;
+  width: 26rem;
+  height: 26rem;
   border-radius: 9999px;
-  filter: blur(64px);
-}
-
-.booking-app .bk-splash__glow::before {
-  top: -9rem;
-  left: -10rem;
-  width: 28rem;
-  height: 28rem;
-  background: hsl(var(--accent) / 0.5);
+  background: hsl(var(--primary) / 0.12);
+  filter: blur(70px);
   animation: bk-drift-a 18s ease-in-out infinite alternate;
 }
 
-.booking-app .bk-splash__glow::after {
-  top: 26%;
-  right: -11rem;
-  width: 22rem;
-  height: 22rem;
-  background: hsl(var(--primary) / 0.2);
-  animation: bk-drift-b 24s ease-in-out infinite alternate;
-}
-
 .dark .booking-app .bk-splash__glow::before {
-  background: hsl(var(--accent) / 0.34);
+  background: hsl(var(--primary-foreground) / 0.06);
 }
 
 @keyframes bk-drift-a {
   to {
-    transform: translate3d(3.5rem, 2.5rem, 0) scale(1.12);
+    transform: translate3d(3rem, 2rem, 0) scale(1.1);
   }
 }
 
-@keyframes bk-drift-b {
-  to {
-    transform: translate3d(-3rem, -2rem, 0) scale(0.92);
+@media (prefers-reduced-motion: reduce) {
+  .booking-app .bk-splash__glow::before {
+    animation: none;
   }
 }
 
-/* Oversized ring, cropped by the edge of the screen. */
-.booking-app .bk-splash__ring {
-  position: absolute;
-  top: -7rem;
-  right: -9rem;
-  width: 24rem;
-  height: 24rem;
-  border-radius: 9999px;
-  border: 1.5px solid hsl(var(--foreground) / 0.1);
-  pointer-events: none;
-}
-
-.booking-app .bk-splash__ring::after {
-  content: "";
-  position: absolute;
-  inset: 3.25rem;
-  border-radius: inherit;
-  border: 1.5px solid hsl(var(--foreground) / 0.06);
-}
-
-.booking-app .bk-splash__brand {
-  position: relative;
-  display: flex;
-  flex: 1 1 0%;
-  min-height: 0;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 1.25rem;
-  padding: max(env(safe-area-inset-top, 0px), 1.75rem) 1.5rem 1.75rem;
-}
-
-.booking-app .bk-splash__brand .bk-overline {
-  letter-spacing: 0.22em;
-}
-
+/* Monogram tile, top right. */
 .booking-app .bk-splash__logo {
+  position: absolute;
+  top: max(env(safe-area-inset-top, 0px), 2.25rem);
+  right: 2.75rem;
+  z-index: 1;
   display: grid;
   place-items: center;
-  flex: none;
-  width: 4rem;
-  height: 4rem;
+  width: 10rem;
+  height: 10rem;
   overflow: hidden;
-  border-radius: 1.25rem;
-  background: var(--bk-surface);
-  border: 1px solid var(--bk-line);
-  box-shadow: var(--bk-shadow);
+  border-radius: 1.75rem;
+  background: hsl(var(--background));
+  border: 1px solid hsl(var(--foreground) / 0.06);
+  box-shadow: 0 18px 40px -22px hsl(var(--foreground) / 0.45);
 }
 
-.booking-app .bk-splash__name {
-  /* --bk-name-scale is set from the length of the business name, so a long
-     name or a long single word still sets cleanly without breaking mid-word. */
-  font-size: calc(clamp(2.5rem, min(14.5vw, 8vh), 4.5rem) * var(--bk-name-scale, 1));
-  line-height: 0.98;
-  letter-spacing: -0.03em;
-  text-wrap: balance;
-  overflow-wrap: anywhere;
+.booking-app .bk-splash__monogram {
+  font-size: 4.75rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.045em;
   color: hsl(var(--foreground));
 }
 
+/* Brand block, anchored to the bottom of the hero. */
+.booking-app .bk-splash__brand {
+  position: absolute;
+  left: 1.5rem;
+  right: 1.5rem;
+  bottom: 1.75rem;
+  z-index: 1;
+}
+
+.booking-app .bk-splash__brand .bk-overline {
+  letter-spacing: 0.2em;
+  margin-bottom: 0.5rem;
+}
+
+.booking-app .bk-splash__name {
+  /* --bk-name-scale shrinks long names; the mask below clips the entrance. */
+  font-size: calc(clamp(2.5rem, 11.5vw, 3.25rem) * var(--bk-name-scale, 1));
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+  color: hsl(var(--foreground));
+  margin: 0;
+}
+
+.booking-app .bk-splash__mask {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.08em;
+  margin-bottom: -0.08em;
+}
+
+.booking-app .bk-splash__tagline1 {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.875rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: hsl(var(--foreground));
+}
+
+.booking-app .bk-splash__tagline1::before {
+  content: "";
+  flex: none;
+  width: 2.25rem;
+  height: 3px;
+  border-radius: 9999px;
+  background: hsl(var(--foreground));
+}
+
+.booking-app .bk-splash__tagline2 {
+  margin-top: 0.375rem;
+  padding-left: 3rem;
+  font-size: 0.9375rem;
+  line-height: 1.35;
+  color: hsl(var(--muted-foreground));
+}
+
+/* The lead-source sheet. */
 .booking-app .bk-splash__panel {
   position: relative;
   display: flex;
   flex: none;
   flex-direction: column;
-  padding: 1.5rem 1.5rem max(env(safe-area-inset-bottom, 0px), 1.125rem);
-  border-radius: 2rem 2rem 0 0;
+  padding: 1.5rem 1.5rem max(env(safe-area-inset-bottom, 0px), 1.25rem);
+  border-radius: 1.75rem 1.75rem 0 0;
   background: hsl(var(--primary));
   color: hsl(var(--primary-foreground));
-  box-shadow: 0 -28px 60px -34px hsl(var(--primary) / 0.75);
+  box-shadow: 0 -24px 48px -30px hsl(var(--primary) / 0.7);
+}
+
+.booking-app .bk-splash__heading {
+  font-size: 1.1875rem;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+  color: inherit;
+  margin: 0;
+}
+
+.booking-app .bk-splash__subtitle {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-height: 1.25rem;
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+  line-height: 1.35;
+  color: hsl(var(--primary-foreground) / 0.7);
+}
+
+.booking-app .bk-splash__subtitle.is-error {
+  color: hsl(var(--primary-foreground));
+  font-weight: 600;
 }
 
 .booking-app .bk-splash__chips {
@@ -1005,49 +1060,69 @@
   gap: 0.5rem;
   max-height: min(11.5rem, 30vh);
   overflow-y: auto;
-  /* The quarter-rem padding (cancelled by the side margins) leaves room for
-     the focus ring, which the scroll container would otherwise clip. */
-  margin: 0.875rem -0.25rem -0.25rem;
+  /* Room for the focus ring, which the scroll container would otherwise clip. */
+  margin: 1rem -0.25rem -0.25rem;
   padding: 0.25rem;
 }
 
 .booking-app .bk-splash__chip {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 0.375rem;
-  min-height: 2.75rem;
-  padding: 0 1.125rem;
+  min-height: 2.125rem;
+  padding: 0 0.875rem;
   border-radius: 9999px;
-  border: 1.5px solid hsl(var(--primary-foreground) / 0.3);
-  background: hsl(var(--primary-foreground) / 0.07);
+  border: 1px solid hsl(var(--primary-foreground) / 0.28);
+  background: transparent;
   color: hsl(var(--primary-foreground));
-  font-size: 0.9375rem;
+  font-size: 0.8125rem;
   font-weight: 500;
   white-space: nowrap;
-  transition:
-    background-color 0.2s ease,
-    color 0.2s ease,
-    border-color 0.2s ease;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+
+.booking-app .bk-splash__chip-label {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4375rem;
+  transition: color 0.25s ease;
+}
+
+/* The single highlight every chip shares. Framer glides it between choices. */
+.booking-app .bk-splash__chip-active {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  background: hsl(var(--primary-foreground));
 }
 
 .booking-app .bk-splash__chip[aria-pressed="true"] {
-  background: hsl(var(--primary-foreground));
   border-color: hsl(var(--primary-foreground));
+}
+
+.booking-app .bk-splash__chip[aria-pressed="true"] .bk-splash__chip-label {
   color: hsl(var(--primary));
   font-weight: 600;
 }
 
 .booking-app .bk-splash__panel.is-error .bk-splash__chip:not([aria-pressed="true"]) {
-  border-color: hsl(var(--primary-foreground) / 0.8);
+  border-color: hsl(var(--primary-foreground) / 0.7);
 }
 
 .booking-app .bk-splash__cta {
-  display: inline-flex;
+  position: relative;
+  display: flex;
   align-items: center;
   justify-content: center;
   width: 100%;
-  min-height: 3.5rem;
+  min-height: 3rem;
+  margin-top: 1.25rem;
   padding: 0 1.5rem;
+  overflow: hidden;
   border-radius: 9999px;
   background: hsl(var(--primary-foreground));
   color: hsl(var(--primary));
@@ -1058,8 +1133,7 @@
   transition:
     background-color 0.25s ease,
     color 0.25s ease,
-    box-shadow 0.25s ease,
-    transform 0.16s var(--bk-ease);
+    box-shadow 0.25s ease;
 }
 
 .booking-app .bk-splash__cta:active {
@@ -1074,6 +1148,37 @@
   box-shadow: inset 0 0 0 1.5px hsl(var(--primary-foreground) / 0.3);
 }
 
+/* One pass of light across the button when it becomes ready. */
+.booking-app .bk-splash__sheen {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 60%;
+  pointer-events: none;
+  background: linear-gradient(
+    105deg,
+    transparent 0%,
+    hsl(var(--primary) / 0.22) 50%,
+    transparent 100%
+  );
+}
+
+.booking-app .bk-splash__footer {
+  margin: 1rem 0 0;
+  text-align: center;
+  font-size: 0.6875rem;
+  line-height: 1;
+  color: hsl(var(--primary-foreground) / 0.6);
+}
+
+.booking-app .bk-splash__footer a {
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  color: inherit;
+}
+
 /* The panel is the tenant's primary colour, so its focus rings use the colour
    that is guaranteed to contrast with it. */
 .booking-app .bk-splash__panel button:focus-visible,
@@ -1082,18 +1187,16 @@
   outline-offset: 2px;
 }
 
-/* Short viewports (small phones, or any phone with browser chrome showing):
-   tighten the panel so the name keeps its room. */
+/* Short viewports: shrink the monogram and the sheet so the name keeps room. */
 @media (max-height: 700px) {
   .booking-app .bk-splash__logo {
-    width: 3rem;
-    height: 3rem;
-    border-radius: 1rem;
+    width: 7.5rem;
+    height: 7.5rem;
+    border-radius: 1.25rem;
   }
 
-  .booking-app .bk-splash__brand {
-    gap: 0.75rem;
-    padding-bottom: 1.125rem;
+  .booking-app .bk-splash__monogram {
+    font-size: 3.5rem;
   }
 
   .booking-app .bk-splash__panel {
@@ -1101,18 +1204,18 @@
   }
 
   .booking-app .bk-splash__chip {
-    min-height: 2.5rem;
-    padding: 0 1rem;
-    font-size: 0.875rem;
+    min-height: 2rem;
+    padding: 0 0.75rem;
   }
 
   /* Three rows and the top of a fourth, so a longer list visibly continues. */
   .booking-app .bk-splash__chips {
-    max-height: min(10.25rem, 26vh);
+    max-height: min(9.5rem, 26vh);
   }
 
   .booking-app .bk-splash__cta {
-    min-height: 3.25rem;
+    min-height: 2.875rem;
+    margin-top: 1rem;
   }
 }
 
