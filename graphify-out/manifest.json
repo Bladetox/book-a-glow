@@ -3666,9 +3666,21 @@
     "semantic_hash": ""
   },
   "supabase/pending/README.md": {
-    "mtime": 1794689116.860715,
-    "seen": 1794689132.1577477,
-    "ast_hash": "ab2fa4e563615334d4f0c939652cab9b",
+    "mtime": 1794689998.1780524,
+    "seen": 1794690000.9121065,
+    "ast_hash": "07f1467daefd6c2f465eb003aad2c756",
+    "semantic_hash": ""
+  },
+  "supabase/pending/tests/00_base_tables.sql": {
+    "mtime": 1794689992.702278,
+    "seen": 1794690000.9120505,
+    "ast_hash": "770e41c02957602636c947be43fb70f6",
+    "semantic_hash": ""
+  },
+  "supabase/pending/tests/10_assertions.sql": {
+    "mtime": 1794689992.7039816,
+    "seen": 1794690000.9120538,
+    "ast_hash": "168c8644bcc92ad5b8115e3fc8ebcf3a",
     "semantic_hash": ""
   },
   "package-lock.json": {
