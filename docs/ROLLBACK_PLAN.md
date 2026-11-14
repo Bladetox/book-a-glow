@@ -9,6 +9,10 @@
   display_order, is_addon, ordered by id): 3b4dc262c13481cc6c96f4a01ac923af
 - Latest migration: 20261114201537. Migration count: 266.
 
+## Applied
+- Forward migration applied as version 20261114214957 (name video_consultation_service_flag).
+- Post-apply: 189 services, 0 video, services checksum unchanged.
+
 ## What the change does
 Adds services.is_video_consultation (boolean, not null, default false) and a check that
 a video service cannot have is_call_out_available = true. No existing code reads or
@@ -19,9 +23,8 @@ writes the column on production. The feature branch that does is not deployed.
 
    ALTER TABLE public.services DROP CONSTRAINT IF EXISTS services_video_consultation_no_callout;
    ALTER TABLE public.services DROP COLUMN IF EXISTS is_video_consultation;
-   DELETE FROM supabase_migrations.schema_migrations WHERE version = '<applied version>';
+   DELETE FROM supabase_migrations.schema_migrations WHERE version = '20261114214957';
 
-   Replace <applied version> with the version recorded for the forward migration.
    If apply_migration times out, run the same SQL in the Supabase SQL Editor.
 2. Verify: services count = 189 and the checksum above matches. The column is absent.
    Migration count = 266 and the latest version = 20261114201537.

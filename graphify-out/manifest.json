@@ -3659,16 +3659,10 @@
     "ast_hash": "7381f23172cdad1f5665f89848ca7461",
     "semantic_hash": ""
   },
-  "supabase/pending/video_consultation_service_flag.sql": {
-    "mtime": 1794689116.861989,
-    "seen": 1794689132.1577005,
-    "ast_hash": "22d069ddfba642bf1d4df8eefb637858",
-    "semantic_hash": ""
-  },
   "supabase/pending/README.md": {
-    "mtime": 1794691650.2541506,
-    "seen": 1794691653.265966,
-    "ast_hash": "fed46d0dacfe9587d4ae35928b3b5582",
+    "mtime": 1794693009.0680149,
+    "seen": 1794693076.606971,
+    "ast_hash": "1ded34b1868ec3d469126eeb30c23dff",
     "semantic_hash": ""
   },
   "supabase/pending/tests/00_base_tables.sql": {
@@ -3699,6 +3693,18 @@
     "mtime": 1794691604.6761258,
     "seen": 1794691653.2659388,
     "ast_hash": "f0578b50fe80dd8fc53c04feb105be2c",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20261114214957_video_consultation_service_flag.sql": {
+    "mtime": 1794689116.861989,
+    "seen": 1794693076.6069412,
+    "ast_hash": "22d069ddfba642bf1d4df8eefb637858",
+    "semantic_hash": ""
+  },
+  "docs/ROLLBACK_PLAN.md": {
+    "mtime": 1794693011.8961523,
+    "seen": 1794693076.6069596,
+    "ast_hash": "9e1847065690350a75b54a5b8192f5ea",
     "semantic_hash": ""
   },
   "package-lock.json": {

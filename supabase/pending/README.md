@@ -1,6 +1,7 @@
 # Pending migrations (not applied)
 
-Drafts for the video consultation feature. They are deliberately kept out of
+Drafts for the video consultation feature. The service flag draft was applied as
+20261114214957 and moved to supabase/migrations/. They are deliberately kept out of
 `supabase/migrations/` so the repo-to-production version check stays exact
 (CLAUDE.md). Each file moves into `supabase/migrations/` under the version that
 `apply_migration` assigns, only after it has been reviewed and approved.
