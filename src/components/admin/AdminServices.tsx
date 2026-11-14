@@ -9,6 +9,7 @@
 // and category list therefore reflect active, non-archived services only.
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { createPortal } from "react-dom";
 import {
   AdminPageHeader,
   SectionLabel,
@@ -1110,7 +1111,8 @@ const AdminServices = () => {
           </div>
         </div>
 
-        <AnimatePresence>
+        {createPortal(
+          <AnimatePresence>
           {editing && (
             <>
               <motion.div
@@ -1246,7 +1248,9 @@ const AdminServices = () => {
               </div>
             </>
           )}
-        </AnimatePresence>
+          </AnimatePresence>,
+          document.body,
+        )}
 
         {filtered.length === 0 ? (
           <EmptyState

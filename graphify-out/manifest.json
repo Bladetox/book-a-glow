@@ -234,9 +234,9 @@
     "semantic_hash": ""
   },
   "src/components/admin/AdminServices.tsx": {
-    "mtime": 1794694263.065826,
-    "seen": 1794694420.0072958,
-    "ast_hash": "635a43704a68dff218eae615ad49c41c",
+    "mtime": 1794697339.7049978,
+    "seen": 1794697412.3449824,
+    "ast_hash": "6c7c041eea0ae53469341de38974c5a7",
     "semantic_hash": ""
   },
   "src/components/admin/AdminSettings.tsx": {
