@@ -1,7 +1,7 @@
 # Graph Report - book-a-glow  (2026-11-14)
 
 ## Corpus Check
-- 581 files · ~385,095 words
+- 581 files · ~385,121 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 15 file(s) not represented in the graph (top: .css 6, (none) 2, .example 1)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `75801400`
+- Built from commit: `df749d9c`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -831,15 +831,15 @@ Nodes (15): @radix-ui/react-popover@^1.1.14, @radix-ui/react-tooltip@^1.2.7, @ra
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `react` connect `react` to `AdminCalendar.tsx`, `AdminSharedUI.tsx`, `AdminBilling.tsx`, `ClientAlertsModal.tsx`, `SetupChecklistPaymentGate.tsx`, `AdminSidebar.tsx`, `feature-flags/SAFeatureFlags.tsx`, `useTenant`, `dependencies`, `AdminSpecialOccasions.tsx`, `App.tsx`, `useTenant`, `NotificationBell.tsx`, `Resources.tsx`, `lucide-react`, `Admin.tsx`, `usePublicTenant`, `utils.ts`, `AdminDashboard.tsx`, `package.json`, `IntegrationsGuidePanel.tsx`, `AdminSettings.tsx`, `FirstBookingCelebration.tsx`, `StockScanModal.tsx`, `AdminCommunications.tsx`, `ReviewStep.tsx`, `AdminBilling.tsx`, `DashboardViews.tsx`, `homepage-journey.test.tsx`, `SuperAdminShell.tsx`, `useSlotHold.ts`, `SARevenue.tsx`, `BusinessThemeProvider.tsx`, `Pricing.tsx`, `useSupabaseDashboard.ts`, `DetailsStep.tsx`, `AdminIntegrations.tsx`, `Onboarding.tsx`, `use-admin-viewport.ts`, `use-toast.ts`, `AdminHelp.tsx`, `Book.tsx`, `AdminSidebar.tsx`, `SeoLandingPage.tsx`, `AdminConsultations.tsx`, `Login.tsx`, `LoyaltyBulkBar.tsx`, `framer-motion`, `AdminRecommendations.tsx`, `cn`, `toast.tsx`, `SATenantHealth.tsx`, `RevenueTrendCard.tsx`, `SATenants.tsx`, `AdminAvailability.tsx`, `SACohortRetention.tsx`, `@tanstack/react-query`, `SABookings.tsx`, `SAFeatureAdoption.tsx`, `LoyaltyClientCard.tsx`, `loyaltyHelpers.ts`, `SAGrowth.tsx`, `Index.tsx`, `sheet.tsx`, `ConsultationFormBuilder.tsx`, `SAUsers.tsx`, `types.ts`, `lucide-react`, `useFeatureFlags.ts`?**
-  _High betweenness centrality (0.130) - this node is a cross-community bridge._
+  _High betweenness centrality (0.108) - this node is a cross-community bridge._
 - **Should `AdminSharedUI.tsx` be split into smaller, more focused modules?**
   _Cohesion score 0.09411764705882353 - nodes in this community are weakly interconnected._
 - **Why does `lucide-react` connect `lucide-react` to `AdminCalendar.tsx`, `AdminSharedUI.tsx`, `AdminBilling.tsx`, `ClientAlertsModal.tsx`, `SetupChecklistPaymentGate.tsx`, `lucide-react`, `feature-flags/SAFeatureFlags.tsx`, `useTenant`, `dependencies`, `AdminSpecialOccasions.tsx`, `App.tsx`, `useTenant`, `NotificationBell.tsx`, `Resources.tsx`, `utils.ts`, `Admin.tsx`, `usePublicTenant`, `AdminDashboard.tsx`, `package.json`, `IntegrationsGuidePanel.tsx`, `AdminSettings.tsx`, `FirstBookingCelebration.tsx`, `StockScanModal.tsx`, `AdminCommunications.tsx`, `AdminMetricExplanation.tsx`, `AdminBilling.tsx`, `ReviewStep.tsx`, `homepage-journey.test.tsx`, `DashboardPreview.tsx`, `SuperAdminShell.tsx`, `SARevenue.tsx`, `Pricing.tsx`, `DetailsStep.tsx`, `AdminIntegrations.tsx`, `Onboarding.tsx`, `AdminHelp.tsx`, `Book.tsx`, `AdminSidebar.tsx`, `SeoLandingPage.tsx`, `AdminConsultations.tsx`, `react`, `Login.tsx`, `LoyaltyBulkBar.tsx`, `framer-motion`, `AdminRecommendations.tsx`, `cn`, `toast.tsx`, `SATenantHealth.tsx`, `RevenueTrendCard.tsx`, `SATenants.tsx`, `AdminAvailability.tsx`, `SACohortRetention.tsx`, `@tanstack/react-query`, `SABookings.tsx`, `SAFeatureAdoption.tsx`, `LoyaltyClientCard.tsx`, `loyaltyHelpers.ts`, `SAGrowth.tsx`, `sheet.tsx`, `ConsultationFormBuilder.tsx`, `DashboardViews.tsx`, `SAUsers.tsx`, `types.ts`, `useFeatureFlags.ts`, `display-cards.tsx`?**
-  _High betweenness centrality (0.068) - this node is a cross-community bridge._
+  _High betweenness centrality (0.078) - this node is a cross-community bridge._
 - **Should `ClientAlertsModal.tsx` be split into smaller, more focused modules?**
   _Cohesion score 0.14855072463768115 - nodes in this community are weakly interconnected._
 - **Why does `supabase` connect `lucide-react` to `AdminCalendar.tsx`, `AdminSharedUI.tsx`, `AdminBilling.tsx`, `ClientAlertsModal.tsx`, `SetupChecklistPaymentGate.tsx`, `lucide-react`, `feature-flags/SAFeatureFlags.tsx`, `useTenant`, `AdminSpecialOccasions.tsx`, `App.tsx`, `useTenant`, `NotificationBell.tsx`, `useNextyInsights.ts`, `Admin.tsx`, `usePublicTenant`, `StockScanModal.tsx`, `AdminSettings.tsx`, `FirstBookingCelebration.tsx`, `ReviewStep.tsx`, `AdminCommunications.tsx`, `useSlotHold.ts`, `AdminBilling.tsx`, `Pricing.tsx`, `SARevenue.tsx`, `BusinessThemeProvider.tsx`, `useSupabaseDashboard.ts`, `DetailsStep.tsx`, `AdminIntegrations.tsx`, `Onboarding.tsx`, `use-admin-viewport.ts`, `Book.tsx`, `AdminConsultations.tsx`, `Login.tsx`, `framer-motion`, `AdminRecommendations.tsx`, `SATenantHealth.tsx`, `useClientAlerts.ts`, `SATenants.tsx`, `AdminAvailability.tsx`, `SACohortRetention.tsx`, `@tanstack/react-query`, `SABookings.tsx`, `SAFeatureAdoption.tsx`, `LoyaltyClientCard.tsx`, `loyaltyHelpers.ts`, `SAGrowth.tsx`, `ConsultationFormBuilder.tsx`, `SAUsers.tsx`, `types.ts`, `useFeatureFlags.ts`?**
-  _High betweenness centrality (0.041) - this node is a cross-community bridge._
+  _High betweenness centrality (0.042) - this node is a cross-community bridge._
 - **Should `ref_https` be split into smaller, more focused modules?**
   _Cohesion score 0.045454545454545456 - nodes in this community are weakly interconnected._
 - **Should `AdminSidebar.tsx` be split into smaller, more focused modules?**
