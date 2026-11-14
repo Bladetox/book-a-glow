@@ -3683,6 +3683,12 @@
     "ast_hash": "168c8644bcc92ad5b8115e3fc8ebcf3a",
     "semantic_hash": ""
   },
+  "docs/FUNCTION_AUDIT_2026-11-14.md": {
+    "mtime": 1794690595.2197204,
+    "seen": 1794690598.072149,
+    "ast_hash": "aa14f2c1b5b00b5a4b89770fcda79ab5",
+    "semantic_hash": ""
+  },
   "package-lock.json": {
     "mtime": 1794649689.6963637,
     "seen": 1794687193.6964672,
