@@ -11,8 +11,10 @@ monthly jobs need a longer window before any removal.
 
 Changed by the feature (scope doc §11.6):
 - check_availability, get_available_slots, get_booking_horizon_availability
-- get_month_availability: still called in production (6 calls in 24 hours), so it is in
-  scope even though no current frontend file names it
+- get_month_availability: the public booking calendar. It is a thin wrapper that filters
+  get_booking_horizon_availability to one month and is anon-callable by design. Live calls
+  come from phenomebeauty.nextslot.co.za (6 in 24 hours). It inherits horizon changes. A
+  video-mode calendar needs a mode argument, added by drop and recreate (no overloads).
 - acquire_slot_hold, resize_slot_hold
 - create_booking_with_consultation (29-arg, hold-aware; the 27-arg legacy is not changed)
 - reschedule_booking
@@ -26,7 +28,7 @@ Possibly changed: calculate_booking_price, get_booking_consistency_quote
 - replace_consistency_program_services: used by AdminConsistencyPricing.tsx. Keep.
 - service_booking_reference_map: used by useSupabaseServices.ts and called 12 times in
   24 hours. Keep.
-- get_month_availability: called in production. Keep (see above).
+- get_month_availability: the public booking calendar. Keep (see above).
 
 ## Found in production, not in the repo
 
