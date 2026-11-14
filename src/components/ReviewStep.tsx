@@ -13,6 +13,7 @@ import { Sparkles, X, Loader2, Plus, Minus } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import BookingConfirmation from "@/components/BookingConfirmation";
 import { toast } from "sonner";
+import type { ScheduleMode } from "@/lib/videoConsultation";
 import type { PublicService } from "@/hooks/usePublicServices";
 import type { ResizeHoldResult } from "@/hooks/useSlotHold";
 import YocoImg from "@/assets/Yoco.svg";
@@ -21,6 +22,7 @@ import PayshapImg from "@/assets/payshap.png";
 import IkhokhaImg from "@/assets/ikhokha.svg";
 
 interface ReviewStepProps {
+  scheduleMode: ScheduleMode;
   booking: BookingState;
   onUpdate: (updates: Partial<BookingState>) => void;
   onGoToStep: (step: number) => void;
@@ -104,7 +106,7 @@ function GatewayLogo({ choice, className }: { choice: PaymentChoice; className?:
   return null;
 }
 
-const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, holdId, sessionToken, resizeHold, isResizing, onPayshapComplete }: ReviewStepProps) => {
+const ReviewStep = ({ scheduleMode, booking, onUpdate, onGoToStep, releaseHold, holdId, sessionToken, resizeHold, isResizing, onPayshapComplete }: ReviewStepProps) => {
   const { data: allServices = [] } = usePublicServices();
   const { sections: termsSections } = usePublicTerms();
   const config = usePublicBusinessConfig();
@@ -253,7 +255,8 @@ const ReviewStep = ({ booking, onUpdate, onGoToStep, releaseHold, holdId, sessio
   })();
 
   const servicesTotal = selectedWithQty.reduce((sum, { svc, qty }) => sum + svc.price * qty, 0);
-  const isCallOut = !!booking.address && booking.addressVerified;
+  // Video call bookings never take call-out (scope doc section 4.3).
+  const isCallOut = scheduleMode === "physical" && !!booking.address && booking.addressVerified;
   const estimatedDistanceKm = Number(booking.distanceKm ?? (isCallOut ? config.defaultDistanceKm : 0)) || 0;
   const callOutFee = isCallOut ? Math.ceil(estimatedDistanceKm * 2 * config.ratePerKm) : 0;
   const localTotal = servicesTotal + callOutFee;

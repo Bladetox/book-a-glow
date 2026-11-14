@@ -1,3 +1,4 @@
+import type { ScheduleMode } from "@/lib/videoConsultation";
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import {
   format,
@@ -20,6 +21,7 @@ import type { useSlotHold } from "@/hooks/useSlotHold";
 import { usePublicTenant } from "@/contexts/PublicTenantContext";
 
 interface ScheduleStepProps {
+  scheduleMode: ScheduleMode;
   selectedDate: Date | null;
   selectedTime: string | null;
   onSelectDate: (date: Date | null) => void;
@@ -43,6 +45,7 @@ async function getStaffId(tenantId: string): Promise<string> {
 }
 
 const ScheduleStep = ({
+  scheduleMode,
   selectedDate,
   selectedTime,
   onSelectDate,
@@ -73,6 +76,7 @@ const ScheduleStep = ({
     month,
     totalDuration,
     ownerId || undefined,
+    scheduleMode,
   );
 
   const selectedDateStr = selectedDate ? format(selectedDate, "yyyy-MM-dd") : null;
@@ -81,6 +85,8 @@ const ScheduleStep = ({
     selectedDateStr,
     totalDuration,
     slotHold.sessionToken,
+    undefined,
+    scheduleMode,
   );
 
   const today = useMemo(() => {
@@ -247,6 +253,7 @@ const ScheduleStep = ({
         bookingDate: format(selectedDate, "yyyy-MM-dd"),
         startTime:   `${time}:00`,
         durationMins: totalDuration,
+        scheduleMode,
       });
 
       if (!result.success) {
@@ -257,7 +264,7 @@ const ScheduleStep = ({
     } finally {
       setAcquiringSlot(false);
     }
-  }, [selectedDate, selectedTime, acquiringSlot, tenantId, totalDuration, slotHold, onSelectTime]);
+  }, [selectedDate, selectedTime, acquiringSlot, tenantId, totalDuration, scheduleMode, slotHold, onSelectTime]);
 
   const hasAnyAvailableDate = Object.values(monthAvailability ?? {}).some((day) => day.status === "available");
   const noSuitableDatesInHorizon = !loadingMonth && !!monthAvailability && !hasAnyAvailableDate;

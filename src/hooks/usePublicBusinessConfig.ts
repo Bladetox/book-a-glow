@@ -41,6 +41,8 @@ export interface PublicBusinessConfig {
   confirmationIntro: string;
   confirmationOutro: string;
   mobileServiceEnabled: boolean;
+  /** Per-tenant switch for video call services. Off unless the tenant setting is "true". */
+  videoConsultationsEnabled: boolean;
   clientLabelExisting: string;
   clientLabelNew: string;
   /** Optional CSS @font-face stylesheet URL (Google Fonts CSS, Bunny Fonts, or self-hosted) */
@@ -84,6 +86,7 @@ const defaults: PublicBusinessConfig = {
   confirmationIntro: "Thank you for your booking.",
   confirmationOutro: "We look forward to seeing you.",
   mobileServiceEnabled: false,
+  videoConsultationsEnabled: false,
   clientLabelExisting: "Returning Client",
   clientLabelNew: "New Client",
   brandFontUrl: null,
@@ -230,6 +233,7 @@ export function usePublicBusinessConfig(): PublicBusinessConfig & { loading: boo
 
     // Feature flags
     mobileServiceEnabled: s.mobile_service_enabled === "true",
+    videoConsultationsEnabled: s.video_consultations_enabled === "true",
 
     // Client type labels
     clientLabelExisting: s.client_label_existing || defaults.clientLabelExisting,

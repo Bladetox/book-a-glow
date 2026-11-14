@@ -55,3 +55,49 @@ export function videoServiceFields(isVideoConsultation: boolean):
     ? { is_video_consultation: true, is_call_out_available: false }
     : { is_video_consultation: false };
 }
+
+export type ScheduleMode = "physical" | "consultation";
+export type SelectionMode = ScheduleMode | "mixed" | "empty";
+
+/**
+ * Mode for a set of selected services, from their video flags.
+ * "mixed" means video and physical services are selected together, which is refused.
+ */
+export function selectionScheduleMode(flags: boolean[]): SelectionMode {
+  if (flags.length === 0) return "empty";
+  const video = flags.filter(Boolean).length;
+  if (video === 0) return "physical";
+  if (video === flags.length) return "consultation";
+  return "mixed";
+}
+
+/**
+ * Whether a service can join the current selection. Video and physical services
+ * can't be booked together (scope doc section 4.3).
+ */
+export function canAddToSelection(selectedFlags: boolean[], nextIsVideo: boolean): boolean {
+  const mode = selectionScheduleMode(selectedFlags);
+  if (mode === "empty") return true;
+  if (mode === "physical") return !nextIsVideo;
+  if (mode === "consultation") return nextIsVideo;
+  return false;
+}
+
+/**
+ * Availability rows for one schedule type. Rows without a schedule_type field are
+ * physical, so the app behaves the same before and after the database change.
+ */
+export function rowsForScheduleMode<T extends { schedule_type?: string | null }>(
+  rows: T[],
+  mode: ScheduleMode,
+): T[] {
+  return rows.filter((row) => (row.schedule_type ?? "physical") === mode);
+}
+
+/**
+ * RPC arguments for a schedule type. Physical calls send nothing extra, so they
+ * keep working against the database before the schedule_type change is applied.
+ */
+export function scheduleTypeRpcArg(mode: ScheduleMode): { p_schedule_type?: ScheduleMode } {
+  return mode === "consultation" ? { p_schedule_type: "consultation" } : {};
+}

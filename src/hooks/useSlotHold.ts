@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { scheduleTypeRpcArg, type ScheduleMode } from '@/lib/videoConsultation';
 
 export interface SlotHoldState {
   holdId: string | null;
@@ -72,6 +73,7 @@ export function useSlotHold() {
     bookingDate: string;
     startTime: string;
     durationMins: number;
+    scheduleMode?: ScheduleMode;
   }) => {
     clearCountdown();
     holdIdRef.current = null;
@@ -87,6 +89,7 @@ export function useSlotHold() {
       p_start_time: params.startTime,
       p_duration_mins: params.durationMins,
       p_session_token: sessionToken.current,
+      ...scheduleTypeRpcArg(params.scheduleMode ?? "physical"),
     });
 
     if (error || !data?.[0]?.success) {

@@ -9,7 +9,8 @@ import {
   SaveButton,
   EmptyState,
 } from "@/components/admin/AdminSharedUI";
-import { PlusCircle, ShieldBan, ShieldCheck } from "lucide-react";
+import { PlusCircle, ShieldBan, ShieldCheck, Video } from "lucide-react";
+import { buildWhatsAppContactUrl } from "@/lib/videoConsultation";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { format, startOfDay } from "date-fns";
@@ -1299,6 +1300,26 @@ const AdminBookings = ({ initialClient, onClearClient }: AdminBookingsProps) => 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                                   <DetailRow icon={User}  label="Client"  value={b.client} />
                                   <DetailRow icon={Phone} label="Phone"   value={b.phone} />
+                                  {b.isVideoConsultation && (
+                                    <div className="flex items-start gap-2 sm:col-span-2">
+                                      <Video className="w-3 h-3 text-white/25 mt-0.5 shrink-0" />
+                                      <div className="min-w-0">
+                                        <p className="text-[10px] text-white/25">Video call</p>
+                                        {buildWhatsAppContactUrl(b.phone) ? (
+                                          <a
+                                            href={buildWhatsAppContactUrl(b.phone) ?? undefined}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-xs text-emerald-300/80 underline hover:text-emerald-200"
+                                          >
+                                            Open WhatsApp chat with client
+                                          </a>
+                                        ) : (
+                                          <p className="text-xs text-white/40">No valid WhatsApp number for this client</p>
+                                        )}
+                                      </div>
+                                    </div>
+                                  )}
                                   <DetailRow icon={Mail}  label="Email"   value={b.email} />
                                   <DetailRow icon={MapPin} label="Address" value={b.address} />
                                   <DetailRow icon={Clock} label="Ref"     value={b.ref} />

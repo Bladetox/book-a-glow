@@ -8,6 +8,8 @@ import ThemeToggle from "@/components/ThemeToggle";
 import SplashScreen from "@/components/SplashScreen";
 import { useBooking } from "@/hooks/useBooking";
 import { usePublicServices } from "@/hooks/usePublicServices";
+import { toast } from "sonner";
+import { canAddToSelection, selectionScheduleMode, type ScheduleMode } from "@/lib/videoConsultation";
 import { usePublicTenant } from "@/contexts/PublicTenantContext";
 import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
 import { useMonthAvailability } from "@/hooks/usePublicAvailability";
@@ -172,6 +174,19 @@ const Index = () => {
   const totalDuration = selectedServices.reduce((sum, t) => sum + t.duration, 0);
   const durationForSlots = Math.max(totalDuration, 30);
 
+  // Video call services use their own schedule and cannot be mixed with physical services.
+  const selectionFlags = selectedServices.map((s) => s.isVideoConsultation);
+  const scheduleMode: ScheduleMode =
+    selectionScheduleMode(selectionFlags) === "consultation" ? "consultation" : "physical";
+  const guardedAddTreatment = (id: string) => {
+    const svc = treatments.find((t) => t.id === id);
+    if (svc && !canAddToSelection(selectionFlags, svc.isVideoConsultation)) {
+      toast.error("Video call services can't be booked together with other services. Start a separate booking for them.");
+      return;
+    }
+    addTreatment(id);
+  };
+
   // Cart line items for StickyBottomBar
   const cartItems = uniqueSelectedIds.flatMap((id) => {
     const svc = treatments.find((t) => t.id === id);
@@ -279,7 +294,7 @@ const Index = () => {
                 {step === 0 && (
                   <ServicesStep
                     selectedTreatments={booking.selectedTreatments}
-                    onAdd={addTreatment}
+                    onAdd={guardedAddTreatment}
                     onRemove={removeTreatment}
                   />
                 )}
@@ -290,6 +305,7 @@ const Index = () => {
                     onSelectDate={(d) => updateBooking({ selectedDate: d })}
                     onSelectTime={(t) => updateBooking({ selectedTime: t })}
                     totalDuration={durationForSlots}
+                    scheduleMode={scheduleMode}
                     maxAdvanceDays={config.maxAdvanceDays}
                     bookingWindowReady={!config.loading}
                     onReviewServices={() => {
@@ -310,6 +326,7 @@ const Index = () => {
                 )}
                 {step === 3 && (
                   <ReviewStep
+                    scheduleMode={scheduleMode}
                     booking={booking}
                     onUpdate={updateBooking}
                     onGoToStep={(s) => {

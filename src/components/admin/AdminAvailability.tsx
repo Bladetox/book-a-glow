@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
+import { rowsForScheduleMode, type ScheduleMode } from "@/lib/videoConsultation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Calendar,
@@ -59,6 +61,7 @@ const AdminAvailability = () => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [view, setView] = useState<"weekly" | "daily">("weekly");
+  const [scheduleMode, setScheduleMode] = useState<ScheduleMode>("physical");
 
   const dirtyDays = useRef(new Set<string>());
   const dirtyDates = useRef(new Set<string>());
@@ -84,8 +87,9 @@ const AdminAvailability = () => {
   useEffect(() => {
     if (!rawSlots) return;
 
-    const fetchedWeek = toWeekAvailability(rawSlots);
-    const fetchedDaily = toDailyOverrides(rawSlots);
+    const modeRows = rowsForScheduleMode(rawSlots, scheduleMode);
+    const fetchedWeek = toWeekAvailability(modeRows);
+    const fetchedDaily = toDailyOverrides(modeRows);
 
     setWeekAvail((previous) => {
       const merged = { ...fetchedWeek };
@@ -103,7 +107,7 @@ const AdminAvailability = () => {
       }
       return merged;
     });
-  }, [rawSlots]);
+  }, [rawSlots, scheduleMode]);
 
   const persistDay = useCallback(
     (day: string, config: DayConfig) => {
@@ -122,6 +126,7 @@ const AdminAvailability = () => {
             enabled: config.enabled,
             slots: normaliseSlots(config.slots),
             allSlots: ALL_SLOTS,
+            scheduleMode,
           },
           {
             onSuccess: () => {
@@ -133,7 +138,7 @@ const AdminAvailability = () => {
         );
       }, 500);
     },
-    [saveAvailability],
+    [saveAvailability, scheduleMode],
   );
 
   const persistDate = useCallback(
@@ -152,6 +157,7 @@ const AdminAvailability = () => {
             enabled: config.enabled,
             slots: normaliseSlots(config.slots),
             allSlots: ALL_SLOTS,
+            scheduleMode,
           },
           {
             onSuccess: () => {
@@ -163,7 +169,7 @@ const AdminAvailability = () => {
         );
       }, 500);
     },
-    [saveDailyOverride],
+    [saveDailyOverride, scheduleMode],
   );
 
   const toggleDayEnabled = (day: string) => {
@@ -256,6 +262,7 @@ const AdminAvailability = () => {
         slots: [],
         allSlots: [],
         deleteOnly: true,
+        scheduleMode,
       },
       {
         onSuccess: () => {
@@ -277,6 +284,26 @@ const AdminAvailability = () => {
       Object.values(dateTimerMap).forEach(clearTimeout);
     };
   }, []);
+
+  const hasUnsavedChanges =
+    dirtyDays.current.size > 0 ||
+    dirtyDates.current.size > 0 ||
+    Object.keys(dayTimers.current).length > 0 ||
+    Object.keys(dateTimers.current).length > 0;
+  const scheduleModes: { value: ScheduleMode; label: string }[] = [
+    { value: "physical", label: "Services" },
+    { value: "consultation", label: "Video calls" },
+  ];
+  const switchScheduleMode = (mode: ScheduleMode) => {
+    if (mode === scheduleMode) return;
+    if (hasUnsavedChanges) {
+      toast.error("Wait for your changes to save before switching schedules.");
+      return;
+    }
+    setWeekAvail({});
+    setDailyOverrides({});
+    setScheduleMode(mode);
+  };
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
@@ -302,7 +329,20 @@ const AdminAvailability = () => {
             : "Tap a date to override its availability. Override dates show a dot on the calendar."
         }
         action={
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            {scheduleModes.map(({ value, label }) => (
+              <button
+                key={value}
+                onClick={() => switchScheduleMode(value)}
+                className={`whitespace-nowrap rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-wider transition-all ${
+                  scheduleMode === value
+                    ? "border border-white/[0.15] bg-white/[0.12] text-white"
+                    : "border border-white/[0.06] text-white/35 hover:text-white/60"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
             {views.map((value) => (
               <button
                 key={value}

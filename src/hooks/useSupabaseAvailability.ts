@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
+import { scheduleTypeRpcArg, type ScheduleMode } from "@/lib/videoConsultation";
 
 export interface AvailabilitySlot {
   id: string;
@@ -17,11 +18,14 @@ export interface AvailabilitySlot {
   tenant_id: string;
   created_at: string | null;
   updated_at: string | null;
+  /** 'physical' or 'consultation'. Absent before the schedule_type migration; treated as physical. */
+  schedule_type?: string | null;
 }
 
 export const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"] as const;
 
-const AVAILABILITY_SELECT = "id, staff_id, day_of_week, day_enabled, slot_start_time, slot_end_time, is_available, requires_travel_buffer, buffer_minutes, specific_date, override_reason, tenant_id, created_at, updated_at";
+// "*" so schedule_type is included once the column exists, and the query still works before it does.
+const AVAILABILITY_SELECT = "*";
 const normaliseSlot = (slot: string): string => slot.slice(0, 5);
 const normaliseSlotList = (slots: string[]): string[] => [...new Set(slots.map(normaliseSlot))].sort();
 
@@ -105,46 +109,46 @@ export function resolveAvailabilityRows(rows: AvailabilitySlot[], dates: string[
   return dates.flatMap((date) => resolveAvailabilityForDate(rows, date));
 }
 
-type SaveAvailabilityInput = { dayOfWeek: number; enabled: boolean; slots: string[]; allSlots: string[] };
+type SaveAvailabilityInput = { dayOfWeek: number; enabled: boolean; slots: string[]; allSlots: string[]; scheduleMode?: ScheduleMode };
 
 export function useSaveAvailability() {
   const queryClient = useQueryClient();
   const { tenantId, tenant } = useTenant();
   const ownerId = ownerIdForTenant(tenant);
   return useMutation({
-    mutationFn: async ({ dayOfWeek, enabled, slots, allSlots }: SaveAvailabilityInput) => {
+    mutationFn: async ({ dayOfWeek, enabled, slots, allSlots, scheduleMode = "physical" }: SaveAvailabilityInput) => {
       if (!ownerId) throw new Error("Tenant owner is not available");
-      const { data, error } = await supabase.rpc("save_staff_availability", { p_tenant_id: tenantId, p_staff_id: ownerId, p_day_of_week: dayOfWeek, p_day_enabled: enabled, p_slots: normaliseSlotList(slots), p_all_slots: normaliseSlotList(allSlots) });
+      const { data, error } = await supabase.rpc("save_staff_availability", { p_tenant_id: tenantId, p_staff_id: ownerId, p_day_of_week: dayOfWeek, p_day_enabled: enabled, p_slots: normaliseSlotList(slots), p_all_slots: normaliseSlotList(allSlots), ...scheduleTypeRpcArg(scheduleMode) });
       if (error) throw error;
       return (data ?? []) as AvailabilitySlot[];
     },
     onSuccess: (savedRows, variables) => {
       if (!ownerId) return;
       queryClient.setQueryData<AvailabilitySlot[]>(["availability", tenantId, ownerId], (current = []) => [
-        ...current.filter((row) => !(row.staff_id === ownerId && row.day_of_week === variables.dayOfWeek && row.specific_date === null)),
+        ...current.filter((row) => !(row.staff_id === ownerId && row.day_of_week === variables.dayOfWeek && row.specific_date === null && (row.schedule_type ?? "physical") === (variables.scheduleMode ?? "physical"))),
         ...savedRows,
       ]);
     },
   });
 }
 
-type SaveDailyOverrideInput = { date: string; dayOfWeek: number; enabled: boolean; slots: string[]; allSlots: string[]; deleteOnly?: boolean };
+type SaveDailyOverrideInput = { date: string; dayOfWeek: number; enabled: boolean; slots: string[]; allSlots: string[]; deleteOnly?: boolean; scheduleMode?: ScheduleMode };
 
 export function useSaveDailyOverride() {
   const queryClient = useQueryClient();
   const { tenantId, tenant } = useTenant();
   const ownerId = ownerIdForTenant(tenant);
   return useMutation({
-    mutationFn: async ({ date, dayOfWeek, enabled, slots, allSlots, deleteOnly = false }: SaveDailyOverrideInput) => {
+    mutationFn: async ({ date, dayOfWeek, enabled, slots, allSlots, deleteOnly = false, scheduleMode = "physical" }: SaveDailyOverrideInput) => {
       if (!ownerId) throw new Error("Tenant owner is not available");
-      const { data, error } = await supabase.rpc("save_staff_daily_override", { p_tenant_id: tenantId, p_staff_id: ownerId, p_specific_date: date, p_day_of_week: dayOfWeek, p_day_enabled: enabled, p_slots: normaliseSlotList(slots), p_all_slots: normaliseSlotList(allSlots), p_delete_only: deleteOnly });
+      const { data, error } = await supabase.rpc("save_staff_daily_override", { p_tenant_id: tenantId, p_staff_id: ownerId, p_specific_date: date, p_day_of_week: dayOfWeek, p_day_enabled: enabled, p_slots: normaliseSlotList(slots), p_all_slots: normaliseSlotList(allSlots), p_delete_only: deleteOnly, ...scheduleTypeRpcArg(scheduleMode) });
       if (error) throw error;
       return (data ?? []) as AvailabilitySlot[];
     },
     onSuccess: (savedRows, variables) => {
       if (!ownerId) return;
       queryClient.setQueryData<AvailabilitySlot[]>(["availability", tenantId, ownerId], (current = []) => [
-        ...current.filter((row) => !(row.staff_id === ownerId && row.specific_date === variables.date)),
+        ...current.filter((row) => !(row.staff_id === ownerId && row.specific_date === variables.date && (row.schedule_type ?? "physical") === (variables.scheduleMode ?? "physical"))),
         ...savedRows,
       ]);
     },
