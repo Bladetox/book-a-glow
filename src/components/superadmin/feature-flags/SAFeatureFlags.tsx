@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import {
-  ALL_FLAGS, PLATFORM_TENANT_ID, flagKeys, flagSettingKey, parseFlagRows,
+  ALL_FLAGS, GLOBAL_FLAG_KEYS, PLATFORM_TENANT_ID, flagKeys, flagSettingKey, parseFlagRows,
 } from "@/lib/featureFlags/registry";
 import {
   LifetimeBanner, LoadingBlock, PlanSections, RefreshButton, SavedButton, TenantPicker,
@@ -15,8 +15,10 @@ async function writeFlags(
   tenantId: string,
   flags: Record<string, boolean>,
 ): Promise<{ ok: true } | { ok: false; message: string }> {
+  // Global defaults never carry tenant-only flags (see TENANT_ONLY_FLAGS).
+  const keys = tenantId === PLATFORM_TENANT_ID ? GLOBAL_FLAG_KEYS : ALL_FLAGS;
   const { error } = await supabase.from("app_settings").upsert(
-    ALL_FLAGS.map(k => ({
+    keys.map(k => ({
       tenant_id: tenantId,
       key:       flagSettingKey(k),
       value:     JSON.stringify(flags[k] ?? false),
@@ -52,7 +54,7 @@ function GlobalPanel({
     setTimeout(() => setStatus("idle"), 2500);
   };
 
-  const enabledCount = ALL_FLAGS.filter(k => flags[k]).length;
+  const enabledCount = GLOBAL_FLAG_KEYS.filter(k => flags[k]).length;
 
   return (
     <div className="space-y-4">
@@ -60,7 +62,7 @@ function GlobalPanel({
         <div>
           <p className="text-[11px] text-white/30 uppercase tracking-widest font-semibold">Global Defaults</p>
           <p className="text-white/25 text-xs mt-0.5">
-            {enabledCount}/{ALL_FLAGS.length} enabled · applies to all tenants without an override
+            {enabledCount}/{GLOBAL_FLAG_KEYS.length} enabled · applies to all tenants without an override
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -74,7 +76,7 @@ function GlobalPanel({
         </div>
       </div>
 
-      {loading ? <LoadingBlock /> : <PlanSections flags={flags} onToggle={onToggle} />}
+      {loading ? <LoadingBlock /> : <PlanSections flags={flags} onToggle={onToggle} hideTenantOnly />}
     </div>
   );
 }

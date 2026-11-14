@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { rowsForScheduleMode, type ScheduleMode } from "@/lib/videoConsultation";
+import { useVideoConsultationsEnabled } from "@/hooks/useVideoConsultationsEnabled";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Calendar,
@@ -52,6 +53,8 @@ type DayConfig = { enabled: boolean; slots: string[] };
 
 const AdminAvailability = () => {
   const { data: rawSlots, isLoading } = useStaffAvailability();
+  const { tenantId } = useTenant();
+  const videoEnabled = useVideoConsultationsEnabled(tenantId);
   const { mutate: saveAvailability, isError, error } = useSaveAvailability();
   const { mutate: saveDailyOverride, isPending: isSavingDaily } =
     useSaveDailyOverride();
@@ -62,6 +65,10 @@ const AdminAvailability = () => {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [view, setView] = useState<"weekly" | "daily">("weekly");
   const [scheduleMode, setScheduleMode] = useState<ScheduleMode>("physical");
+  useEffect(() => {
+    // Video hours are not shown when the tenant has video call services switched off.
+    if (!videoEnabled && scheduleMode === "consultation") setScheduleMode("physical");
+  }, [videoEnabled, scheduleMode]);
 
   const dirtyDays = useRef(new Set<string>());
   const dirtyDates = useRef(new Set<string>());
@@ -330,7 +337,7 @@ const AdminAvailability = () => {
         }
         action={
           <div className="flex flex-wrap gap-2">
-            {scheduleModes.map(({ value, label }) => (
+            {videoEnabled && scheduleModes.map(({ value, label }) => (
               <button
                 key={value}
                 onClick={() => switchScheduleMode(value)}

@@ -41,6 +41,7 @@ import { useAppSettings, useUpsertAppSetting } from "@/hooks/useSupabaseSettings
 import type { AddonRule } from "@/hooks/useSuggestedAddons";
 import { toast } from "sonner";
 import { videoServiceFields } from "@/lib/videoConsultation";
+import { useVideoConsultationsEnabled } from "@/hooks/useVideoConsultationsEnabled";
 
 interface EditingService {
   id?: string;
@@ -469,6 +470,7 @@ const AdminServices = () => {
   } = useServiceReferences();
   const upsertSetting = useUpsertAppSetting();
   const { tenantId } = useTenant();
+  const videoEnabled = useVideoConsultationsEnabled(tenantId);
   const upsertMutation = useUpsertService();
   const deleteMutation = useDeleteService();
   const archiveMutation = useArchiveService();
@@ -1212,22 +1214,24 @@ const AdminServices = () => {
                 <span className="text-xs text-white/40">Active (visible to clients)</span>
               </div>
             </div>
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-3">
-                <AdminSwitch
-                  checked={editing.is_video_consultation}
-                  onChange={(checked) => setEditing({ ...editing, is_video_consultation: checked })}
-                  label="Video call service"
-                />
-                <span className="text-xs text-white/40">Video call service</span>
+            {videoEnabled && (
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-3">
+                  <AdminSwitch
+                    checked={editing.is_video_consultation}
+                    onChange={(checked) => setEditing({ ...editing, is_video_consultation: checked })}
+                    label="Video call service"
+                  />
+                  <span className="text-xs text-white/40">Video call service</span>
+                </div>
+                {editing.is_video_consultation && (
+                  <p className="text-xs text-white/40 leading-relaxed">
+                    This service is delivered remotely. You contact the client on the appointment
+                    day and start the video call yourself. Call-out is switched off for video calls.
+                  </p>
+                )}
               </div>
-              {editing.is_video_consultation && (
-                <p className="text-xs text-white/40 leading-relaxed">
-                  This service is delivered remotely. You contact the client on the appointment
-                  day and start the video call yourself. Call-out is switched off for video calls.
-                </p>
-              )}
-            </div>
+            )}
             <div className="flex items-center justify-end">
               <div className="flex items-center gap-2">
                 <SaveButton label="Cancel" variant="secondary" onClick={cancelEdit} />

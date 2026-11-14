@@ -120,9 +120,9 @@
     "semantic_hash": ""
   },
   "src/components/admin/AdminAvailability.tsx": {
-    "mtime": 1794693706.5318706,
-    "seen": 1794693887.0612986,
-    "ast_hash": "ab1121b5c8765364553e41fb8a46e277",
+    "mtime": 1794694267.24619,
+    "seen": 1794694420.0071805,
+    "ast_hash": "2142c44b4b5fae403f85716601cea925",
     "semantic_hash": ""
   },
   "src/components/admin/AdminBilling.tsx": {
@@ -234,9 +234,9 @@
     "semantic_hash": ""
   },
   "src/components/admin/AdminServices.tsx": {
-    "mtime": 1794689108.7196805,
-    "seen": 1794689132.156308,
-    "ast_hash": "44c21bd9f801af04a709b476658cd1b5",
+    "mtime": 1794694263.065826,
+    "seen": 1794694420.0072958,
+    "ast_hash": "635a43704a68dff218eae615ad49c41c",
     "semantic_hash": ""
   },
   "src/components/admin/AdminSettings.tsx": {
@@ -660,15 +660,15 @@
     "semantic_hash": ""
   },
   "src/components/superadmin/feature-flags/FeatureFlagParts.tsx": {
-    "mtime": 1794649689.7426667,
-    "seen": 1794687193.6961048,
-    "ast_hash": "8c4e40a9efd78b5899f36753c64ddcf2",
+    "mtime": 1794694180.81346,
+    "seen": 1794694420.007626,
+    "ast_hash": "8619c56a564dc80ae51e7a426dbcd476",
     "semantic_hash": ""
   },
   "src/components/superadmin/feature-flags/SAFeatureFlags.tsx": {
-    "mtime": 1794689658.1100323,
-    "seen": 1794689730.2157547,
-    "ast_hash": "d46579ebe123a166473f3d9337abcc9d",
+    "mtime": 1794694180.813763,
+    "seen": 1794694420.0076308,
+    "ast_hash": "e4fecc96abe546a5c23e55f4a5b6ee52",
     "semantic_hash": ""
   },
   "src/components/superadmin/feature-flags/planFeatureMap.ts": {
@@ -1014,9 +1014,9 @@
     "semantic_hash": ""
   },
   "src/hooks/useFeatureFlags.ts": {
-    "mtime": 1794649689.747249,
-    "seen": 1794687193.6961827,
-    "ast_hash": "2dcf1c24d011f1b6d81eb90bd919c179",
+    "mtime": 1794694170.9444537,
+    "seen": 1794694420.0078437,
+    "ast_hash": "6dd757f64fcb4f949204c2c394f29a5c",
     "semantic_hash": ""
   },
   "src/hooks/useNextyInsights.ts": {
@@ -1044,9 +1044,9 @@
     "semantic_hash": ""
   },
   "src/hooks/usePublicBusinessConfig.ts": {
-    "mtime": 1794693474.4598002,
-    "seen": 1794693887.0614974,
-    "ast_hash": "fb9fa7ed5bf241a88d2afe2b652a58a7",
+    "mtime": 1794694223.5854046,
+    "seen": 1794694420.0078602,
+    "ast_hash": "716221e962a251d37ad8d6853d9f7e15",
     "semantic_hash": ""
   },
   "src/hooks/usePublicServices.ts": {
@@ -1182,15 +1182,15 @@
     "semantic_hash": ""
   },
   "src/lib/featureFlags/registry.test.ts": {
-    "mtime": 1794649689.7512393,
-    "seen": 1794687193.6962335,
-    "ast_hash": "2b75b1026b87b62288c94dc5f1a8b3ed",
+    "mtime": 1794694413.0170865,
+    "seen": 1794694420.007968,
+    "ast_hash": "4ea8a26ee02de0646625d0d43bdeb2b3",
     "semantic_hash": ""
   },
   "src/lib/featureFlags/registry.ts": {
-    "mtime": 1794649689.7513795,
-    "seen": 1794687193.6962347,
-    "ast_hash": "b430af82ab25a9721268a1a0c7d8a8f5",
+    "mtime": 1794694170.9442651,
+    "seen": 1794694420.0079718,
+    "ast_hash": "f5564024babc29f3e9c17e8c41c1ac18",
     "semantic_hash": ""
   },
   "src/lib/nextyTenantProfile.test.ts": {
@@ -3708,15 +3708,15 @@
     "semantic_hash": ""
   },
   "supabase/pending/tests/30_booking_assertions.sql": {
-    "mtime": 1794693314.406871,
-    "seen": 1794693330.5628648,
-    "ast_hash": "74bcf595df6895e60d838364e3fc7d34",
+    "mtime": 1794694330.5879076,
+    "seen": 1794694420.0088408,
+    "ast_hash": "20caa8b7c777400847c9e947e5239041",
     "semantic_hash": ""
   },
   "supabase/pending/video_consultation_booking_functions.sql": {
-    "mtime": 1794693267.0638444,
-    "seen": 1794693330.5628715,
-    "ast_hash": "577683c57fa90a1e38ff1542359f3871",
+    "mtime": 1794694323.4806523,
+    "seen": 1794694420.0088475,
+    "ast_hash": "eca4dcc3e9dcd80a3f5132a768d4ffdc",
     "semantic_hash": ""
   },
   "docs/rollback/functions_before_video_release.sql": {
@@ -3726,9 +3726,21 @@
     "semantic_hash": ""
   },
   "docs/ROLLBACK_PLAN_AVAILABILITY_BOOKING.md": {
-    "mtime": 1794693879.112273,
-    "seen": 1794693887.0620086,
-    "ast_hash": "264c52b59a8a15d1d29d7a1ea4c5c7ec",
+    "mtime": 1794694339.4612072,
+    "seen": 1794694420.008876,
+    "ast_hash": "a6340b4cf8abbdd9057dc404076a452a",
+    "semantic_hash": ""
+  },
+  "src/hooks/useVideoConsultationsEnabled.test.ts": {
+    "mtime": 1794694343.2827184,
+    "seen": 1794694420.0079162,
+    "ast_hash": "3b9e66f27643d1d1f6bb72c896c516e6",
+    "semantic_hash": ""
+  },
+  "src/hooks/useVideoConsultationsEnabled.ts": {
+    "mtime": 1794694223.567761,
+    "seen": 1794694420.007935,
+    "ast_hash": "08666aaf9267328a56c0823209d034fe",
     "semantic_hash": ""
   },
   "package-lock.json": {

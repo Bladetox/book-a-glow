@@ -1,4 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
+import { flagSettingKey } from "@/lib/featureFlags/registry";
+import { parseVideoFlagValue } from "@/hooks/useVideoConsultationsEnabled";
 import { supabase } from "@/integrations/supabase/client";
 import { usePublicTenant } from "@/contexts/PublicTenantContext";
 
@@ -233,7 +235,7 @@ export function usePublicBusinessConfig(): PublicBusinessConfig & { loading: boo
 
     // Feature flags
     mobileServiceEnabled: s.mobile_service_enabled === "true",
-    videoConsultationsEnabled: s.video_consultations_enabled === "true",
+    videoConsultationsEnabled: parseVideoFlagValue(s[flagSettingKey("video_consultations")]),
 
     // Client type labels
     clientLabelExisting: s.client_label_existing || defaults.clientLabelExisting,

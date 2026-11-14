@@ -11,7 +11,7 @@
  */
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { FLAG_KEYS, flagSettingKey, type FlagKey, type FeatureFlags } from "@/lib/featureFlags/registry";
+import { FLAG_KEYS, GLOBAL_FLAG_KEYS, TENANT_ONLY_FLAGS, flagSettingKey, type FlagKey, type FeatureFlags } from "@/lib/featureFlags/registry";
 
 export { FLAG_KEYS };
 export type { FlagKey, FeatureFlags };
@@ -65,12 +65,13 @@ function parseRows(
   defaults: Partial<FeatureFlags> = {},
 ): FeatureFlags {
   const result = {} as FeatureFlags;
-  for (const k of FLAG_KEYS) {
+  for (const k of GLOBAL_FLAG_KEYS) {
     result[k] = defaults[k] ?? false;
   }
+  for (const k of TENANT_ONLY_FLAGS) result[k] = false;
   for (const row of rows) {
     const k = row.key.replace("feature_flag_", "") as FlagKey;
-    if (FLAG_KEYS.includes(k)) {
+    if (GLOBAL_FLAG_KEYS.includes(k)) {
       try { result[k] = JSON.parse(row.value) === true; } catch { /* keep default */ }
     }
   }
@@ -78,7 +79,7 @@ function parseRows(
 }
 
 const ALL_TRUE: FeatureFlags = FLAG_KEYS.reduce(
-  (acc, k) => { acc[k] = true; return acc; },
+  (acc, k) => { acc[k] = !TENANT_ONLY_FLAGS.has(k); return acc; },
   {} as FeatureFlags,
 );
 

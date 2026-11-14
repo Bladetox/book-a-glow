@@ -43,6 +43,7 @@ export const FEATURE_REGISTRY = [
   { key: "multi_staff", plan: "platform", status: "internal", wired: "none", label: "Multi-Staff Support", desc: "Not implemented. Only tenants.owner_id is used. Do not sell." },
   { key: "gmb_integration", plan: "platform", status: "internal", wired: "none", label: "Google My Business", desc: "Edge functions deployed, no UI in repo. Do not sell yet." },
   { key: "broadcast_email", plan: "platform", status: "internal", wired: "none", label: "Broadcast Email", desc: "SuperAdmin-triggered only. Not a tenant feature." },
+  { key: "video_consultations", plan: "professional", status: "partial", wired: "ui", label: "Video Call Services", desc: "Per-tenant opt-in only, set in Tenant Overrides. Shows video-call services and video hours on the public booking page and in admin. Not part of global defaults." },
 ] as const satisfies readonly FeatureDef[];
 
 export type FeatureEntry = typeof FEATURE_REGISTRY[number];
@@ -51,6 +52,9 @@ export type FeatureFlags = Record<FlagKey, boolean>;
 export const flagSettingKey = (k: FlagKey) => `feature_flag_${k}`;
 export const PLATFORM_TENANT_ID = "00000000-0000-0000-0000-000000000000";
 export const FLAG_KEYS: readonly FlagKey[] = FEATURE_REGISTRY.map(f => f.key);
+/** Flags that are set per tenant only. They never take global defaults or trial/plan defaults. */
+export const TENANT_ONLY_FLAGS: ReadonlySet<FlagKey> = new Set<FlagKey>(["video_consultations"]);
+export const GLOBAL_FLAG_KEYS: readonly FlagKey[] = FLAG_KEYS.filter(k => !TENANT_ONLY_FLAGS.has(k));
 export const ALL_FLAGS = FLAG_KEYS;
 export const flagKeys = FLAG_KEYS.map(flagSettingKey);
 

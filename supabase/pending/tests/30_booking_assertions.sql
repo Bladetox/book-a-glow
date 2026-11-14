@@ -70,3 +70,24 @@ BEGIN
 
   RAISE NOTICE 'booking assertions passed';
 END $$;
+
+-- K. The tenant switch is enforced by the database: with the flag off, a video booking is refused.
+DO $$
+DECLARE
+  staff uuid := '22222222-2222-2222-2222-222222222222';
+  d date := '2026-11-27';
+  vid uuid := 'aaaaaaaa-0000-0000-0000-000000000002';
+  hid uuid; r record;
+BEGIN
+  PERFORM set_config('request.jwt.claim.sub', staff::text, false);
+  DELETE FROM app_settings WHERE tenant_id = 't1' AND key = 'feature_flag_video_consultations';
+  SELECT id INTO hid FROM slot_holds WHERE session_token = 'tok-consult-000000002' LIMIT 1;
+  IF hid IS NULL THEN
+    SELECT hold_id INTO hid FROM acquire_slot_hold('t1', staff, d, '18:00', 30, 'tok-consult-000000002', 'consultation');
+  END IF;
+  SELECT * INTO r FROM create_booking_with_consultation(p_client_id := NULL, p_staff_id := staff, p_booking_date := d, p_start_time := '18:00', p_service_ids := ARRAY[vid], p_is_callout := false, p_callout_address := NULL, p_callout_distance_km := 0, p_client_notes := NULL, p_client_type := NULL, p_lead_source := NULL, p_skin_conditions := NULL, p_medications := NULL, p_allergies := NULL, p_health_conditions := NULL, p_pregnancy := NULL, p_additional_notes := NULL, p_environmental_exposure := NULL, p_physical_factors := NULL, p_hair_length_ok := NULL, p_guest_name := 'Off', p_guest_email := NULL, p_guest_phone := NULL, p_total_amount := NULL, p_deposit_amount := NULL, p_tenant_id := 't1', p_consultation_answers := NULL, p_existing_client_changes := NULL, p_hold_id := hid, p_session_token := 'tok-consult-000000002');
+  IF r.success THEN RAISE EXCEPTION 'video booking accepted while the tenant switch is off'; END IF;
+  IF r.message NOT LIKE '%not enabled%' THEN RAISE EXCEPTION 'unexpected refusal message: %', r.message; END IF;
+  INSERT INTO app_settings(tenant_id, key, value) VALUES ('t1', 'feature_flag_video_consultations', 'true');
+  RAISE NOTICE 'tenant switch assertions passed';
+END $$;

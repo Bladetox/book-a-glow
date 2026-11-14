@@ -25,6 +25,22 @@ AS $$
 $$;
 REVOKE ALL ON FUNCTION public.booking_schedule_type(uuid[]) FROM PUBLIC;
 
+-- Per-tenant switch for video call services (super admin Tenant Overrides).
+-- Only the stored value 'true' enables it. No row means off.
+CREATE OR REPLACE FUNCTION public.video_consultations_enabled(p_tenant_id text)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+  SELECT COALESCE(
+    (SELECT s.value = 'true' FROM public.app_settings s
+      WHERE s.tenant_id = p_tenant_id AND s.key = 'feature_flag_video_consultations' LIMIT 1),
+    false);
+$$;
+REVOKE ALL ON FUNCTION public.video_consultations_enabled(text) FROM PUBLIC;
+
 -- Old acquire_slot_hold signature dropped first (no overloads).
 DROP FUNCTION IF EXISTS public.acquire_slot_hold(text, uuid, date, time without time zone, integer, text);
 
@@ -510,6 +526,10 @@ BEGIN
     RETURN QUERY SELECT NULL::UUID, false, 'Video call services cannot be booked together with other services.'::TEXT, 0::NUMERIC, 0::NUMERIC;
     RETURN;
   END IF;
+  IF v_mode = 'consultation' AND NOT public.video_consultations_enabled(v_tenant_id) THEN
+    RETURN QUERY SELECT NULL::UUID, false, 'Video call services are not enabled for this business.'::TEXT, 0::NUMERIC, 0::NUMERIC;
+    RETURN;
+  END IF;
   IF v_mode = 'consultation' AND COALESCE(p_is_callout, false) THEN
     RETURN QUERY SELECT NULL::UUID, false, 'Call-out is not available for video call services.'::TEXT, 0::NUMERIC, 0::NUMERIC;
     RETURN;
@@ -750,6 +770,10 @@ BEGIN
   v_mode := public.booking_schedule_type(p_service_ids);
   IF v_mode = 'mixed' THEN
     RETURN QUERY SELECT NULL::uuid, false, 'Video call services cannot be booked together with other services.'::text, 0::numeric, 0::numeric; RETURN;
+  END IF;
+  IF v_mode = 'consultation' AND NOT public.video_consultations_enabled(p_tenant_id) THEN
+    RETURN QUERY SELECT NULL::uuid, false, 'Video call services are not enabled for this business.'::text, 0::numeric, 0::numeric;
+    RETURN;
   END IF;
   IF v_mode = 'consultation' AND COALESCE(p_is_callout, false) THEN
     RETURN QUERY SELECT NULL::uuid, false, 'Call-out is not available for video call services.'::text, 0::numeric, 0::numeric; RETURN;

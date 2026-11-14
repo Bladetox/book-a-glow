@@ -35,8 +35,9 @@ own rollback in docs/ROLLBACK_PLAN.md.
 - Repo commit to return to: the commit before the release's first migration is applied.
 
 ## Rollback steps (production), in this order
-1. Stop new video bookings: set the tenant setting `video_consultations_enabled` to 'false'
-   for the pilot tenant (no code change needed). Physical bookings are unaffected.
+1. Stop new video bookings: set the tenant flag `feature_flag_video_consultations` to `false` (Super Admin → Tenant Overrides)
+   for the pilot tenant (no code change needed). The database refuses video bookings while the flag is off.
+   Physical bookings are unaffected.
 2. Restore the function definitions: apply docs/rollback/functions_before_video_release.sql
    after dropping the new signatures:
 
