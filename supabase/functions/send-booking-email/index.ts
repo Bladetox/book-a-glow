@@ -1125,9 +1125,13 @@ Deno.serve(async (req) => {
         : String(payload.to ?? "");
       // Subject is part of the key: the client and tenant emails can go to the same address
       // (e.g. a tenant booking for themselves), and they must not collide as retries.
-      const idempotencyKey = btoa(`${booking.id}|${email_type}|${String(payload.subject ?? "")}|${recipients}`)
-        .replace(/[^a-zA-Z0-9]/g, "")
-        .slice(0, 180);
+      // Hashed rather than base64-encoded: subjects contain non-Latin1 characters
+      // (em dashes, emoji) that btoa() cannot encode.
+      const keySource = `${booking.id}|${email_type}|${String(payload.subject ?? "")}|${recipients}`;
+      const keyDigest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(keySource));
+      const idempotencyKey = Array.from(new Uint8Array(keyDigest))
+        .map((b) => b.toString(16).padStart(2, "0"))
+        .join("");
 
       const res = await fetch(RESEND_API_URL, {
         method: "POST",
