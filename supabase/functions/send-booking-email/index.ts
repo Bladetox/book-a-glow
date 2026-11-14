@@ -1123,7 +1123,9 @@ Deno.serve(async (req) => {
       const recipients = Array.isArray(payload.to)
         ? payload.to.map((value) => String(value)).sort().join(",")
         : String(payload.to ?? "");
-      const idempotencyKey = btoa(`${booking.id}|${email_type}|${recipients}`)
+      // Subject is part of the key: the client and tenant emails can go to the same address
+      // (e.g. a tenant booking for themselves), and they must not collide as retries.
+      const idempotencyKey = btoa(`${booking.id}|${email_type}|${String(payload.subject ?? "")}|${recipients}`)
         .replace(/[^a-zA-Z0-9]/g, "")
         .slice(0, 180);
 

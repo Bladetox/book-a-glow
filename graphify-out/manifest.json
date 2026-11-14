@@ -1680,9 +1680,9 @@
     "semantic_hash": ""
   },
   "supabase/functions/send-booking-email/index.ts": {
-    "mtime": 1794649689.7563639,
-    "seen": 1794687193.696379,
-    "ast_hash": "b0937cffba116b8cd1cfda08b22e0aa2",
+    "mtime": 1794699471.992878,
+    "seen": 1794699686.4846277,
+    "ast_hash": "918e3e1144dd90d90d433f4d72a8356f",
     "semantic_hash": ""
   },
   "supabase/functions/send-email/index.ts": {
