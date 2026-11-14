@@ -11,6 +11,9 @@ DECLARE
 BEGIN
   PERFORM set_config('request.jwt.claim.sub', '22222222-2222-2222-2222-222222222222', false);
 
+  -- 0. Start clean: remove only this date's overrides (recurring rows are replaced by the saves below).
+  DELETE FROM staff_availability WHERE staff_id = staff AND specific_date = d;
+
   -- 1. Save consultation hours for the day. Physical rows must not move.
   SELECT count(*) INTO n FROM staff_availability WHERE staff_id = staff AND day_of_week = 5 AND schedule_type = 'physical' AND specific_date IS NULL;
   PERFORM public.save_staff_availability('t1', staff, 5, true, ARRAY['18:00','18:30'], ARRAY['18:00','18:30'], 'consultation');
