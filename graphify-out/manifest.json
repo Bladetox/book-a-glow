@@ -234,9 +234,9 @@
     "semantic_hash": ""
   },
   "src/components/admin/AdminServices.tsx": {
-    "mtime": 1794649689.736364,
-    "seen": 1794687193.6960092,
-    "ast_hash": "5b352d4782f7020b93685732275dab47",
+    "mtime": 1794689108.7196805,
+    "seen": 1794689132.156308,
+    "ast_hash": "44c21bd9f801af04a709b476658cd1b5",
     "semantic_hash": ""
   },
   "src/components/admin/AdminSettings.tsx": {
@@ -1116,9 +1116,9 @@
     "semantic_hash": ""
   },
   "src/hooks/useSupabaseServices.ts": {
-    "mtime": 1794649689.7483637,
-    "seen": 1794687193.6962073,
-    "ast_hash": "f48a8971fcd5d8624184ddf671485477",
+    "mtime": 1794689108.7196805,
+    "seen": 1794689132.1566753,
+    "ast_hash": "7b819b5ff4f7f411a0e7c08cfc8e93c1",
     "semantic_hash": ""
   },
   "src/hooks/useSupabaseSettings.ts": {
@@ -3639,6 +3639,36 @@
     "mtime": 1794687348.909863,
     "seen": 1794687357.7198238,
     "ast_hash": "81fd21c9b4cd509a4c9331d9448a9fce",
+    "semantic_hash": ""
+  },
+  "src/lib/videoConsultation.test.ts": {
+    "mtime": 1794689022.5963743,
+    "seen": 1794689132.156721,
+    "ast_hash": "521c26c484e29e57da52a2e03b737b94",
+    "semantic_hash": ""
+  },
+  "src/lib/videoConsultation.ts": {
+    "mtime": 1794689018.6079643,
+    "seen": 1794689132.156724,
+    "ast_hash": "21e27f828c183d5073b80580698cbbf5",
+    "semantic_hash": ""
+  },
+  "supabase/pending/video_consultation_availability_schedule_type.sql": {
+    "mtime": 1794689116.8632376,
+    "seen": 1794689132.1576974,
+    "ast_hash": "7381f23172cdad1f5665f89848ca7461",
+    "semantic_hash": ""
+  },
+  "supabase/pending/video_consultation_service_flag.sql": {
+    "mtime": 1794689116.861989,
+    "seen": 1794689132.1577005,
+    "ast_hash": "22d069ddfba642bf1d4df8eefb637858",
+    "semantic_hash": ""
+  },
+  "supabase/pending/README.md": {
+    "mtime": 1794689116.860715,
+    "seen": 1794689132.1577477,
+    "ast_hash": "ab2fa4e563615334d4f0c939652cab9b",
     "semantic_hash": ""
   },
   "package-lock.json": {

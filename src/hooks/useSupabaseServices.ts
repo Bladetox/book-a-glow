@@ -14,6 +14,7 @@ export interface Service {
   is_active: boolean;
   is_archived: boolean;
   is_call_out_available: boolean;
+  is_video_consultation: boolean;
   image_url: string | null;
   tags: string[] | null;
   tenant_id: string | null;
@@ -24,7 +25,7 @@ export interface Service {
 
 const SERVICE_COLUMNS =
   "id, name, description, category, price, duration_minutes, " +
-  "deposit_percent, is_active, is_archived, is_call_out_available, " +
+  "deposit_percent, is_active, is_archived, is_call_out_available, is_video_consultation, " +
   "image_url, tags, tenant_id, created_at, updated_at, display_order";
 
 function invalidateServiceQueries(

@@ -40,6 +40,7 @@ import { useTenant } from "@/contexts/TenantContext";
 import { useAppSettings, useUpsertAppSetting } from "@/hooks/useSupabaseSettings";
 import type { AddonRule } from "@/hooks/useSuggestedAddons";
 import { toast } from "sonner";
+import { videoServiceFields } from "@/lib/videoConsultation";
 
 interface EditingService {
   id?: string;
@@ -50,6 +51,7 @@ interface EditingService {
   category: string;
   customCategory: string;
   is_active: boolean;
+  is_video_consultation: boolean;
 }
 
 const emptyService = (): EditingService => ({
@@ -60,6 +62,7 @@ const emptyService = (): EditingService => ({
   category: "",
   customCategory: "",
   is_active: true,
+  is_video_consultation: false,
 });
 
 const NEW_CATEGORY_SENTINEL = "__new__";
@@ -812,6 +815,7 @@ const AdminServices = () => {
       category: t.category,
       customCategory: "",
       is_active: t.is_active,
+      is_video_consultation: t.is_video_consultation,
     });
     setIsNew(false);
   };
@@ -854,6 +858,7 @@ const AdminServices = () => {
         duration_minutes: duration,
         category: resolvedCategory,
         is_active: editing.is_active,
+        ...videoServiceFields(editing.is_video_consultation),
         display_order: isNew ? activeServices.length : undefined,
       },
       { onSuccess: cancelEdit }
@@ -1206,6 +1211,24 @@ const AdminServices = () => {
                 />
                 <span className="text-xs text-white/40">Active (visible to clients)</span>
               </div>
+            </div>
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-3">
+                <AdminSwitch
+                  checked={editing.is_video_consultation}
+                  onChange={(checked) => setEditing({ ...editing, is_video_consultation: checked })}
+                  label="Video call service"
+                />
+                <span className="text-xs text-white/40">Video call service</span>
+              </div>
+              {editing.is_video_consultation && (
+                <p className="text-xs text-white/40 leading-relaxed">
+                  This service is delivered remotely. You contact the client on the appointment
+                  day and start the video call yourself. Call-out is switched off for video calls.
+                </p>
+              )}
+            </div>
+            <div className="flex items-center justify-end">
               <div className="flex items-center gap-2">
                 <SaveButton label="Cancel" variant="secondary" onClick={cancelEdit} />
                 <SaveButton
