@@ -28,3 +28,15 @@ checks the drafts' rules but not the availability functions or RLS.
 - Not enough on its own: reschedule_booking, acquire_slot_hold and resize_slot_hold
   also read staff_availability and must change in the same release. Until then this
   draft must not be applied.
+
+## Booking drafts (not applied)
+
+- `video_consultation_booking_functions.sql`: adds `slot_holds.schedule_type`, the
+  shared helper `booking_schedule_type`, and schedule-aware holds, resize, reschedule
+  and canonical booking. Mixed bookings and call-out on video services are refused in
+  the canonical path. Requires the service flag and availability drafts first.
+- `tests/30_booking_assertions.sql`: runs against a test database that has the
+  production columns these functions touch. The test database is a minimal stub of
+  production; it is not a full replica. Its prerequisites are the tables and columns
+  used by the test (services, bookings, booking_items, slot_holds, staff_availability,
+  profiles, tenants, user_roles, app_settings, consistency tables).
