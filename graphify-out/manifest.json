@@ -1788,9 +1788,9 @@
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1794649689.6925938,
-    "seen": 1794687193.6964035,
-    "ast_hash": "379d553b224884ef193e9253554ca78e",
+    "mtime": 1794687333.057894,
+    "seen": 1794687357.7198336,
+    "ast_hash": "e68e245541ce89596a0bf22dae0af25b",
     "semantic_hash": ""
   },
   "README.md": {
@@ -1800,9 +1800,9 @@
     "semantic_hash": ""
   },
   "docs/VIDEO_CONSULTATION_BUILD_SCOPE.md": {
-    "mtime": 1794649689.6925938,
-    "seen": 1794687193.6964066,
-    "ast_hash": "5375bffd1272c6e74c6703d2247587e4",
+    "mtime": 1794687355.0538955,
+    "seen": 1794687357.719836,
+    "ast_hash": "2439f5180943d699e920c2d4ce452e85",
     "semantic_hash": ""
   },
   "docs/call-out-fee-waiver.md": {
@@ -3633,6 +3633,12 @@
     "mtime": 1794649689.7683637,
     "seen": 1794687204.3040638,
     "ast_hash": "d3f0e921dc8c679a3dc3393f0a37ae22",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20261114201537_record_live_staff_availability_unique_index.sql": {
+    "mtime": 1794687348.909863,
+    "seen": 1794687357.7198238,
+    "ast_hash": "81fd21c9b4cd509a4c9331d9448a9fce",
     "semantic_hash": ""
   },
   "package-lock.json": {

@@ -461,3 +461,17 @@ Therefore:
 - [ ] Existing physical-service full-payment and deposit checkouts continue to charge and settle exactly as before.
 - [ ] Existing physical-service deposit checkouts continue to charge and settle exactly as before.
 
+
+---
+
+## 12. Verified production state (read-only checks, 14 November 2026)
+
+- **Migrations:** production and repo both have 266 entries after `20261114201537_record_live_staff_availability_unique_index.sql`, which records the live `staff_availability_unique_slot` definition as a no-op. Full version-set diff not yet run.
+- **Availability unique index:** the live definition is `(staff_id, day_of_week, slot_start_time, COALESCE(specific_date, '0001-01-01'))`. It now exists in the repo migrations, so the drift in §11.1 is resolved for the index. Its origin is still unknown.
+- **Availability data:** 3,485 rows (1,266 recurring, 2,219 date overrides, none with NULL `day_of_week`). No mode column exists.
+- **Writers:** `save_staff_availability` and `save_staff_daily_override` are authenticated-only and tenant-admin checked. `replace_staff_availability` is granted to PUBLIC and anon but raises for anon because `auth.uid()` is NULL. It should be revoked in the security batch.
+- **Public `staff_availability` SELECT policy:** requires `auth.uid()`, so anon cannot read it.
+- **Guest booking:** `create_booking_with_consultation` (29-arg, hold-aware) and the slot, hold and price functions have no `auth.uid()` gate and are anon-executable.
+- **Security findings (deferred to the end of the build, per decision):** anon has table-level SELECT, UPDATE and INSERT on `bookings`, `booking_items`, `services` and `profiles`, plus `staff_availability`. RLS is the only control. Anon can read 467 booking rows (all columns) through the `anon can read booking for payment pages` policy. Anon can update pending bookings to `payment_claimed` through `anon can update booking payshap fields`. The `Guests can create bookings` policy does not restrict tenant, amounts or status. `profiles` and `slot_holds` are protected by RLS.
+
+Open items: origin of the live unique index, a Supabase branch for migration testing, and the security batch.
