@@ -956,7 +956,8 @@ useEffect(() => {
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className={`flex flex-col gap-3 ${!mobileServiceEnabled ? "pb-4" : ""}`}
+        // Bottom padding clears the sticky Back / Review footer for every tenant, so the last field can scroll fully into view.
+        className="flex flex-col gap-3 pb-32"
       >
         {/* Full Name */}
         <div className="relative">

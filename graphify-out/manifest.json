@@ -60,9 +60,9 @@
     "semantic_hash": ""
   },
   "src/components/DetailsStep.tsx": {
-    "mtime": 1794689866.686208,
-    "seen": 1794689898.2226937,
-    "ast_hash": "c870115b52ea14c8b1a57b7d2c257296",
+    "mtime": 1794698970.6904645,
+    "seen": 1794699038.7355971,
+    "ast_hash": "b2bbd5884413f83c465e16625dbc85c4",
     "semantic_hash": ""
   },
   "src/components/PwaUpdater.tsx": {
