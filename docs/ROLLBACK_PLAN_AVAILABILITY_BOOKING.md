@@ -94,3 +94,21 @@ Supabase SQL Editor if apply_migration times out (CLAUDE.md).
 - The live physical slot and horizon outputs were recorded before applying (step above).
 - A rehearsal on a full schema copy is still required before production. The stub database
   does not cover RLS, grants or the full function set.
+
+## Applied to production (14 November 2026)
+| Version | Name | Content |
+|---|---|---|
+| 20261114222813 | video_release_schedule_type | schedule_type column and unique index |
+| 20261114222850 | video_release_availability_functions | six reader and writer functions, grants |
+| 20261114222947 | video_release_booking_functions | holds, reschedule, booking, helpers |
+| 20261114223142 | video_release_booking_hold_overload_fix | corrects the hold-aware booking overload |
+| 20261114223330 | video_flag_enable_all_tenants_data_fix | placeholder; data: flag set to true for all 10 tenants |
+
+Notes:
+- 20261114222947 was applied with defaults on the hold-aware overload's parameters. That made
+  a 28-argument call ambiguous. 20261114223142 recreates it without defaults. Rollback must
+  drop both overloads before restoring the original definitions.
+- Pre-release checks: horizon checksum for the PhenomeBeauty owner (60-minute duration) was
+  ddce95a8ae4c6f10e229dc2a2db1a488 before and after the release. All 3,486 availability
+  rows are physical.
+- Data rollback for the flag: `update app_settings set value = 'false' where key = 'feature_flag_video_consultations';`

@@ -1158,9 +1158,9 @@
     "semantic_hash": ""
   },
   "src/integrations/supabase/types.ts": {
-    "mtime": 1794689452.5892894,
-    "seen": 1794689501.47142,
-    "ast_hash": "bd3aff0aa208fce5259c566c435b9eb5",
+    "mtime": 1794695547.1555839,
+    "seen": 1794695676.9658573,
+    "ast_hash": "ce44779a58f36fc6ab3be696356a19f4",
     "semantic_hash": ""
   },
   "src/lib/clientIdentity.ts": {
@@ -3653,12 +3653,6 @@
     "ast_hash": "ec9996dee391506fca9d8d8ea4af9f0a",
     "semantic_hash": ""
   },
-  "supabase/pending/video_consultation_availability_schedule_type.sql": {
-    "mtime": 1794689116.8632376,
-    "seen": 1794689132.1576974,
-    "ast_hash": "7381f23172cdad1f5665f89848ca7461",
-    "semantic_hash": ""
-  },
   "supabase/pending/README.md": {
     "mtime": 1794693327.5918481,
     "seen": 1794693330.562912,
@@ -3689,12 +3683,6 @@
     "ast_hash": "e8328f8b14132ac913eb0d3de7a2e48c",
     "semantic_hash": ""
   },
-  "supabase/pending/video_consultation_availability_functions.sql": {
-    "mtime": 1794691604.6761258,
-    "seen": 1794691653.2659388,
-    "ast_hash": "f0578b50fe80dd8fc53c04feb105be2c",
-    "semantic_hash": ""
-  },
   "supabase/migrations/20261114214957_video_consultation_service_flag.sql": {
     "mtime": 1794689116.861989,
     "seen": 1794693076.6069412,
@@ -3713,12 +3701,6 @@
     "ast_hash": "20caa8b7c777400847c9e947e5239041",
     "semantic_hash": ""
   },
-  "supabase/pending/video_consultation_booking_functions.sql": {
-    "mtime": 1794694323.4806523,
-    "seen": 1794694420.0088475,
-    "ast_hash": "eca4dcc3e9dcd80a3f5132a768d4ffdc",
-    "semantic_hash": ""
-  },
   "docs/rollback/functions_before_video_release.sql": {
     "mtime": 1794693879.1078176,
     "seen": 1794693887.061266,
@@ -3726,9 +3708,9 @@
     "semantic_hash": ""
   },
   "docs/ROLLBACK_PLAN_AVAILABILITY_BOOKING.md": {
-    "mtime": 1794694339.4612072,
-    "seen": 1794694420.008876,
-    "ast_hash": "a6340b4cf8abbdd9057dc404076a452a",
+    "mtime": 1794695629.839985,
+    "seen": 1794695676.9667435,
+    "ast_hash": "cfda1b6989f224c5b4c5f0cf94a4eb47",
     "semantic_hash": ""
   },
   "src/hooks/useVideoConsultationsEnabled.test.ts": {
@@ -3747,6 +3729,42 @@
     "mtime": 1794694737.8559318,
     "seen": 1794694853.9010413,
     "ast_hash": "82225a354e54c5053b9b53d750788f30",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20261114222813_video_release_schedule_type.sql": {
+    "mtime": 1794695530.7154481,
+    "seen": 1794695676.9667,
+    "ast_hash": "7381f23172cdad1f5665f89848ca7461",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20261114222850_video_release_availability_functions.sql": {
+    "mtime": 1794695530.7158866,
+    "seen": 1794695676.9667027,
+    "ast_hash": "dedac7ecb069feb86d725ca1e712627a",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20261114222947_video_release_booking_functions.sql": {
+    "mtime": 1794695530.7166572,
+    "seen": 1794695676.9667046,
+    "ast_hash": "b05587a28431c4efb4a93fdc01a26a60",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20261114223142_video_release_booking_hold_overload_fix.sql": {
+    "mtime": 1794695530.7223806,
+    "seen": 1794695676.9667065,
+    "ast_hash": "acf15fe31fc4bfb30407bfda692fc76d",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20261114223330_video_flag_enable_all_tenants_data_fix.sql": {
+    "mtime": 1794695619.5479844,
+    "seen": 1794695676.9667082,
+    "ast_hash": "d7df927836845dcc01032deecc466c3e",
+    "semantic_hash": ""
+  },
+  "docs/VIDEO_CONSULTATION_OPEN_ITEMS.md": {
+    "mtime": 1794694944.2505076,
+    "seen": 1794695676.966748,
+    "ast_hash": "71b40b2f6b99839fd93c69e15e28cfc0",
     "semantic_hash": ""
   },
   "package-lock.json": {

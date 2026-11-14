@@ -1,0 +1,2 @@
+-- Data-only fix (content-free placeholder). The per-tenant flag feature_flag_video_consultations
+-- was set to 'true' for all tenants on 14 Nov 2026. No schema change.
