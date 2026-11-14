@@ -13,7 +13,9 @@ Changed by the feature (scope doc §11.6):
 - check_availability, get_available_slots, get_booking_horizon_availability
 - get_month_availability: the public booking calendar. It is a thin wrapper that filters
   get_booking_horizon_availability to one month and is anon-callable by design. Live calls
-  come from phenomebeauty.nextslot.co.za (6 in 24 hours). It inherits horizon changes. A
+  came from phenomebeauty.nextslot.co.za: one burst of 6 between 12:21 and 12:24 UTC on 14 Nov,
+  then none. From 03:14 UTC the live site called get_booking_horizon_availability. The burst is
+  most likely an old browser session or cached bundle, not a live build. It inherits horizon changes. A
   video-mode calendar needs a mode argument, added by drop and recreate (no overloads).
 - acquire_slot_hold, resize_slot_hold
 - create_booking_with_consultation (29-arg, hold-aware; the 27-arg legacy is not changed)
