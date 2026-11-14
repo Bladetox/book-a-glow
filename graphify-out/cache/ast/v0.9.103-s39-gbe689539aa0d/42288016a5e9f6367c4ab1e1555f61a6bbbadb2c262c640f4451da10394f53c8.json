@@ -1,0 +1,1 @@
+{"nodes": [{"id": "$graphify-root$_supabase_migrations_20260501001319_nexty_insight_actions_authenticated_policy_v2_sql", "label": "20260501001319_nexty_insight_actions_authenticated_policy_v2.sql", "file_type": "code", "source_file": "supabase/migrations/20260501001319_nexty_insight_actions_authenticated_policy_v2.sql", "source_location": null}], "edges": []}

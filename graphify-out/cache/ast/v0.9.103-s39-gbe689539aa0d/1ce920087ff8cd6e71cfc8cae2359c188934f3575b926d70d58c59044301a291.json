@@ -1,0 +1,1 @@
+{"nodes": [{"id": "$graphify-root$_supabase_migrations_20260402234443_fix_superadmin_rls_recursion_all_tables_sql", "label": "20260402234443_fix_superadmin_rls_recursion_all_tables.sql", "file_type": "code", "source_file": "supabase/migrations/20260402234443_fix_superadmin_rls_recursion_all_tables.sql", "source_location": null}], "edges": []}

@@ -1,0 +1,1 @@
+{"nodes": [{"id": "$graphify-root$_supabase_migrations_20260602113830_drop_redundant_yoco_webhook_trigger_sql", "label": "20260602113830_drop_redundant_yoco_webhook_trigger.sql", "file_type": "code", "source_file": "supabase/migrations/20260602113830_drop_redundant_yoco_webhook_trigger.sql", "source_location": null}], "edges": []}

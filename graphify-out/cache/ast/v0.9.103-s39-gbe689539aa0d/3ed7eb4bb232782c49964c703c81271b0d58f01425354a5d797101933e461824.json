@@ -1,0 +1,1 @@
+{"nodes": [{"id": "$graphify-root$_supabase_migrations_20261106230451_enable_dashboard_realtime_tables_sql", "label": "20261106230451_enable_dashboard_realtime_tables.sql", "file_type": "code", "source_file": "supabase/migrations/20261106230451_enable_dashboard_realtime_tables.sql", "source_location": null}], "edges": []}

@@ -1,0 +1,1 @@
+{"nodes": [{"id": "$graphify-root$_supabase_migrations_20261101231752_scope_booking_availability_rpc_execution_sql", "label": "20261101231752_scope_booking_availability_rpc_execution.sql", "file_type": "code", "source_file": "supabase/migrations/20261101231752_scope_booking_availability_rpc_execution.sql", "source_location": null}], "edges": []}

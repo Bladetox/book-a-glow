@@ -1,0 +1,1 @@
+{"nodes": [{"id": "$graphify-root$_supabase_migrations_20260811115616_reset_min_notice_to_30_sql", "label": "20260811115616_reset_min_notice_to_30.sql", "file_type": "code", "source_file": "supabase/migrations/20260811115616_reset_min_notice_to_30.sql", "source_location": null}], "edges": []}

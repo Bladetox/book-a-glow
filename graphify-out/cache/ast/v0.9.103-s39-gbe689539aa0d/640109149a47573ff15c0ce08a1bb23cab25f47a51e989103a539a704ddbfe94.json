@@ -1,0 +1,1 @@
+{"nodes": [{"id": "$graphify-root$_supabase_migrations_20261102004141_fix4_restrict_direct_slot_hold_table_access_sql", "label": "20261102004141_fix4_restrict_direct_slot_hold_table_access.sql", "file_type": "code", "source_file": "supabase/migrations/20261102004141_fix4_restrict_direct_slot_hold_table_access.sql", "source_location": null}], "edges": []}

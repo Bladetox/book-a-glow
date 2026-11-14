@@ -1,0 +1,1 @@
+{"nodes": [{"id": "$graphify-root$_supabase_migrations_20260925124055_align_app_settings_rls_global_tenant_sentinel_sql", "label": "20260925124055_align_app_settings_rls_global_tenant_sentinel.sql", "file_type": "code", "source_file": "supabase/migrations/20260925124055_align_app_settings_rls_global_tenant_sentinel.sql", "source_location": null}], "edges": []}
