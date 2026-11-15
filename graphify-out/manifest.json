@@ -90,9 +90,9 @@
     "semantic_hash": ""
   },
   "src/components/SplashScreen.tsx": {
-    "mtime": 1794764805.1338987,
-    "seen": 1794764930.966039,
-    "ast_hash": "ca7b4ccb0992612c770061e83cb7a90e",
+    "mtime": 1794765311.6659288,
+    "seen": 1794765478.5828524,
+    "ast_hash": "494f6941021608513996e8277b40a08d",
     "semantic_hash": ""
   },
   "src/components/StepIndicator.tsx": {
@@ -234,9 +234,9 @@
     "semantic_hash": ""
   },
   "src/components/admin/AdminSettings.tsx": {
-    "mtime": 1794750997.39037,
-    "seen": 1794751093.6412427,
-    "ast_hash": "f915b6208613ec751911900eb4bd79b2",
+    "mtime": 1794765320.5099292,
+    "seen": 1794765478.582891,
+    "ast_hash": "a1c2d308bd3ef95fcb8476bb0bea7c8a",
     "semantic_hash": ""
   },
   "src/components/admin/AdminSharedUI.tsx": {
@@ -1038,9 +1038,9 @@
     "semantic_hash": ""
   },
   "src/hooks/usePublicBusinessConfig.ts": {
-    "mtime": 1794750162.9957218,
-    "seen": 1794750291.6541328,
-    "ast_hash": "1cfe7086dd4e92396824b5df9f06872f",
+    "mtime": 1794765307.8419285,
+    "seen": 1794765478.5831213,
+    "ast_hash": "310113dd82d313414a374dc6a445bd11",
     "semantic_hash": ""
   },
   "src/hooks/usePublicServices.ts": {
@@ -3864,9 +3864,9 @@
     "semantic_hash": ""
   },
   "src/hooks/useImageEdgeColor.ts": {
-    "mtime": 1794759987.3218365,
-    "seen": 1794760107.0515585,
-    "ast_hash": "d699afbf7ec39c07ed9acba22b219ee2",
+    "mtime": 1794765301.037928,
+    "seen": 1794765478.583092,
+    "ast_hash": "ef111c0cbe20acfb57ebd020e8461b25",
     "semantic_hash": ""
   },
   "src/components/BookErrorBoundary.tsx": {
@@ -3885,6 +3885,18 @@
     "mtime": 1794764804.0058985,
     "seen": 1794764930.9665475,
     "ast_hash": "76fd64ae74f164806737fe249acbd34b",
+    "semantic_hash": ""
+  },
+  "src/lib/splash-background.test.ts": {
+    "mtime": 1794765294.4059277,
+    "seen": 1794765478.583175,
+    "ast_hash": "379f8ec456c90e178f4fabc37e80a4ad",
+    "semantic_hash": ""
+  },
+  "src/lib/splash-background.ts": {
+    "mtime": 1794765292.5699277,
+    "seen": 1794765478.5831769,
+    "ast_hash": "b7a5f833357b0e64469f2a06e0af4366",
     "semantic_hash": ""
   },
   "package-lock.json": {

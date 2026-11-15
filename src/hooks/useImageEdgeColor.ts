@@ -1,43 +1,32 @@
 import { useEffect, useState } from "react";
 
 /**
- * Samples the colour of an image's top edge, as a CSS hex string.
- *
- * Used so the browser's top bar can blend into a splash photo that is drawn
- * from its top edge. Returns null when there is no image, while it loads, or
- * when the image cannot be read (for example a cross-origin image without CORS
- * headers), so callers can fall back to the theme colour.
+ * Reads the average colour of an image's top row, as a hex string.
+ * Resolves null when the image cannot be loaded or read.
  */
-export function useImageEdgeColor(url: string | null | undefined): string | null {
-  const [edge, setEdge] = useState<string | null>(null);
-
-  useEffect(() => {
-    setEdge(null);
-    if (!url) return;
-
-    let cancelled = false;
+export function sampleTopEdgeColor(src: string): Promise<string | null> {
+  return new Promise((resolve) => {
     const img = new Image();
     // Only ask for CORS for images on another origin. A same-origin request with
     // crossOrigin set can be answered differently by the service worker, which
     // then makes the canvas unreadable.
     let sameOrigin = true;
     try {
-      sameOrigin = new URL(url, window.location.href).origin === window.location.origin;
+      sameOrigin = new URL(src, window.location.href).origin === window.location.origin;
     } catch {
-      // Malformed URL: the image will fail to load and the theme colour is kept.
       sameOrigin = true;
     }
     if (!sameOrigin) img.crossOrigin = "anonymous";
+
     img.onload = () => {
-      if (cancelled) return;
       try {
         const width = Math.min(img.naturalWidth, 64);
-        if (width === 0) return;
+        if (width === 0) return resolve(null);
         const canvas = document.createElement("canvas");
         canvas.width = width;
         canvas.height = 1;
         const ctx = canvas.getContext("2d", { willReadFrequently: true });
-        if (!ctx) return;
+        if (!ctx) return resolve(null);
         ctx.drawImage(img, 0, 0, img.naturalWidth, 1, 0, 0, width, 1);
         const pixels = ctx.getImageData(0, 0, width, 1).data;
         let r = 0;
@@ -50,17 +39,31 @@ export function useImageEdgeColor(url: string | null | undefined): string | null
         }
         const count = pixels.length / 4;
         const hex = (v: number) => Math.round(v / count).toString(16).padStart(2, "0");
-        setEdge(`#${hex(r)}${hex(g)}${hex(b)}`.toUpperCase());
+        resolve(`#${hex(r)}${hex(g)}${hex(b)}`.toUpperCase());
       } catch {
-        // Tainted or unreadable image: keep the theme colour.
-        setEdge(null);
+        // Tainted or unreadable image.
+        resolve(null);
       }
     };
-    img.onerror = () => {
-      if (!cancelled) setEdge(null);
-    };
-    img.src = url;
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+}
 
+/**
+ * Guest-side fallback: samples the top edge of the splash photo when the stored
+ * colour is missing (for example photos uploaded before colours were stored).
+ */
+export function useImageEdgeColor(url: string | null | undefined): string | null {
+  const [edge, setEdge] = useState<string | null>(null);
+
+  useEffect(() => {
+    setEdge(null);
+    if (!url) return;
+    let cancelled = false;
+    sampleTopEdgeColor(url).then((hex) => {
+      if (!cancelled) setEdge(hex);
+    });
     return () => {
       cancelled = true;
     };

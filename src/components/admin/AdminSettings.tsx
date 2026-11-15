@@ -8,6 +8,8 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { businessThemes } from "@/data/themes";
 import { useBusinessTheme } from "@/contexts/BusinessThemeProvider";
+import { sampleTopEdgeColor } from "@/hooks/useImageEdgeColor";
+import { parseSplashBackground, serializeSplashBackground } from "@/lib/splash-background";
 import {
   useTenantSettings,
   useAppSettings,
@@ -454,8 +456,12 @@ const AdminSettings = () => {
       const { error: uploadError } = await supabase.storage.from("business-logos").upload(path, file, { upsert: true });
       if (uploadError) throw uploadError;
       const { data: urlData } = supabase.storage.from("business-logos").getPublicUrl(path);
+      // Read the photo's top-edge colour here, once, from the file the admin just
+      // chose. Guests' phones then don't have to read the image.
+      const localUrl = URL.createObjectURL(file);
+      const topColor = await sampleTopEdgeColor(localUrl).finally(() => URL.revokeObjectURL(localUrl));
       update("splash_background_url", urlData.publicUrl);
-      upsertSetting.mutate({ splash_background_url: urlData.publicUrl }, {
+      upsertSetting.mutate({ splash_background_url: serializeSplashBackground(urlData.publicUrl, topColor) }, {
         onSuccess: () => { flash("splash"); toast.success("Splash background uploaded"); },
         onError: (err: Error) => toast.error(err?.message ?? "Save failed"),
       });
@@ -622,7 +628,7 @@ const AdminSettings = () => {
               <span className="text-xs font-medium text-white/60">Background photo</span>
               <p className="text-xs text-white/35 leading-relaxed">Shown behind the name on your splash screen. Use a portrait photo at least 1080 px wide.</p>
               {draft.splash_background_url && (
-                <img src={draft.splash_background_url} alt="Splash background" className="w-full max-w-[12rem] aspect-[3/4] rounded-2xl nexty-card object-cover" />
+                <img src={parseSplashBackground(draft.splash_background_url).url ?? ""} alt="Splash background" className="w-full max-w-[12rem] aspect-[3/4] rounded-2xl nexty-card object-cover" />
               )}
               <div className="flex items-center gap-3">
                 <button onClick={() => splashBgInputRef.current?.click()} disabled={splashBgUploading}

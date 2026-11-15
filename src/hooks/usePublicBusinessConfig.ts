@@ -3,6 +3,7 @@ import { flagSettingKey } from "@/lib/featureFlags/registry";
 import { parseVideoFlagValue } from "@/hooks/useVideoConsultationsEnabled";
 import { supabase } from "@/integrations/supabase/client";
 import { usePublicTenant } from "@/contexts/PublicTenantContext";
+import { parseSplashBackground } from "@/lib/splash-background";
 
 export const defaultReferralOptions = [
   "TikTok",
@@ -27,6 +28,8 @@ export interface PublicBusinessConfig {
   splashCtaLabel: string;
   /** Optional full-bleed photo behind the splash hero (app_settings splash_background_url) */
   splashBackgroundUrl: string | null;
+  /** Colour of the photo's top edge, stored when the photo was uploaded */
+  splashTopColor: string | null;
   referralOptions: string[];
   signOff: string;
   email: string;
@@ -78,6 +81,7 @@ const defaults: PublicBusinessConfig = {
   splashTagline2: "Book your appointment",
   splashCtaLabel: "Select a Service",
   splashBackgroundUrl: null,
+  splashTopColor: null,
   referralOptions: defaultReferralOptions,
   signOff: "Thank you.",
   email: "",
@@ -211,7 +215,8 @@ export function usePublicBusinessConfig(): PublicBusinessConfig & { loading: boo
     splashTagline1: s.splash_tagline1 || s.tagline || defaults.splashTagline1,
     splashTagline2: s.splash_tagline2 || s.subtitle || defaults.splashTagline2,
     splashCtaLabel: s.splash_cta_label || defaults.splashCtaLabel,
-    splashBackgroundUrl: s.splash_background_url || null,
+    splashBackgroundUrl: parseSplashBackground(s.splash_background_url).url,
+    splashTopColor: parseSplashBackground(s.splash_background_url).top,
     referralOptions,
     signOff: s.sign_off || defaults.signOff,
     confirmationTitle: s.confirmation_title || defaults.confirmationTitle,

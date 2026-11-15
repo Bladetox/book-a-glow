@@ -106,7 +106,7 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
   }, [config.splashBackgroundUrl]);
   const backgroundLightness = parseFloat(theme.colors.background.split(/\s+/)[2] ?? "50");
   // Hex, not hsl(), so the browser's status bar and toolbar take the colour reliably.
-  const topColor = photoTopColor ?? hslStringToHex(theme.colors.background);
+  const topColor = config.splashTopColor ?? photoTopColor ?? hslStringToHex(theme.colors.background);
   useShellBackground(topColor, topColor, backgroundLightness < 50 ? "dark" : "light");
 
   // ── Brand font (sister-studios only; null + no-op for all other tenants) ──
@@ -182,7 +182,10 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
         style={config.splashBackgroundUrl ? {
           // The photo fills the whole screen behind the hero and the sheet, so the
           // sheet overlays the image with no gap between them.
-          backgroundImage: `url("${config.splashBackgroundUrl}")`,
+          // A veil in the theme's background colour, over the whole photo, so the
+          // name and taglines are readable and the photo darkens or lightens evenly
+          // down to the sheet, in light and dark mode alike.
+          backgroundImage: `linear-gradient(to bottom, hsl(var(--background) / 0) 25%, hsl(var(--background) / 0.75) 55%, hsl(var(--background) / 0.75) 100%), url("${config.splashBackgroundUrl}")`,
           backgroundSize: "cover",
           backgroundPosition: "center 20%",
         } : undefined}
@@ -192,11 +195,7 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
         {/* ── Hero: logo, name and tagline ─────────────────────────────── */}
         <div
           className="bk-splash__hero"
-          style={config.splashBackgroundUrl ? {
-            // Full-width veil in the theme's background colour, fading in towards the
-            // sheet. It keeps the name and taglines readable in light and dark mode.
-            background: "linear-gradient(to bottom, hsl(var(--background) / 0) 30%, hsl(var(--background) / 0.8) 100%)",
-          } : undefined}
+          style={config.splashBackgroundUrl ? { background: "transparent" } : undefined}
         >
           <motion.div variants={logoIn} className="bk-splash__logo">
             {config.logoUrl ? (
