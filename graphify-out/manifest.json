@@ -90,9 +90,9 @@
     "semantic_hash": ""
   },
   "src/components/SplashScreen.tsx": {
-    "mtime": 1794755008.0957632,
-    "seen": 1794755121.1691594,
-    "ast_hash": "f14f46925a5155d9fa2a59b20c5ac213",
+    "mtime": 1794757601.2576947,
+    "seen": 1794757734.5491405,
+    "ast_hash": "c2a9abc32cb9f354f126524d732630ef",
     "semantic_hash": ""
   },
   "src/components/StepIndicator.tsx": {
@@ -3867,6 +3867,12 @@
     "mtime": 1794750165.8401291,
     "seen": 1794750291.654713,
     "ast_hash": "7513546cd46e99e0c41a2b87b47ac091",
+    "semantic_hash": ""
+  },
+  "src/hooks/useImageEdgeColor.ts": {
+    "mtime": 1794757598.0536945,
+    "seen": 1794757734.549576,
+    "ast_hash": "5806e512a4f2187c58996d621ccd0b22",
     "semantic_hash": ""
   },
   "package-lock.json": {

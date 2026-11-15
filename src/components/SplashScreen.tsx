@@ -4,6 +4,7 @@ import { CircleAlert, Facebook, Globe, Instagram, MoreHorizontal, Music2, Search
 import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
 import { useBusinessTheme } from "@/contexts/BusinessThemeProvider";
 import { useShellBackground } from "@/hooks/useShellBackground";
+import { useImageEdgeColor } from "@/hooks/useImageEdgeColor";
 import { useBrandFont } from "@/hooks/useBrandFont";
 
 interface SplashScreenProps {
@@ -85,9 +86,14 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
   const { loading: themeLoading, theme } = useBusinessTheme();
   const [attempted, setAttempted] = useState(false);
 
-  // Page surface in the tenant's active theme (light or dark variant): the
-  // bottom edge and browser chrome match the sheet, with no white or black bars.
-  useShellBackground(`hsl(${theme.colors.primary})`, `hsl(${theme.colors.background})`);
+  // Native-app chrome. The bottom edge and bottom toolbar match the acquisition
+  // tab (primary, in the active light or dark variant). The top bar blends into
+  // the photo's top edge when there is a photo, otherwise the theme background.
+  const photoTopColor = useImageEdgeColor(config.splashBackgroundUrl);
+  useShellBackground(
+    `hsl(${theme.colors.primary})`,
+    photoTopColor ?? `hsl(${theme.colors.background})`,
+  );
 
   // ── Brand font (sister-studios only; null + no-op for all other tenants) ──
   const brandFontFamily = useBrandFont(config.brandFontUrl ?? null);
