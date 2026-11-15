@@ -48,9 +48,9 @@
     "semantic_hash": ""
   },
   "src/App.tsx": {
-    "mtime": 1794649689.7003639,
-    "seen": 1794750291.653883,
-    "ast_hash": "291e2a730841c0ae9becbd699bedcff0",
+    "mtime": 1794759984.3778365,
+    "seen": 1794760107.0512564,
+    "ast_hash": "b416b6360f93a6c1b29aacf0342e2a0b",
     "semantic_hash": ""
   },
   "src/components/BookingConfirmation.tsx": {
@@ -3864,9 +3864,15 @@
     "semantic_hash": ""
   },
   "src/hooks/useImageEdgeColor.ts": {
-    "mtime": 1794758695.6537597,
-    "seen": 1794758787.6478903,
-    "ast_hash": "9694d8b6ea8ddbe0001a8f32e71abe79",
+    "mtime": 1794759987.3218365,
+    "seen": 1794760107.0515585,
+    "ast_hash": "d699afbf7ec39c07ed9acba22b219ee2",
+    "semantic_hash": ""
+  },
+  "src/components/BookErrorBoundary.tsx": {
+    "mtime": 1794759974.089836,
+    "seen": 1794760107.0512586,
+    "ast_hash": "95c3ae776056d2d210d0c75d5d16db3b",
     "semantic_hash": ""
   },
   "package-lock.json": {

@@ -9,6 +9,7 @@ import { PublicTenantProvider, usePublicTenant } from "./contexts/PublicTenantCo
 import { getTenantSlug, isCustomDomainHost } from "./lib/tenant-resolver";
 import { supabase } from "./integrations/supabase/client";
 import { PwaUpdater } from "@/components/PwaUpdater";
+import { BookErrorBoundary } from "@/components/BookErrorBoundary";
 import { usePageSEO } from "@/hooks/usePageSEO";
 
 const Index            = lazy(() => import("./pages/Index"));
@@ -112,7 +113,7 @@ const MarketingRoutes = () => (
         <Route path="/payment-success" element={<><SEO path="/payment-success" /><PublicTenantProvider><PaymentSuccess /></PublicTenantProvider></>} />
         {/* Platform billing return URL - iKhokha redirects here after checkout */}
         <Route path="/billing-success" element={<><SEO path="/billing-success" /><BillingSuccess /></>} />
-        <Route path="/book" element={<><SEO path="/book" /><PublicTenantProvider><Book /></PublicTenantProvider></>} />
+        <Route path="/book" element={<><SEO path="/book" /><PublicTenantProvider><BookErrorBoundary><Book /></BookErrorBoundary></PublicTenantProvider></>} />
         {/* Legacy redirects */}
         <Route path="/product" element={<Navigate to="/" replace />} />
         <Route path="/blog" element={<Navigate to="/resources" replace />} />
@@ -138,8 +139,8 @@ const TenantRoutes = () => {
     <div className="app-shell">
       <Suspense fallback={<TenantShell />}>
         <Routes>
-          <Route path="/" element={<Book />} />
-          <Route path="/book" element={<Book />} />
+          <Route path="/" element={<BookErrorBoundary><Book /></BookErrorBoundary>} />
+          <Route path="/book" element={<BookErrorBoundary><Book /></BookErrorBoundary>} />
           <Route path="/payment" element={<PaymentSuccess />} />
           <Route path="/payment-success" element={<PaymentSuccess />} />
           <Route path="/admin" element={<Admin />} />
