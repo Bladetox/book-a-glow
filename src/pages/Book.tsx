@@ -5,7 +5,6 @@ import ScheduleStep from "@/components/ScheduleStep";
 import DetailsStep from "@/components/DetailsStep";
 import ReviewStep from "@/components/ReviewStep";
 import StickyBottomBar from "@/components/StickyBottomBar";
-import ThemeToggle from "@/components/ThemeToggle";
 import SplashScreen from "@/components/SplashScreen";
 import { useBooking } from "@/hooks/useBooking";
 import { usePublicServices } from "@/hooks/usePublicServices";
@@ -308,8 +307,6 @@ const Index = () => {
                 )}
               </div>
             </div>
-
-            <ThemeToggle />
           </header>
 
           {/* ── STEP INDICATOR ─────────────────────────────────────────────── */}
