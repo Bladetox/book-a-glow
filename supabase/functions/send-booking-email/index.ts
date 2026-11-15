@@ -973,6 +973,19 @@ Deno.serve(async (req) => {
       .map((item: any) => item.service_name)
       .filter(Boolean) as string[];
 
+    // Booking context: a video-consultation booking is one where every booked
+    // service is a video call. The client does not travel anywhere, so address,
+    // map and calendar-location copy is replaced. Physical bookings are unchanged.
+    const { data: bookedServiceFlags } = bookedServiceIds.length > 0
+      ? await supabase
+          .from("services")
+          .select("id, is_video_consultation")
+          .in("id", bookedServiceIds)
+      : { data: [] as Array<{ id: string; is_video_consultation: boolean }> };
+    const isVideoBooking =
+      (bookedServiceFlags ?? []).length > 0 &&
+      (bookedServiceFlags ?? []).every((s) => s.is_video_consultation === true);
+
     // google_review_url is the tenant-level column written by
     // AdminSettings → "Google Review Link".
     const { data: tenant } = await supabase
@@ -1091,19 +1104,55 @@ Deno.serve(async (req) => {
     const rawCallOutAddress = escapeHtml((booking as any).call_out_address || (booking as any).guest_address || "");
     const rawSalonAddress   = tenantAddress || escapeHtml(settings["salon_address"] || "");
 
-    const calendarLocation = isCallOut
-      ? (rawCallOutAddress || "Call-out")
-      : (rawSalonAddress || tenantName);
+    const calendarLocation = isVideoBooking
+      ? "Online video consultation"
+      : isCallOut
+        ? (rawCallOutAddress || "Call-out")
+        : (rawSalonAddress || tenantName);
 
-    const tenantLocationDisplay = isCallOut
-      ? rawCallOutAddress
-      : (tenantAddress || escapeHtml(settings["salon_address"] || ""));
+    const tenantLocationDisplay = isVideoBooking
+      ? "Video call on WhatsApp"
+      : isCallOut
+        ? rawCallOutAddress
+        : (tenantAddress || escapeHtml(settings["salon_address"] || ""));
 
-    const clientLocationLabel = isCallOut ? "We're coming to you" : "Location";
-    const clientLocationValue = isCallOut ? rawCallOutAddress : rawSalonAddress;
-    const clientMapsLink      = (!isCallOut && rawSalonAddress)
+    const clientLocationLabel = isVideoBooking
+      ? "Format"
+      : isCallOut ? "We're coming to you" : "Location";
+    const clientLocationValue = isVideoBooking
+      ? "Online video call on WhatsApp"
+      : isCallOut ? rawCallOutAddress : rawSalonAddress;
+    const clientMapsLink      = (!isCallOut && !isVideoBooking && rawSalonAddress)
       ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(rawSalonAddress)}`
       : null;
+
+    // Video-consultation copy blocks. The tenant starts the WhatsApp call;
+    // NextSlot never contacts the client or hosts the call.
+    const clientWhatsAppDigits = normalizePhone(
+      (booking as any).client_phone || (booking as any).guest_phone || (booking.client as any)?.phone || null,
+    ) ?? "";
+    const clientWhatsAppLink = clientWhatsAppDigits ? `https://wa.me/${clientWhatsAppDigits}` : "";
+
+    const videoContactLine = clientPhone
+      ? `${tenantName} will contact you on WhatsApp at <strong>${clientPhone}</strong> on ${formattedDate} to start your video call.`
+      : `${tenantName} will contact you on WhatsApp to start your video call. Please reply to this email with your WhatsApp number so we can reach you.`;
+
+    const videoNextStepsHtml = isVideoBooking
+      ? `
+        <tr><td style="padding:0 36px 26px;">
+          <div style="background:#f7f7f7;border-radius:8px;border:1px solid #ebebeb;border-left:3px solid #000;padding:16px 18px;">
+            <p class="tm" style="margin:0 0 8px;font-size:13px;font-weight:700;color:#000;line-height:1.5;">How your video consultation works</p>
+            <p class="tl" style="margin:0;font-size:13px;color:#555;line-height:1.7;">
+              This appointment takes place online, so there is no address to visit. ${videoContactLine}
+              Please have WhatsApp installed and your phone nearby from ${formattedTime}, and answer the call from ${tenantName}.
+            </p>
+          </div>
+        </td></tr>`
+      : "";
+
+    const ownerWhatsAppHtml = isVideoBooking && clientWhatsAppLink
+      ? `<p style="margin:12px 0 0;"><a href="${clientWhatsAppLink}" target="_blank" style="color:#111;font-size:13px;font-weight:600;">Message client on WhatsApp &rarr;</a></p>`
+      : "";
 
     const waLocation = isCallOut
       ? (rawCallOutAddress || tenantName)
@@ -1347,6 +1396,7 @@ Deno.serve(async (req) => {
         <tr><td style="padding:0 36px 26px;text-align:center;">
           ${calendarButton(gcalBookingLink)}
         </td></tr>
+        ${videoNextStepsHtml}
         ${consistencyEmailSection}
         <tr><td style="padding:0 36px 26px;">
           <p class="tl" style="margin:0;font-size:13px;color:#666;line-height:1.5;">
@@ -1359,7 +1409,9 @@ Deno.serve(async (req) => {
         from: `${tenantName} <bookings@nextslot.co.za>`,
         reply_to: tenantEmail ?? undefined,
         to: [clientEmail],
-        subject: `Your booking is confirmed — ${formattedDate}`,
+        subject: isVideoBooking
+          ? `Your video consultation is confirmed — ${formattedDate}`
+          : `Your booking is confirmed — ${formattedDate}`,
         html: emailWrapper(
           logoHtml,
           tenantName,
@@ -1408,6 +1460,7 @@ Deno.serve(async (req) => {
   </td></tr>
   <tr><td style="padding:16px 28px 22px;">
     ${calendarButton(gcalOwnerLink)}
+    ${ownerWhatsAppHtml}
     <p style="margin:18px 0 0;"><a href="${appBaseUrl}/admin" style="color:#111;font-size:13px;font-weight:600;">Open NextSlot dashboard</a></p>
   </td></tr>
   <tr><td style="padding:12px 28px 18px;background:#f7f7f7;border-top:1px solid #ebebeb;">
@@ -1463,6 +1516,7 @@ Deno.serve(async (req) => {
             )}
             <p class="tl" style="margin:8px 0 0;font-size:11px;color:#888;line-height:1.5;">Nothing more is due. See you on ${formattedDate}!</p>
           </td></tr>
+          ${videoNextStepsHtml}
           ${consistencyEmailSection}
           <tr><td style="padding:0 36px 26px;">
             ${calendarButton(gcalBookingLink)}
@@ -1476,7 +1530,9 @@ Deno.serve(async (req) => {
           from:     `${tenantName} <bookings@nextslot.co.za>`,
           reply_to: tenantEmail ?? undefined,
           to:       [clientEmail],
-          subject:  `Booking Confirmed — Fully Paid ✓`,
+          subject:  isVideoBooking
+            ? `Video consultation confirmed — Fully Paid ✓`
+            : `Booking Confirmed — Fully Paid ✓`,
           html:     emailWrapper(logoHtml, tenantName, "Booking Confirmed & Fully Paid", clientBody, `&copy; ${new Date().getFullYear()} ${tenantName} &middot; Powered by NextSlot`),
           ...(icsContent ? { attachments: [{ filename: "appointment.ics", content: btoa(icsContent), content_type: "text/calendar; method=REQUEST" }] } : {}),
         };
@@ -1523,6 +1579,7 @@ Deno.serve(async (req) => {
   </td></tr>
   <tr><td style="padding:16px 28px 22px;">
     ${calendarButton(gcalOwnerLink)}
+    ${ownerWhatsAppHtml}
   </td></tr>
   <tr><td style="padding:12px 28px 18px;background:#f7f7f7;border-top:1px solid #ebebeb;">
     <p style="margin:0;font-size:11px;color:#999;letter-spacing:.02em;">Sent by NextSlot &middot; ${new Date().getFullYear()}</p>
