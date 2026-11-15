@@ -90,9 +90,11 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
   // tab (primary, in the active light or dark variant). The top bar blends into
   // the photo's top edge when there is a photo, otherwise the theme background.
   const photoTopColor = useImageEdgeColor(config.splashBackgroundUrl);
+  const backgroundLightness = parseFloat(theme.colors.background.split(/\s+/)[2] ?? "50");
   useShellBackground(
     `hsl(${theme.colors.primary})`,
     photoTopColor ?? `hsl(${theme.colors.background})`,
+    backgroundLightness < 50 ? "dark" : "light",
   );
 
   // ── Brand font (sister-studios only; null + no-op for all other tenants) ──

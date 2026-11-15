@@ -140,10 +140,26 @@ export const BusinessThemeProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   // Apply mode override (light/dark) by inverting base theme lightness in place
+  // Guests on a tenant's booking pages follow the phone's own light or dark
+  // setting. The saved switch only applies to the admin, which keeps its own choice.
+  const [systemDark, setSystemDark] = useState<boolean>(() =>
+    typeof window !== "undefined" && !!window.matchMedia?.("(prefers-color-scheme: dark)").matches
+  );
+  useEffect(() => {
+    const query = window.matchMedia?.("(prefers-color-scheme: dark)");
+    if (!query) return;
+    const onChange = (event: MediaQueryListEvent) => setSystemDark(event.matches);
+    query.addEventListener("change", onChange);
+    return () => query.removeEventListener("change", onChange);
+  }, []);
+
+  const followsDevice = !adminPath && !!tenantSlug;
+
   const theme = useMemo(() => {
+    if (followsDevice) return getThemeVariant(baseTheme, systemDark ? "dark" : "light");
     if (!modeOverride) return baseTheme;
     return getThemeVariant(baseTheme, modeOverride);
-  }, [baseTheme, modeOverride]);
+  }, [baseTheme, modeOverride, followsDevice, systemDark]);
 
   const cssVars = useMemo(() => getThemeCssVars(theme), [theme]);
 
