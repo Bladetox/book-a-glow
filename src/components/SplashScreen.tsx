@@ -1,5 +1,6 @@
-import { motion } from "framer-motion";
-import { useMemo, useState } from "react";
+import { motion, type Variants } from "framer-motion";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ElementType } from "react";
+import { CircleAlert, Facebook, Globe, Instagram, MoreHorizontal, Music2, Search, UserPlus } from "lucide-react";
 import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
 import { useBusinessTheme } from "@/contexts/BusinessThemeProvider";
 import { useBrandFont } from "@/hooks/useBrandFont";
@@ -10,93 +11,123 @@ interface SplashScreenProps {
   onReferralChange: (source: string) => void;
 }
 
+// Editorial motion: slow, opacity-led, and settling without any overshoot. No
+// rotation, no bounce. Reduced-motion users get the same end state without the
+// transforms, because <MotionConfig reducedMotion="user"> wraps the booking
+// shell in Book.tsx.
+const EASE = [0.16, 1, 0.3, 1] as const;
+
+const screen: Variants = {
+  hidden: {},
+  show: { transition: { delayChildren: 0.25, staggerChildren: 0.16 } },
+};
+
+const logoIn: Variants = {
+  hidden: { opacity: 0 },
+  show: { opacity: 1, transition: { duration: 1.6, ease: EASE } },
+};
+
+const rise: Variants = {
+  hidden: { opacity: 0, y: 10 },
+  show: { opacity: 1, y: 0, transition: { duration: 1.2, ease: EASE } },
+};
+
+// The business name is revealed from a mask, not flown in.
+const maskedLine: Variants = {
+  hidden: { y: "105%" },
+  show: { y: "0%", transition: { duration: 1.3, ease: EASE } },
+};
+
+// Critically damped: it arrives and stops, with no overshoot.
+const sheetIn: Variants = {
+  hidden: { y: "100%" },
+  show: { y: "0%", transition: { type: "spring", stiffness: 120, damping: 26, delay: 0.7 } },
+};
+
+const panelContent: Variants = {
+  hidden: {},
+  show: { transition: { delayChildren: 1.0, staggerChildren: 0.14 } },
+};
+
+const chipList: Variants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.08 } },
+};
+
+const chipIn: Variants = {
+  hidden: { opacity: 0, y: 6 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.9, ease: EASE } },
+};
+
+/** Icon for the common lead sources. Tenants can configure any label, so unknown ones get none. */
+const sourceIcon = (label: string): ElementType | null => {
+  const key = label.trim().toLowerCase();
+  if (key.includes("tiktok")) return Music2;
+  if (key.includes("instagram")) return Instagram;
+  if (key.includes("facebook")) return Facebook;
+  if (key.includes("google")) return Search;
+  if (key.includes("website") || key.includes("web")) return Globe;
+  if (key.includes("referr") || key.includes("friend")) return UserPlus;
+  if (key === "other") return MoreHorizontal;
+  return null;
+};
+
+/**
+ * Welcome screen and acquisition capture.
+ *
+ * The guest has to say where they heard about the business before they can
+ * start booking; the answer is saved with the booking as its lead source.
+ * Colours come from the tenant theme tokens (see src/styles/booking.css).
+ */
 const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashScreenProps) => {
   const config = usePublicBusinessConfig();
-  const { theme, loading: themeLoading } = useBusinessTheme();
+  const { loading: themeLoading } = useBusinessTheme();
   const [attempted, setAttempted] = useState(false);
 
   // ── Brand font (sister-studios only; null + no-op for all other tenants) ──
   const brandFontFamily = useBrandFont(config.brandFontUrl ?? null);
 
-  const isDark = useMemo(() => {
-    const parts = theme.colors.background.split(/\s+/);
-    return parseFloat(parts[2] ?? "50") < 50;
-  }, [theme]);
-
-  const primaryHSL = theme.colors.primary;
-  const [pH, pS] = primaryHSL.replace(/%/g, "").split(/\s+/).map(Number);
-  const orbL  = isDark ? 65 : 60;
-  const orbAlpha = isDark ? 0.13 : 0.10;
-  const orbColor = (alpha: number) => `hsla(${pH}, ${pS}%, ${orbL}%, ${alpha})`;
-  const particleColor = isDark ? `hsl(${pH} ${pS}% 80%)` : `hsl(${pH} ${pS}% 30%)`;
-  const shimmerColor  = isDark
-    ? `rgba(${pH}, ${pS}%, ${orbL}%, 0.22)`
-    : `hsla(${pH}, ${pS}%, ${orbL}%, 0.18)`;
-
-  const textPrimary    = isDark ? "rgba(255,255,255,0.88)"  : `hsl(${theme.colors.foreground})`;
-  const textSubtle     = isDark ? "rgba(255,255,255,0.38)"  : `hsla(${pH}, ${pS}%, ${orbL}%, 0.55)`;
-  const textFaint      = isDark ? "rgba(255,255,255,0.18)"  : `hsla(${pH}, ${pS}%, ${orbL}%, 0.35)`;
-  const textFooter     = isDark ? "rgba(255,255,255,0.14)"  : `hsla(${pH}, ${pS}%, 40%, 0.45)`;
-  const textFooterLink = isDark ? `hsla(${pH}, ${pS}%, 75%, 0.65)` : `hsl(${pH} ${pS}% 35%)`;
-  const chipSelected   = isDark ? "rgba(255,255,255,0.10)"  : `hsla(${pH}, ${pS}%, ${orbL}%, 0.12)`;
-  const chipBorderSel  = isDark ? "rgba(255,255,255,0.35)"  : `hsla(${pH}, ${pS}%, ${orbL}%, 0.50)`;
-  const chipTextSel    = isDark ? "rgba(255,255,255,0.95)"  : `hsl(${theme.colors.foreground})`;
-  const chipBorderDef  = isDark ? "rgba(255,255,255,0.08)"  : `hsla(${pH}, ${pS}%, 40%, 0.15)`;
-  const chipTextDef    = isDark ? "rgba(255,255,255,0.32)"  : `hsla(${pH}, ${pS}%, 35%, 0.60)`;
-  const ctaActiveBg    = isDark ? "rgba(255,255,255,0.07)"  : `hsla(${pH}, ${pS}%, ${orbL}%, 0.10)`;
-  const ctaBorderAct   = isDark ? "rgba(255,255,255,0.18)"  : `hsla(${pH}, ${pS}%, ${orbL}%, 0.40)`;
-  const ctaTextAct     = isDark ? "rgba(255,255,255,0.88)"  : `hsl(${theme.colors.foreground})`;
-  const ctaInactiveBg  = isDark ? "rgba(255,255,255,0.03)"  : "rgba(0,0,0,0.02)";
-  const ctaBorderIna   = isDark ? "rgba(255,255,255,0.06)"  : `hsla(${pH}, ${pS}%, 40%, 0.10)`;
-  const ctaTextIna     = isDark ? "rgba(255,255,255,0.28)"  : `hsla(${pH}, ${pS}%, 35%, 0.40)`;
-  const logoBg         = isDark ? "rgba(255,255,255,0.055)" : `hsla(${pH}, ${pS}%, 95%, 0.70)`;
-  const logoBoxShadow  = isDark
-    ? `0 0 0 0.5px hsla(${pH},${pS}%,80%,0.12) inset, 0 8px 32px rgba(0,0,0,0.5), 0 0 24px hsla(${pH},${pS}%,${orbL}%,0.06)`
-    : `0 0 0 0.5px hsla(${pH},${pS}%,50%,0.12) inset, 0 4px 20px rgba(0,0,0,0.08)`;
-  const errorColor     = "rgba(255,100,100,0.85)";
-  const errorColorDim  = "rgba(255,120,120,0.70)";
-
-  const bgColor = `hsl(var(--background))`;
-
-  // ── Brand name heading style ──────────────────────────────────────────────
-  const brandGlow = orbColor(0.10);
-  const brandNameStyle = useMemo<React.CSSProperties>(() => ({
-    fontSize: "clamp(2rem, 8vw, 2.6rem)",
-    color: config.brandNameColor ?? textPrimary,
-    textShadow: config.brandNameColor
-      ? `0 2px 24px ${config.brandNameColor}55, 0 0 48px ${config.brandNameColor}33`
-      : isDark ? `0 2px 32px ${brandGlow}` : "none",
+  // ── Brand name style: font + colour applied ONLY when set ─────────────────
+  const brandNameStyle = useMemo<CSSProperties>(() => ({
+    ...(config.brandNameColor
+      ? { color: config.brandNameColor, textShadow: `0 2px 28px ${config.brandNameColor}33` }
+      : {}),
     ...(brandFontFamily ? { fontFamily: brandFontFamily } : {}),
-  }), [brandFontFamily, config.brandNameColor, textPrimary, isDark, brandGlow]);
+  }), [brandFontFamily, config.brandNameColor]);
 
-  const orbs = useMemo(
-    () => [
-      { id: 0, x: 10,  y: 8,   size: 420, duration: 20, delay: 0,   driftX: 22,  driftY: 30 },
-      { id: 1, x: 80,  y: 70,  size: 360, duration: 26, delay: 5,   driftX: -26, driftY: -20 },
-      { id: 2, x: 48,  y: 38,  size: 260, duration: 32, delay: 10,  driftX: 14,  driftY: -18 },
-      { id: 3, x: 25,  y: 75,  size: 200, duration: 38, delay: 15,  driftX: -12, driftY: 16 },
-    ],
-    []
-  );
-
-  const particles = useMemo(
-    () =>
-      Array.from({ length: 32 }, (_, i) => ({
-        id: i,
-        x: Math.random() * 100,
-        y: Math.random() * 100,
-        size: Math.random() * 1.8 + 0.4,
-        duration: Math.random() * 14 + 18,
-        delay: Math.random() * 10,
-        driftX: (Math.random() - 0.5) * 30,
-        driftY: (Math.random() - 0.5) * 25,
-        maxOpacity: Math.random() * 0.22 + 0.06,
-      })),
-    []
-  );
+  // Scale the name down as it gets longer. The longest single word matters as
+  // much as the total length, so long names never break mid-word.
+  const nameScale = useMemo(() => {
+    const name = config.name.trim();
+    const longestWord = Math.max(0, ...name.split(/\s+/).map((word) => word.length));
+    const byLength = name.length <= 22 ? 1 : name.length <= 32 ? 0.8 : name.length <= 44 ? 0.64 : 0.54;
+    const byWord = longestWord > 10 ? 10.5 / longestWord : 1;
+    return Math.max(0.46, Math.min(byLength, byWord));
+  }, [config.name]);
 
   const referralOptions = config.referralOptions;
   const isSelected = referralSource.trim().length > 0;
+  const showError = attempted && !isSelected;
+
+  // Every option is laid out at once. Only when a tenant has more options than
+  // fit does the list scroll, and then the guest is told there are more.
+  const chipsRef = useRef<HTMLDivElement>(null);
+  const [chipsScroll, setChipsScroll] = useState(false);
+  useEffect(() => {
+    const el = chipsRef.current;
+    if (!el) return;
+    const measure = () => setChipsScroll(el.scrollHeight > el.clientHeight + 4);
+    // Measure only once the chips have settled: web fonts arriving and the end of
+    // the entrance. Measuring mid-entrance would flash the scroll hint.
+    const settle = window.setTimeout(measure, 1600);
+    void document.fonts?.ready.then(measure);
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(measure);
+    observer?.observe(el);
+    return () => {
+      window.clearTimeout(settle);
+      observer?.disconnect();
+    };
+  }, [referralOptions.length, themeLoading]);
 
   const handleCta = () => {
     if (!isSelected) { setAttempted(true); return; }
@@ -104,300 +135,163 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
   };
 
   if (themeLoading) {
-    return <div className="fixed inset-0 z-[100]" style={{ backgroundColor: bgColor }} />;
+    return <div className="fixed inset-0 z-[100] bg-background" />;
   }
 
   return (
     /*
-      overflow-hidden + fixed inset-0: the splash is locked to the viewport.
-      No scrolling allowed — all content must fit within the screen height.
+      Fixed to the viewport and never scrolls: the hero flexes to fill whatever
+      height the acquisition sheet does not need.
     */
-    <div
-      className="fixed inset-0 z-[100] overflow-hidden"
-      style={{ backgroundColor: bgColor }}
-    >
-      {/* Deep ambient gradient */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute inset-0" style={{
-          background: [
-            `radial-gradient(ellipse 90% 55% at 15% 5%, ${orbColor(orbAlpha * 0.45)} 0%, transparent 60%)`,
-            `radial-gradient(ellipse 70% 50% at 85% 90%, ${orbColor(orbAlpha * 0.30)} 0%, transparent 60%)`,
-          ].join(", ")
-        }} />
-        <motion.div
-          className="absolute left-0 right-0 h-px pointer-events-none"
-          style={{
-            top: "38%",
-            background: `linear-gradient(90deg, transparent 5%, ${orbColor(0.12)} 30%, ${shimmerColor} 50%, ${orbColor(0.12)} 70%, transparent 95%)`,
-            filter: "blur(0.5px)",
-          }}
-          animate={{ opacity: [0, 1, 0.4, 1, 0], top: ["30%", "42%", "38%", "44%", "32%"] }}
-          transition={{ duration: 12, repeat: Infinity, ease: "easeInOut", delay: 2 }}
-        />
-      </div>
+    <div className="booking-app bk-stage bk-splash">
+      <motion.div className="bk-splash__column" initial="hidden" animate="show" variants={screen}>
+        <div className="bk-splash__glow" aria-hidden="true" />
 
-      {/* Ambient orbs */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {orbs.map(o => (
-          <motion.div
-            key={o.id}
-            className="absolute rounded-full"
-            style={{
-              width: o.size, height: o.size,
-              left: `${o.x}%`, top: `${o.y}%`,
-              background: `radial-gradient(circle, ${orbColor(orbAlpha)} 0%, transparent 70%)`,
-              filter: "blur(48px)",
-              transform: "translate(-50%, -50%)",
-            }}
-            animate={{ x: [0, o.driftX, 0], y: [0, o.driftY, 0], opacity: [0.7, 1, 0.7] }}
-            transition={{ duration: o.duration, repeat: Infinity, delay: o.delay, ease: "easeInOut" }}
-          />
-        ))}
-      </div>
-
-      {/* Star particles */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {particles.map(p => (
-          <motion.div
-            key={p.id}
-            className="absolute rounded-full"
-            style={{ width: p.size, height: p.size, left: `${p.x}%`, top: `${p.y}%`, background: particleColor }}
-            animate={{ x: [0, p.driftX, 0], y: [0, p.driftY, 0], opacity: [0, p.maxOpacity, 0] }}
-            transition={{ duration: p.duration, repeat: Infinity, delay: p.delay, ease: "easeInOut" }}
-          />
-        ))}
-      </div>
-
-      {/*
-        Content column.
-        - h-full fills the fixed container exactly.
-        - justify-between pushes the footer to the bottom and distributes
-          the remaining content evenly so nothing overflows.
-        - overflow-hidden prevents any child from causing scroll.
-      */}
-      <motion.div
-        className="relative flex flex-col items-center w-full h-full px-6 overflow-hidden"
-        style={{
-          paddingTop: "max(env(safe-area-inset-top, 0px), 56px)",
-          paddingBottom: "max(env(safe-area-inset-bottom, 0px), 32px)",
-        }}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.8 }}
-      >
-        {/* Top block: logo + headings + divider */}
-        <div className="flex flex-col items-center">
-          {/* Logo block */}
-          <motion.div
-            initial={{ scale: 0.82, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: "spring", stiffness: 160, damping: 24, delay: 0.18 }}
-            className="relative mb-6"
-          >
-            <motion.div
-              className="absolute rounded-[32px] inset-[-14px]"
-              style={{
-                background: `radial-gradient(circle, ${orbColor(0.18)} 0%, transparent 70%)`,
-                filter: "blur(20px)",
-              }}
-              animate={{ opacity: [0.5, 1, 0.5], scale: [1, 1.08, 1] }}
-              transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-            />
-            <div
-              className="relative w-[76px] h-[76px] rounded-[24px] overflow-hidden flex items-center justify-center"
-              style={{
-                background: config.logoUrl ? "transparent" : logoBg,
-                backdropFilter: "blur(24px)",
-                WebkitBackdropFilter: "blur(24px)",
-                boxShadow: logoBoxShadow,
-              }}
-            >
-              {config.logoUrl ? (
-                <img
-                  src={config.logoUrl}
-                  alt={config.name}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <span className="font-display text-2xl font-bold tracking-tight" style={{ color: textPrimary }}>
-                  {config.abbreviation}
-                </span>
-              )}
-              {!config.logoUrl && (
-                <span
-                  className="absolute top-0 left-3 right-3 h-px"
-                  style={{ background: `linear-gradient(90deg, transparent, ${orbColor(0.30)}, transparent)` }}
-                />
-              )}
-            </div>
+        {/* ── Hero: logo, name and tagline ─────────────────────────────── */}
+        <div className="bk-splash__hero">
+          <motion.div variants={logoIn} className="bk-splash__logo">
+            {config.logoUrl ? (
+              <img src={config.logoUrl} alt={config.name} className="h-full w-full object-cover" />
+            ) : (
+              <span className="bk-display bk-splash__monogram" aria-hidden="true">
+                {config.abbreviation}
+              </span>
+            )}
           </motion.div>
 
-          {/* Welcome label */}
-          <motion.p
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4, duration: 0.55 }}
-            className="self-start text-left text-[9px] font-bold tracking-[0.5em] uppercase mb-2"
-            style={{ color: textSubtle }}
-          >
-            {config.splashWelcomeLabel}
-          </motion.p>
+          <div className="bk-splash__brand">
+            <motion.p variants={rise} className="bk-overline">
+              {config.splashWelcomeLabel}
+            </motion.p>
 
-          {/* Business name */}
-          <motion.h1
-            initial={{ opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.54, duration: 0.55 }}
-            className="self-start w-full font-display leading-none font-bold text-left tracking-tight mb-4"
-            style={brandNameStyle}
-          >
-            {config.name}
-          </motion.h1>
+            <motion.h1
+              variants={rise}
+              className="bk-display bk-splash__name"
+              style={{ ...brandNameStyle, "--bk-name-scale": nameScale } as CSSProperties}
+            >
+              <span className="bk-splash__mask">
+                <motion.span variants={maskedLine} className="block">
+                  {config.name}
+                </motion.span>
+              </span>
+            </motion.h1>
 
-          {/* Tagline 1 */}
-          <motion.p
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.7, duration: 0.45 }}
-            className="self-start text-left text-[10px] font-semibold tracking-[0.35em] uppercase mb-1"
-            style={{ color: textSubtle }}
-          >
-            {config.splashTagline1}
-          </motion.p>
+            <motion.p variants={rise} className="bk-splash__tagline1">
+              {config.splashTagline1}
+            </motion.p>
 
-          {/* Tagline 2 */}
-          <motion.p
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.82, duration: 0.45 }}
-            className="self-start text-left text-[10px] font-medium tracking-[0.3em] uppercase"
-            style={{ color: textFaint }}
-          >
-            {config.splashTagline2}
-          </motion.p>
-
+            <motion.p variants={rise} className="bk-splash__tagline2">
+              {config.splashTagline2}
+            </motion.p>
+          </div>
         </div>
 
-        {/* Middle block: referral chips — vertically centred in remaining space */}
-        <div className="flex-1 flex items-center w-full">
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1.08, duration: 0.45 }}
-            className="w-full"
-          >
-            <p
-              className="text-[9px] font-bold tracking-[0.32em] uppercase text-center mb-1"
-              style={{ color: textSubtle }}
-            >
+        {/* ── Acquisition capture ──────────────────────────────────────── */}
+        <motion.section
+          variants={sheetIn}
+          className={`bk-splash__panel ${showError ? "is-error" : ""}`}
+          aria-labelledby="referral-title"
+        >
+          <motion.div variants={panelContent} className="flex flex-col">
+            <motion.h2 variants={rise} id="referral-title" className="bk-splash__heading">
               Where did you hear about us?
-              <span style={{ color: attempted && !isSelected ? errorColor : textFaint }}> *</span>
-            </p>
-            <p
-              className="text-[8px] text-center mb-3 tracking-wide transition-colors duration-300"
-              style={{ color: attempted && !isSelected ? errorColorDim : textFaint }}
-            >
-              {attempted && !isSelected ? "Please select an option to continue" : "Scroll to see all options"}
-            </p>
+            </motion.h2>
 
-            {/*
-              Chip scroll row.
-              - mx-[-1.5rem] cancels the parent px-6 (1.5rem) on both sides so
-                the row is flush with the viewport edges.
-              - px-6 re-applies the same padding as first/last-chip inset.
-            */}
+            <motion.p
+              variants={rise}
+              className={`bk-splash__subtitle ${showError ? "is-error" : ""}`}
+              role={showError ? "alert" : undefined}
+            >
+              {showError && <CircleAlert className="h-4 w-4 shrink-0" aria-hidden="true" />}
+              {showError
+                ? "Please select an option to continue"
+                : chipsScroll
+                  ? "Choose one to get started. Scroll to see all options."
+                  : "Choose one to get started"}
+            </motion.p>
+
+            {/* The shake is a wrapper, so it never fights the entrance variants. */}
             <motion.div
-              className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide"
-              style={{
-                marginLeft: "-1.5rem",
-                marginRight: "-1.5rem",
-                paddingLeft: "1.5rem",
-                paddingRight: "1.5rem",
-              }}
-              animate={attempted && !isSelected ? { x: [0, -6, 6, -4, 4, 0] } : { x: 0 }}
+              animate={showError ? { x: [0, -6, 6, -4, 4, 0] } : { x: 0 }}
               transition={{ duration: 0.4, ease: "easeInOut" }}
             >
-              {referralOptions.map(opt => (
-                <motion.button
-                  key={opt}
-                  whileTap={{ scale: 0.91 }}
-                  onClick={() => {
-                    onReferralChange(referralSource === opt ? "" : opt);
-                    if (attempted) setAttempted(false);
-                  }}
-                  className="shrink-0 px-4 py-2 rounded-full text-[11px] font-semibold transition-all duration-200"
-                  style={{
-                    border: referralSource === opt
-                      ? `1px solid ${chipBorderSel}`
-                      : attempted && !isSelected
-                        ? `1px solid ${errorColor.replace("0.85", "0.25")}`
-                        : `1px solid ${chipBorderDef}`,
-                    background: referralSource === opt ? chipSelected : "transparent",
-                    color: referralSource === opt
-                      ? chipTextSel
-                      : attempted && !isSelected
-                        ? errorColorDim
-                        : chipTextDef,
-                    backdropFilter: referralSource === opt ? "blur(8px)" : undefined,
-                  }}
-                >
-                  {opt}
-                </motion.button>
-              ))}
+              <motion.div
+                ref={chipsRef}
+                role="group"
+                aria-labelledby="referral-title"
+                variants={chipList}
+                className="bk-splash__chips scrollbar-hide"
+              >
+                {referralOptions.map((opt) => {
+                  const selected = referralSource === opt;
+                  const Icon = sourceIcon(opt);
+                  return (
+                    <motion.button
+                      key={opt}
+                      type="button"
+                      variants={chipIn}
+                      whileTap={{ scale: 0.97 }}
+                      aria-pressed={selected}
+                      onClick={() => {
+                        onReferralChange(selected ? "" : opt);
+                        if (attempted) setAttempted(false);
+                      }}
+                      className="bk-splash__chip"
+                    >
+                      {/* One highlight shared by every chip, so it glides to the new choice. */}
+                      {selected && (
+                        <motion.span
+                          layoutId="splash-chip-active"
+                          className="bk-splash__chip-active"
+                          transition={{ type: "spring", stiffness: 260, damping: 32 }}
+                          aria-hidden="true"
+                        />
+                      )}
+                      <span className="bk-splash__chip-label">
+                        {Icon && <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />}
+                        {opt}
+                      </span>
+                    </motion.button>
+                  );
+                })}
+              </motion.div>
             </motion.div>
+
+            {/*
+              Stays tappable without a selection so a tap can explain what is
+              missing, which a natively disabled button could not do.
+            */}
+            <motion.button
+              variants={rise}
+              type="button"
+              onClick={handleCta}
+              aria-disabled={!isSelected}
+              className="bk-splash__cta"
+            >
+              {isSelected && (
+                // Mounts on each new selection, so the sheen plays every time the
+                // button becomes ready, then stays out of the way.
+                <motion.span
+                  key="sheen"
+                  className="bk-splash__sheen"
+                  // The band is 60% wide; these offsets take it fully off the button at both ends.
+                  initial={{ x: "-100%" }}
+                  animate={{ x: "190%" }}
+                  transition={{ duration: 1.4, ease: EASE, delay: 0.2 }}
+                  aria-hidden="true"
+                />
+              )}
+              <span className="relative">{config.splashCtaLabel}</span>
+            </motion.button>
+
+            <motion.p variants={rise} className="bk-splash__footer">
+              Powered by{" "}
+              <a href="https://nextslot.co.za" target="_blank" rel="noopener noreferrer">
+                nextslot.co.za
+              </a>
+            </motion.p>
           </motion.div>
-        </div>
-
-        {/* Bottom block: CTA + footer — pushed to bottom with mt-auto */}
-        <div className="flex flex-col items-center w-full">
-          {/* CTA */}
-          <motion.button
-            initial={{ opacity: 0, y: 18 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1.25, duration: 0.5 }}
-            whileHover={isSelected ? { scale: 1.012 } : {}}
-            whileTap={{ scale: isSelected ? 0.975 : 1 }}
-            onClick={handleCta}
-            className="w-full px-8 py-4 rounded-2xl text-[10px] font-bold tracking-[0.28em] uppercase relative overflow-hidden cursor-pointer transition-all duration-300"
-            style={{
-              background: isSelected ? ctaActiveBg  : ctaInactiveBg,
-              backdropFilter: "blur(28px)",
-              WebkitBackdropFilter: "blur(28px)",
-              border: isSelected ? `1px solid ${ctaBorderAct}` : `1px solid ${ctaBorderIna}`,
-              boxShadow: isSelected
-                ? `0 0 40px ${orbColor(0.04)}, 0 1px 0 ${orbColor(0.14)} inset`
-                : "none",
-              color: isSelected ? ctaTextAct : ctaTextIna,
-              cursor: isSelected ? "pointer" : "default",
-            }}
-          >
-            {isSelected && (
-              <motion.span
-                className="absolute inset-0 pointer-events-none"
-                style={{ background: `linear-gradient(105deg, transparent 30%, ${orbColor(0.10)} 50%, transparent 70%)` }}
-                initial={{ x: "-100%" }}
-                whileHover={{ x: "200%" }}
-                transition={{ duration: 0.7, ease: "easeInOut" }}
-              />
-            )}
-            <span className="absolute top-0 left-6 right-6 h-px" style={{ background: `linear-gradient(90deg, transparent, ${orbColor(0.30)}, transparent)` }} />
-            <span className="relative">{config.splashCtaLabel}</span>
-          </motion.button>
-
-          {/* Footer */}
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1.6, duration: 0.6 }}
-            className="mt-5 text-[8px] tracking-[0.2em]"
-            style={{ color: textFooter }}
-          >
-            Powered by{" "}
-            <a href="https://nextslot.co.za" target="_blank" rel="noopener noreferrer" style={{ color: textFooterLink, textDecoration: "none" }}>
-              nextslot.co.za
-            </a>
-          </motion.p>
-        </div>
+        </motion.section>
       </motion.div>
     </div>
   );
