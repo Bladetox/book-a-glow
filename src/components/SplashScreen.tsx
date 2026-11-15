@@ -55,9 +55,6 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
     : `0 0 0 0.5px hsla(${pH},${pS}%,50%,0.12) inset, 0 4px 20px rgba(0,0,0,0.08)`;
   const errorColor     = "rgba(255,100,100,0.85)";
   const errorColorDim  = "rgba(255,120,120,0.70)";
-  const dividerColor   = isDark
-    ? `linear-gradient(90deg, transparent, hsla(${pH},${pS}%,${orbL}%,0.35), transparent)`
-    : `linear-gradient(90deg, transparent, hsla(${pH},${pS}%,40%,0.20), transparent)`;
 
   const bgColor = `hsl(var(--background))`;
 
@@ -240,7 +237,7 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4, duration: 0.55 }}
-            className="text-[9px] font-bold tracking-[0.5em] uppercase mb-2"
+            className="self-start text-left text-[9px] font-bold tracking-[0.5em] uppercase mb-2"
             style={{ color: textSubtle }}
           >
             {config.splashWelcomeLabel}
@@ -251,7 +248,7 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
             initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.54, duration: 0.55 }}
-            className="font-display leading-none font-bold text-center tracking-tight mb-4"
+            className="self-start w-full font-display leading-none font-bold text-left tracking-tight mb-4"
             style={brandNameStyle}
           >
             {config.name}
@@ -262,7 +259,7 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.7, duration: 0.45 }}
-            className="text-[10px] font-semibold tracking-[0.35em] uppercase mb-1"
+            className="self-start text-left text-[10px] font-semibold tracking-[0.35em] uppercase mb-1"
             style={{ color: textSubtle }}
           >
             {config.splashTagline1}
@@ -273,20 +270,12 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.82, duration: 0.45 }}
-            className="text-[10px] font-medium tracking-[0.3em] uppercase"
+            className="self-start text-left text-[10px] font-medium tracking-[0.3em] uppercase"
             style={{ color: textFaint }}
           >
             {config.splashTagline2}
           </motion.p>
 
-          {/* Divider */}
-          <motion.div
-            initial={{ scaleX: 0, opacity: 0 }}
-            animate={{ scaleX: 1, opacity: 1 }}
-            transition={{ delay: 0.98, duration: 0.6, ease: "easeOut" }}
-            className="mt-6 mb-6"
-            style={{ width: 48, height: 1, background: dividerColor }}
-          />
         </div>
 
         {/* Middle block: referral chips — vertically centred in remaining space */}

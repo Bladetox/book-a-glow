@@ -90,9 +90,9 @@
     "semantic_hash": ""
   },
   "src/components/SplashScreen.tsx": {
-    "mtime": 1794649689.7325788,
-    "seen": 1794687193.6959755,
-    "ast_hash": "f9f482f8d7898d2889c8fcb536b0894f",
+    "mtime": 1794738240.9769728,
+    "seen": 1794738334.748216,
+    "ast_hash": "fd5d7252b7cd4072f7c06fa4e8a2639f",
     "semantic_hash": ""
   },
   "src/components/StepIndicator.tsx": {
@@ -3765,6 +3765,36 @@
     "mtime": 1794694944.2505076,
     "seen": 1794695676.966748,
     "ast_hash": "71b40b2f6b99839fd93c69e15e28cfc0",
+    "semantic_hash": ""
+  },
+  "reports/Video consultation marketing for NextSlot.md": {
+    "mtime": 1794703745.2974734,
+    "seen": 1794738334.7497594,
+    "ast_hash": "4970045fad519d04b62ab53303e94525",
+    "semantic_hash": ""
+  },
+  "research_notes/Video consultation marketing for NextSlot/competitor_positioning.md": {
+    "mtime": 1794703606.5134652,
+    "seen": 1794738334.7497628,
+    "ast_hash": "55bf9336bd431f4b09c19315d0f8e26c",
+    "semantic_hash": ""
+  },
+  "research_notes/Video consultation marketing for NextSlot/nextslot_positioning.md": {
+    "mtime": 1794703620.1414661,
+    "seen": 1794738334.7497656,
+    "ast_hash": "89cf614b4da9bde3e366b9f069526de2",
+    "semantic_hash": ""
+  },
+  "research_notes/Video consultation marketing for NextSlot/risks_claims.md": {
+    "mtime": 1794703634.7934668,
+    "seen": 1794738334.7497678,
+    "ast_hash": "494c53a3dfced6133e6de4a1ca0f403c",
+    "semantic_hash": ""
+  },
+  "research_notes/Video consultation marketing for NextSlot/sa_demand_whatsapp.md": {
+    "mtime": 1794703612.6814656,
+    "seen": 1794738334.7497697,
+    "ast_hash": "d848d09e5f9c3c9af27263aa928730f1",
     "semantic_hash": ""
   },
   "package-lock.json": {
