@@ -1150,6 +1150,14 @@ Deno.serve(async (req) => {
         </td></tr>`
       : "";
 
+    // Shown before payment on PayShap bookings, so the client knows the format
+    // before the deposit is confirmed.
+    const payshapVideoHtml = isVideoBooking
+      ? `<tr><td style="padding:0 36px 18px;">
+            <p class="tl" style="margin:0;font-size:13px;color:#555;line-height:1.6;">This is an online video consultation. Once your payment is confirmed, ${tenantName} will contact you on WhatsApp to start your call.</p>
+          </td></tr>`
+      : "";
+
     const ownerWhatsAppHtml = isVideoBooking && clientWhatsAppLink
       ? `<p style="margin:12px 0 0;"><a href="${clientWhatsAppLink}" target="_blank" style="color:#111;font-size:13px;font-weight:600;">Message client on WhatsApp &rarr;</a></p>`
       : "";
@@ -1242,6 +1250,7 @@ Deno.serve(async (req) => {
             )}
           </td></tr>
 
+          ${payshapVideoHtml}
           <tr><td style="padding:14px 36px 10px;">
             <p class="tl" style="margin:0 0 10px;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#999;">How to Pay via PayShap</p>
             <div style="background:#f7f7f7;border-radius:10px;border:1px solid #e0e0e0;padding:20px 22px;">
@@ -1323,6 +1332,7 @@ Deno.serve(async (req) => {
       ${row("Payment",     isFullPayment ? `Full Payment — ${totalAmount}` : `Deposit — ${depositAmount}`, true)}
       ${!isFullPayment ? row("Balance Due on Day", balanceDue) : ""}
     </table>
+${ownerWhatsAppHtml ? `<tr><td style="padding:0 28px 6px;">${ownerWhatsAppHtml}</td></tr>` : ""}
 <tr><td style="padding:10px 28px 22px;">
   <div style="background:#000;border-radius:10px;padding:16px 20px;text-align:center;">
     <p style="margin:0 0 6px;font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#fff;">Action required</p>
