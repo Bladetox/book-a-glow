@@ -17,7 +17,11 @@ export function useImageEdgeColor(url: string | null | undefined): string | null
 
     let cancelled = false;
     const img = new Image();
-    img.crossOrigin = "anonymous";
+    // Only ask for CORS for images on another origin. A same-origin request with
+    // crossOrigin set can be answered differently by the service worker, which
+    // then makes the canvas unreadable.
+    const sameOrigin = new URL(url, window.location.href).origin === window.location.origin;
+    if (!sameOrigin) img.crossOrigin = "anonymous";
     img.onload = () => {
       if (cancelled) return;
       try {
