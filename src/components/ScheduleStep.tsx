@@ -1,3 +1,4 @@
+import type { ScheduleMode } from "@/lib/videoConsultation";
 import { useState, useMemo, useRef, useCallback, useEffect } from "react";
 import {
   format,
@@ -28,6 +29,7 @@ import {
 } from "@/lib/bookingFormat";
 
 interface ScheduleStepProps {
+  scheduleMode: ScheduleMode;
   selectedDate: Date | null;
   selectedTime: string | null;
   onSelectDate: (date: Date | null) => void;
@@ -51,6 +53,7 @@ async function getStaffId(tenantId: string): Promise<string> {
 }
 
 const ScheduleStep = ({
+  scheduleMode,
   selectedDate,
   selectedTime,
   onSelectDate,
@@ -64,7 +67,7 @@ const ScheduleStep = ({
 }: ScheduleStepProps) => {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [calendarOpen, setCalendarOpen] = useState(true);
-  const [availabilityNotice, setAvailabilityNotice] = useState<"insufficient_time" | "fully_booked" | "restricted" | null>(null);
+  const [availabilityNotice, setAvailabilityNotice] = useState<"available" | "insufficient_time" | "fully_booked" | "restricted" | null>(null);
   const [refreshingAvailability, setRefreshingAvailability] = useState(false);
   const [availabilityRefreshError, setAvailabilityRefreshError] = useState(false);
   const [acquiringSlot, setAcquiringSlot] = useState(false);
@@ -83,6 +86,7 @@ const ScheduleStep = ({
     month,
     totalDuration,
     ownerId || undefined,
+    scheduleMode,
   );
 
   const selectedDateStr = selectedDate ? format(selectedDate, "yyyy-MM-dd") : null;
@@ -91,6 +95,8 @@ const ScheduleStep = ({
     selectedDateStr,
     totalDuration,
     slotHold.sessionToken,
+    undefined,
+    scheduleMode,
   );
 
   const today = useMemo(() => {
@@ -125,7 +131,7 @@ const ScheduleStep = ({
 
   const releaseHold = slotHold.releaseHold;
 
-  const showAvailabilityNotice = useCallback((status: "insufficient_time" | "fully_booked" | "restricted") => {
+  const showAvailabilityNotice = useCallback((status: "available" | "insufficient_time" | "fully_booked" | "restricted") => {
     if (popupTimerRef.current) clearTimeout(popupTimerRef.current);
     setAvailabilityRefreshError(false);
     setCalendarOpen(false);
@@ -258,6 +264,7 @@ const ScheduleStep = ({
         bookingDate: format(selectedDate, "yyyy-MM-dd"),
         startTime:   `${time}:00`,
         durationMins: totalDuration,
+        scheduleMode,
       });
 
       if (!result.success) {
@@ -269,7 +276,7 @@ const ScheduleStep = ({
       setAcquiringSlot(false);
       setPendingTime(null);
     }
-  }, [selectedDate, selectedTime, acquiringSlot, tenantId, totalDuration, slotHold, onSelectTime]);
+  }, [selectedDate, selectedTime, acquiringSlot, tenantId, totalDuration, scheduleMode, slotHold, onSelectTime]);
 
   const hasAnyAvailableDate = Object.values(monthAvailability ?? {}).some((day) => day.status === "available");
   const noSuitableDatesInHorizon = !loadingMonth && !!monthAvailability && !hasAnyAvailableDate;

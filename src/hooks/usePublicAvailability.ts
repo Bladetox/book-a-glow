@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { usePublicTenant } from "@/contexts/PublicTenantContext";
 import { getTenantSlug } from "@/lib/tenant-resolver";
+import { scheduleTypeRpcArg, type ScheduleMode } from "@/lib/videoConsultation";
 
 /** Resolve the staff/owner id for a tenant — used only when ownerId is unavailable from context */
 async function getStaffId(tenantId: string): Promise<string> {
@@ -42,13 +43,14 @@ export function useMonthAvailability(
   _year: number,
   _month: number,
   durationMinutes: number = 60,
-  staffId?: string
+  staffId?: string,
+  scheduleMode: ScheduleMode = "physical"
 ) {
   const { tenantId, ownerId } = usePublicTenant();
   const resolvedStaffId = staffId || ownerId || null;
 
   return useQuery({
-    queryKey: ["public-booking-horizon-availability", tenantId, durationMinutes],
+    queryKey: ["public-booking-horizon-availability", tenantId, durationMinutes, scheduleMode],
     enabled: !!tenantId,
     staleTime: 60 * 1000,
     refetchOnWindowFocus: true,
@@ -57,6 +59,7 @@ export function useMonthAvailability(
       const { data, error } = await supabase.rpc("get_booking_horizon_availability", {
         p_staff_id: sid,
         p_duration_minutes: durationMinutes,
+        ...scheduleTypeRpcArg(scheduleMode),
       });
       if (error) throw error;
       const map: Record<string, MonthDateAvailability> = {};
@@ -91,7 +94,8 @@ export function useDateSlots(
   date: string | null,
   durationMinutes: number = 60,
   sessionToken?: string,
-  staffId?: string
+  staffId?: string,
+  scheduleMode: ScheduleMode = "physical"
 ) {
   const { tenantId, ownerId } = usePublicTenant();
   const resolvedStaffId = staffId || ownerId || null;
@@ -99,7 +103,7 @@ export function useDateSlots(
   const isToday = !!date && date === todayLocalStr();
 
   return useQuery({
-    queryKey: ["public-date-slots", tenantId, date, durationMinutes],
+    queryKey: ["public-date-slots", tenantId, date, durationMinutes, scheduleMode],
     enabled: !!date && !!tenantId,
     staleTime: isToday ? 0 : 2 * 60 * 1000,
     // Re-fetch every 60 s when viewing today so slots that tick into the past
@@ -116,6 +120,7 @@ export function useDateSlots(
         p_date:             date,
         p_duration_minutes: durationMinutes,
         p_session_token:    sessionToken ?? undefined,
+        ...scheduleTypeRpcArg(scheduleMode),
       });
 
       if (error) throw error;

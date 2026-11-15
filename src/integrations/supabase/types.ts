@@ -2106,6 +2106,7 @@ export type Database = {
           is_addon: boolean
           is_archived: boolean
           is_call_out_available: boolean | null
+          is_video_consultation: boolean
           name: string
           price: number
           tags: string[] | null
@@ -2125,6 +2126,7 @@ export type Database = {
           is_addon?: boolean
           is_archived?: boolean
           is_call_out_available?: boolean | null
+          is_video_consultation?: boolean
           name: string
           price: number
           tags?: string[] | null
@@ -2144,6 +2146,7 @@ export type Database = {
           is_addon?: boolean
           is_archived?: boolean
           is_call_out_available?: boolean | null
+          is_video_consultation?: boolean
           name?: string
           price?: number
           tags?: string[] | null
@@ -2160,6 +2163,7 @@ export type Database = {
           end_time: string
           expires_at: string
           id: string
+          schedule_type: string
           session_token: string
           staff_id: string
           start_time: string
@@ -2172,6 +2176,7 @@ export type Database = {
           end_time: string
           expires_at?: string
           id?: string
+          schedule_type?: string
           session_token: string
           staff_id: string
           start_time: string
@@ -2184,6 +2189,7 @@ export type Database = {
           end_time?: string
           expires_at?: string
           id?: string
+          schedule_type?: string
           session_token?: string
           staff_id?: string
           start_time?: string
@@ -2201,6 +2207,7 @@ export type Database = {
           is_available: boolean | null
           override_reason: string | null
           requires_travel_buffer: boolean | null
+          schedule_type: string
           slot_end_time: string
           slot_start_time: string
           specific_date: string | null
@@ -2217,6 +2224,7 @@ export type Database = {
           is_available?: boolean | null
           override_reason?: string | null
           requires_travel_buffer?: boolean | null
+          schedule_type?: string
           slot_end_time: string
           slot_start_time: string
           specific_date?: string | null
@@ -2233,6 +2241,7 @@ export type Database = {
           is_available?: boolean | null
           override_reason?: string | null
           requires_travel_buffer?: boolean | null
+          schedule_type?: string
           slot_end_time?: string
           slot_start_time?: string
           specific_date?: string | null
@@ -2829,6 +2838,7 @@ export type Database = {
         Args: {
           p_booking_date: string
           p_duration_mins: number
+          p_schedule_type?: string
           p_session_token: string
           p_staff_id: string
           p_start_time: string
@@ -2851,6 +2861,10 @@ export type Database = {
         }[]
       }
       apply_platform_billing_lifecycle: { Args: never; Returns: undefined }
+      booking_schedule_type: {
+        Args: { p_service_ids: string[] }
+        Returns: string
+      }
       calculate_booking_price:
         | {
             Args: {
@@ -2885,6 +2899,7 @@ export type Database = {
         Args: {
           p_date: string
           p_duration_minutes: number
+          p_schedule_type?: string
           p_staff_id: string
           p_start_time: string
         }
@@ -3083,6 +3098,7 @@ export type Database = {
         Args: {
           p_date: string
           p_duration_minutes?: number
+          p_schedule_type?: string
           p_session_token?: string
           p_staff_id: string
         }
@@ -3145,7 +3161,11 @@ export type Database = {
         }[]
       }
       get_booking_horizon_availability: {
-        Args: { p_duration_minutes?: number; p_staff_id: string }
+        Args: {
+          p_duration_minutes?: number
+          p_schedule_type?: string
+          p_staff_id: string
+        }
         Returns: {
           availability_status: string
           available_slots: string[]
@@ -3211,6 +3231,7 @@ export type Database = {
         Args: {
           p_duration_minutes?: number
           p_month: number
+          p_schedule_type?: string
           p_staff_id: string
           p_year: number
         }
@@ -3571,6 +3592,7 @@ export type Database = {
           p_all_slots: string[]
           p_day_enabled: boolean
           p_day_of_week: number
+          p_schedule_type?: string
           p_slots: string[]
           p_staff_id: string
           p_tenant_id: string
@@ -3584,6 +3606,7 @@ export type Database = {
           is_available: boolean | null
           override_reason: string | null
           requires_travel_buffer: boolean | null
+          schedule_type: string
           slot_end_time: string
           slot_start_time: string
           specific_date: string | null
@@ -3604,6 +3627,7 @@ export type Database = {
           p_day_enabled: boolean
           p_day_of_week: number
           p_delete_only?: boolean
+          p_schedule_type?: string
           p_slots: string[]
           p_specific_date: string
           p_staff_id: string
@@ -3618,6 +3642,7 @@ export type Database = {
           is_available: boolean | null
           override_reason: string | null
           requires_travel_buffer: boolean | null
+          schedule_type: string
           slot_end_time: string
           slot_start_time: string
           specific_date: string | null
@@ -3660,6 +3685,10 @@ export type Database = {
       upsert_tenant_secret: {
         Args: { p_key: string; p_tenant_id: string; p_value: string }
         Returns: undefined
+      }
+      video_consultations_enabled: {
+        Args: { p_tenant_id: string }
+        Returns: boolean
       }
       waive_call_out_fee: {
         Args: { p_booking_id: string; p_reason?: string }

@@ -1,4 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
+import { flagSettingKey } from "@/lib/featureFlags/registry";
+import { parseVideoFlagValue } from "@/hooks/useVideoConsultationsEnabled";
 import { supabase } from "@/integrations/supabase/client";
 import { usePublicTenant } from "@/contexts/PublicTenantContext";
 
@@ -41,6 +43,8 @@ export interface PublicBusinessConfig {
   confirmationIntro: string;
   confirmationOutro: string;
   mobileServiceEnabled: boolean;
+  /** Per-tenant switch for video call services. Off unless the tenant setting is "true". */
+  videoConsultationsEnabled: boolean;
   clientLabelExisting: string;
   clientLabelNew: string;
   /** Heading of the services step (app_settings: services_step_heading) */
@@ -88,6 +92,7 @@ const defaults: PublicBusinessConfig = {
   confirmationIntro: "Thank you for your booking.",
   confirmationOutro: "We look forward to seeing you.",
   mobileServiceEnabled: false,
+  videoConsultationsEnabled: false,
   clientLabelExisting: "Returning Client",
   clientLabelNew: "New Client",
   servicesStepHeading: "Select a service",
@@ -236,6 +241,7 @@ export function usePublicBusinessConfig(): PublicBusinessConfig & { loading: boo
 
     // Feature flags
     mobileServiceEnabled: s.mobile_service_enabled === "true",
+    videoConsultationsEnabled: parseVideoFlagValue(s[flagSettingKey("video_consultations")]),
 
     // Client type labels
     clientLabelExisting: s.client_label_existing || defaults.clientLabelExisting,

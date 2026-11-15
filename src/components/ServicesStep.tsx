@@ -70,8 +70,11 @@ const ServicesStep = ({ selectedTreatments, onAdd, onRemove }: ServicesStepProps
   const activeCat = activeCategory ?? (categories[0]?.id ?? null);
 
   // All active services in the selected category — is_addon does not affect visibility
+  // Video call services are shown only when the tenant has switched them on.
   const visibleTreatments = activeCat
-    ? treatments.filter((t) => t.category === activeCat)
+    ? treatments.filter(
+        (t) => t.category === activeCat && (config.videoConsultationsEnabled || !t.isVideoConsultation),
+      )
     : [];
 
   const quantityFor = (id: string) =>

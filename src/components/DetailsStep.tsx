@@ -737,7 +737,8 @@ useEffect(() => {
   const okIcon = "bk-ok h-[18px] w-[18px] shrink-0";
 
   return (
-    <div className="flex flex-col gap-6">
+    // Bottom padding clears the sticky footer on phones, so the last field scrolls fully into view.
+    <div className="flex flex-col gap-6 pb-32">
       <StepHeading
         title="Your details"
         description="We'll send your booking confirmation here."

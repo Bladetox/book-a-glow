@@ -1,0 +1,1 @@
+{"nodes": [{"id": "$graphify-root$_supabase_migrations_20260922133637_app_settings_superadmin_platform_write_policy_sql", "label": "20260922133637_app_settings_superadmin_platform_write_policy.sql", "file_type": "code", "source_file": "supabase/migrations/20260922133637_app_settings_superadmin_platform_write_policy.sql", "source_location": null}], "edges": []}

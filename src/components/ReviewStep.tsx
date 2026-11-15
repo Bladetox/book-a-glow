@@ -19,12 +19,15 @@ import BookingSheet from "@/components/booking/BookingSheet";
 import HoldTimer from "@/components/booking/HoldTimer";
 import StepHeading from "@/components/booking/StepHeading";
 import { formatDayMonth, formatDuration, formatPrice } from "@/lib/bookingFormat";
+import type { ScheduleMode } from "@/lib/videoConsultation";
 import YocoImg from "@/assets/Yoco.svg";
 import PayfastImg from "@/assets/Payfast.webp";
 import PayshapImg from "@/assets/payshap.png";
 import IkhokhaImg from "@/assets/ikhokha.svg";
 
 interface ReviewStepProps {
+  /** Video call bookings take a different schedule and never take call-out. */
+  scheduleMode: ScheduleMode;
   booking: BookingState;
   onUpdate: (updates: Partial<BookingState>) => void;
   onGoToStep: (step: number) => void;
@@ -116,6 +119,7 @@ function GatewayMark({ src, alt, onChip }: { src: string; alt: string; onChip: b
 }
 
 const ReviewStep = ({
+  scheduleMode,
   booking,
   onUpdate,
   onGoToStep,
@@ -287,7 +291,8 @@ const ReviewStep = ({
   })();
 
   const servicesTotal = selectedWithQty.reduce((sum, { svc, qty }) => sum + svc.price * qty, 0);
-  const isCallOut = !!booking.address && booking.addressVerified;
+  // Video call bookings never take call-out (scope doc section 4.3).
+  const isCallOut = scheduleMode === "physical" && !!booking.address && booking.addressVerified;
   const estimatedDistanceKm = Number(booking.distanceKm ?? (isCallOut ? config.defaultDistanceKm : 0)) || 0;
   const callOutFee = isCallOut ? Math.ceil(estimatedDistanceKm * 2 * config.ratePerKm) : 0;
   const localTotal = servicesTotal + callOutFee;

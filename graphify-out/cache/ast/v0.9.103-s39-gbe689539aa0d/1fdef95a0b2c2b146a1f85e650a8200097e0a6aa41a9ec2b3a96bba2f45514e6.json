@@ -1,0 +1,1 @@
+{"nodes": [{"id": "$graphify-root$_supabase_migrations_20260321195128_drop_old_create_booking_overload_sql", "label": "20260321195128_drop_old_create_booking_overload.sql", "file_type": "code", "source_file": "supabase/migrations/20260321195128_drop_old_create_booking_overload.sql", "source_location": null}], "edges": []}

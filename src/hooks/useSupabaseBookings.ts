@@ -31,6 +31,8 @@ export interface BookingRow {
   callOutFee: number;
   callOutAddress: string;
   callOutDistanceKm: number;
+  /** True when any booked service is a video call service. */
+  isVideoConsultation: boolean;
   serviceIds: string;
   serviceDurationMinutes: number;
   bookingItems: { id: string; name: string; price: number; durationMinutes: number }[];
@@ -61,6 +63,7 @@ export type RawBookingRow = Partial<Tables<"bookings">> & {
     price: number | string | null;
     duration_minutes: number | null;
     sort_order: number | null;
+    service?: { is_video_consultation: boolean | null } | null;
   }[] | null;
   client?: {
     full_name?: string | null;
@@ -143,6 +146,7 @@ export function mapBooking(b: RawBookingRow): BookingRow {
     callOutFee:            Number(b.call_out_fee)   || 0,
     callOutAddress:        b.call_out_address       || "",
     callOutDistanceKm:     Number(b.call_out_distance_km) || 0,
+    isVideoConsultation:   items.some((i) => i.service?.is_video_consultation === true),
     serviceIds:            b.service_ids            || "",
     serviceDurationMinutes: Number(b.service_duration_minutes) || 0,
     bookingItems:          items.map((i) => ({
@@ -223,7 +227,7 @@ export function useSupabaseBookings() {
           payshap_proof_url,
           payshap_claimed_at,
           client:profiles!bookings_client_id_fkey(full_name, email, phone, address),
-          items:booking_items(id, service_name, price, duration_minutes, sort_order)
+          items:booking_items(id, service_name, price, duration_minutes, sort_order, service:services(is_video_consultation))
         `)
         .eq("tenant_id", tenantId)
         .order("booking_date", { ascending: true })

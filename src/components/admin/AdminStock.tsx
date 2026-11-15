@@ -9,6 +9,7 @@ import {
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTenant } from "@/contexts/TenantContext";
+import { useTenantFeatureFlags } from "@/hooks/useTenantFeatureFlags";
 import { toast } from "sonner";
 import {
   AdminPageHeader,
@@ -86,6 +87,7 @@ const FormField = ({
 
 const AdminStock = () => {
   const { tenantId } = useTenant();
+  const flags = useTenantFeatureFlags();
   const qc = useQueryClient();
 
   const [tab, setTab] = useState<Tab>("stock");
@@ -361,12 +363,14 @@ const AdminStock = () => {
                     exit={{ opacity: 0, scale: 0.95, y: -4 }}
                     className="absolute right-0 top-full mt-1 z-30 rounded-2xl nexty-glass-strong p-1.5 flex flex-col gap-0.5 min-w-[140px] shadow-xl"
                   >
+                    {flags.stock_barcode_scan && (
                     <button
                       onClick={() => { setShowScan(true); setShowUtilMenu(false); }}
                       className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-white/60 hover:text-white/90 hover:bg-white/[0.06] transition-colors w-full text-left"
                     >
                       <ScanLine className="w-3.5 h-3.5" /> Scan Barcode
                     </button>
+                    )}
                     <button
                       onClick={() => { fileRef.current?.click(); setShowUtilMenu(false); }}
                       className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-white/60 hover:text-white/90 hover:bg-white/[0.06] transition-colors w-full text-left"
@@ -425,7 +429,7 @@ const AdminStock = () => {
 
       {/* FIX (Miller's Law): unified collapsible alert banner — one cognitive chunk instead of two */}
       <AnimatePresence>
-        {alertCount > 0 && (
+        {flags.stock_alerts && alertCount > 0 && (
           <motion.div
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}

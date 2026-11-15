@@ -1,5 +1,5 @@
 import { AlertTriangle, Building2, ChevronDown, Flag, Loader2, RefreshCw, Save } from "lucide-react";
-import { FEATURE_REGISTRY, PLAN_META, PLAN_ORDER, type FeatureEntry, type FlagKey, type PlanId } from "@/lib/featureFlags/registry";
+import { FEATURE_REGISTRY, PLAN_META, PLAN_ORDER, TENANT_ONLY_FLAGS, type FeatureEntry, type FlagKey, type PlanId } from "@/lib/featureFlags/registry";
 
 export type SaveStatus = "idle" | "saving" | "saved" | "error";
 
@@ -13,8 +13,7 @@ export function FeatureToggleRow({
 }) {
   const badge =
     feature.status === "partial"  ? "partial wiring" :
-    feature.status === "unwired"  ? "not yet wired"  :
-    feature.status === "internal" ? "internal only"  : null;
+    feature.status === "unwired"  ? "not yet wired"  : null;
 
   return (
     <div className={`flex items-center justify-between px-5 py-4 transition-opacity ${dimmed ? "opacity-40" : ""}`}>
@@ -56,11 +55,13 @@ export function FeatureToggleRow({
 }
 
 export function PlanSections({
-  flags, onToggle, isLifetime,
+  flags, onToggle, isLifetime, hideTenantOnly = false,
 }: {
   flags: Record<string, boolean>;
   onToggle: (key: FlagKey) => void;
   isLifetime?: boolean;
+  /** Global defaults hide tenant-only flags; tenant overrides show them. */
+  hideTenantOnly?: boolean;
 }) {
   return (
     <div className="space-y-6">
@@ -69,7 +70,7 @@ export function PlanSections({
         currently enforce the cascade on their own.
       </p>
       {PLAN_ORDER.map((planId: PlanId) => {
-        const features = FEATURE_REGISTRY.filter(f => f.plan === planId);
+        const features = FEATURE_REGISTRY.filter(f => f.plan === planId && !(hideTenantOnly && TENANT_ONLY_FLAGS.has(f.key)));
         if (!features.length) return null;
         const meta = PLAN_META[planId];
         const enabledCount = features.filter(f => flags[f.key]).length;

@@ -1,0 +1,1 @@
+{"nodes": [{"id": "$graphify-root$_supabase_migrations_20261102004321_fix4_restrict_legacy_booking_rpc_to_service_role_sql", "label": "20261102004321_fix4_restrict_legacy_booking_rpc_to_service_role.sql", "file_type": "code", "source_file": "supabase/migrations/20261102004321_fix4_restrict_legacy_booking_rpc_to_service_role.sql", "source_location": null}], "edges": []}

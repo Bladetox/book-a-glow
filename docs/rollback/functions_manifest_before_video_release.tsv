@@ -1,0 +1,17 @@
+object	md5	bytes
+acquire_slot_hold(text,uuid,date,time without time zone,integer,text)	b8adde5e03f72ab59c842aa4744869a8	3014
+calculate_booking_price(uuid[],boolean,numeric)	7401e588efa8f6173f2064f95a77f1a6	1494
+calculate_booking_price(uuid[],boolean,numeric,uuid)	4bef70c266f68db55f30b0f96bcf65cd	2540
+check_availability(uuid,date,time without time zone,integer)	a8e50faf506a2300f1eb40dc836df9a9	4659
+create_booking_with_consultation(27-arg legacy)	5fc964beebebf77d8573717e499c9003	13262
+create_booking_with_consultation(29-arg hold-aware)	00fd4107028686b0afacbe58d5853593	2619
+get_available_slots(uuid,date,integer,text)	b33c9f62cbd696d7d45c7d10c1341962	4648
+get_booking_consistency_quote(text,uuid[],text,text,boolean,numeric)	f5037372674bb1ab4fd6acd044491550	3693
+get_booking_horizon_availability(uuid,integer)	c386f988e21da1c24b0a49fb5148e8d6	6439
+get_month_availability(uuid,integer,integer,integer)	efd8b9f1f4cd88185db14342dba0d23e	516
+is_tenant_admin(uuid,text)	1584cfcbcd61cedc500219cb10f25b49	350
+replace_staff_availability(uuid,text,integer,date,jsonb)	7c232d1200f1ddd06ee241dc9b8bf317	1281
+reschedule_booking(uuid,date,time without time zone)	5ae9b618deb9c6487ac8858679a56932	6118
+resize_slot_hold(uuid,text,uuid[])	cbbf838512f9ea0a690c6a74865c3501	6463
+save_staff_availability(text,uuid,integer,boolean,text[],text[])	1f68729b7daaae4b19f915975215ea9e	1537
+save_staff_daily_override(text,uuid,date,integer,boolean,text[],text[],boolean)	0c1f60576c39aa8fb32128e652aa8a45	1906
