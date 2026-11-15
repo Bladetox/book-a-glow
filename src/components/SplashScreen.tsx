@@ -5,6 +5,7 @@ import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
 import { useBusinessTheme } from "@/contexts/BusinessThemeProvider";
 import { useShellBackground } from "@/hooks/useShellBackground";
 import { useImageEdgeColor } from "@/hooks/useImageEdgeColor";
+import { hslStringToHex } from "@/lib/color";
 import { useBrandFont } from "@/hooks/useBrandFont";
 
 interface SplashScreenProps {
@@ -104,7 +105,8 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
     };
   }, [config.splashBackgroundUrl]);
   const backgroundLightness = parseFloat(theme.colors.background.split(/\s+/)[2] ?? "50");
-  const topColor = photoTopColor ?? `hsl(${theme.colors.background})`;
+  // Hex, not hsl(), so the browser's status bar and toolbar take the colour reliably.
+  const topColor = photoTopColor ?? hslStringToHex(theme.colors.background);
   useShellBackground(topColor, topColor, backgroundLightness < 50 ? "dark" : "light");
 
   // ── Brand font (sister-studios only; null + no-op for all other tenants) ──
