@@ -90,6 +90,19 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
   // tab (primary, in the active light or dark variant). The top bar blends into
   // the photo's top edge when there is a photo, otherwise the theme background.
   const photoTopColor = useImageEdgeColor(config.splashBackgroundUrl);
+
+  // With a photo, let it run under the iOS status bar (home-screen app only), so
+  // the top of the screen is the photo rather than a solid strip. Restored on exit.
+  useEffect(() => {
+    if (!config.splashBackgroundUrl) return;
+    const meta = document.querySelector<HTMLMetaElement>('meta[name="apple-mobile-web-app-status-bar-style"]');
+    if (!meta) return;
+    const previous = meta.getAttribute("content");
+    meta.setAttribute("content", "black-translucent");
+    return () => {
+      if (previous !== null) meta.setAttribute("content", previous);
+    };
+  }, [config.splashBackgroundUrl]);
   const backgroundLightness = parseFloat(theme.colors.background.split(/\s+/)[2] ?? "50");
   const topColor = photoTopColor ?? `hsl(${theme.colors.background})`;
   useShellBackground(topColor, topColor, backgroundLightness < 50 ? "dark" : "light");
