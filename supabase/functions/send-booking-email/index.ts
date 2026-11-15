@@ -1134,8 +1134,8 @@ Deno.serve(async (req) => {
     const clientWhatsAppLink = clientWhatsAppDigits ? `https://wa.me/${clientWhatsAppDigits}` : "";
 
     const videoContactLine = clientPhone
-      ? `${tenantName} will contact you on WhatsApp at <strong>${clientPhone}</strong> on ${formattedDate} to start your video call.`
-      : `${tenantName} will contact you on WhatsApp to start your video call. Please reply to this email with your WhatsApp number so we can reach you.`;
+      ? `${tenantName} will contact you on WhatsApp at <strong>${clientPhone}</strong> on ${formattedDate} at ${formattedTime}, to start your video call.`
+      : `${tenantName} will contact you on WhatsApp to start your video call. Please contact ${tenantName}${tenantPhone ? ` on <strong>${tenantPhone}</strong>` : ""} with your WhatsApp number so we can reach you.`;
 
     const videoNextStepsHtml = isVideoBooking
       ? `
@@ -1143,7 +1143,7 @@ Deno.serve(async (req) => {
           <div style="background:#f7f7f7;border-radius:8px;border:1px solid #ebebeb;border-left:3px solid #000;padding:16px 18px;">
             <p class="tm" style="margin:0 0 8px;font-size:13px;font-weight:700;color:#000;line-height:1.5;">How your video consultation works</p>
             <p class="tl" style="margin:0;font-size:13px;color:#555;line-height:1.7;">
-              This appointment takes place online, so there is no address to visit. ${videoContactLine}
+              This appointment takes place online. ${videoContactLine}
               Please have WhatsApp installed and your phone nearby from ${formattedTime}, and answer the call from ${tenantName}.
             </p>
           </div>
@@ -1393,10 +1393,10 @@ Deno.serve(async (req) => {
             locationRow
           )}
         </td></tr>
+        ${videoNextStepsHtml}
         <tr><td style="padding:0 36px 26px;text-align:center;">
           ${calendarButton(gcalBookingLink)}
         </td></tr>
-        ${videoNextStepsHtml}
         ${consistencyEmailSection}
         <tr><td style="padding:0 36px 26px;">
           <p class="tl" style="margin:0;font-size:13px;color:#666;line-height:1.5;">
@@ -1510,13 +1510,13 @@ Deno.serve(async (req) => {
               locationDetailRow
             )}
           </td></tr>
+          ${videoNextStepsHtml}
           <tr><td style="padding:0 36px 22px;">
             ${detailTable(
               detailRow("Total Paid", `${totalAmount} &#10003;`, true)
             )}
             <p class="tl" style="margin:8px 0 0;font-size:11px;color:#888;line-height:1.5;">Nothing more is due. See you on ${formattedDate}!</p>
           </td></tr>
-          ${videoNextStepsHtml}
           ${consistencyEmailSection}
           <tr><td style="padding:0 36px 26px;">
             ${calendarButton(gcalBookingLink)}
