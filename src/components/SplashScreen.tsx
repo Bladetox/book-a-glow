@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties, type ElementT
 import { CircleAlert, Facebook, Globe, Instagram, MoreHorizontal, Music2, Search, UserPlus } from "lucide-react";
 import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
 import { useBusinessTheme } from "@/contexts/BusinessThemeProvider";
+import { useShellBackground } from "@/hooks/useShellBackground";
 import { useBrandFont } from "@/hooks/useBrandFont";
 
 interface SplashScreenProps {
@@ -81,8 +82,12 @@ const sourceIcon = (label: string): ElementType | null => {
  */
 const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashScreenProps) => {
   const config = usePublicBusinessConfig();
-  const { loading: themeLoading } = useBusinessTheme();
+  const { loading: themeLoading, theme } = useBusinessTheme();
   const [attempted, setAttempted] = useState(false);
+
+  // Page surface in the tenant's active theme (light or dark variant): the
+  // bottom edge and browser chrome match the sheet, with no white or black bars.
+  useShellBackground(`hsl(${theme.colors.primary})`, `hsl(${theme.colors.background})`);
 
   // ── Brand font (sister-studios only; null + no-op for all other tenants) ──
   const brandFontFamily = useBrandFont(config.brandFontUrl ?? null);
@@ -144,17 +149,28 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
       height the acquisition sheet does not need.
     */
     <div className="booking-app bk-stage bk-splash">
-      <motion.div className="bk-splash__column" initial="hidden" animate="show" variants={screen}>
+      <motion.div
+        className="bk-splash__column"
+        initial="hidden"
+        animate="show"
+        variants={screen}
+        style={config.splashBackgroundUrl ? {
+          // The photo fills the whole screen behind the hero and the sheet, so the
+          // sheet overlays the image with no gap between them.
+          backgroundImage: `url("${config.splashBackgroundUrl}")`,
+          backgroundSize: "cover",
+          backgroundPosition: "center top",
+        } : undefined}
+      >
         <div className="bk-splash__glow" aria-hidden="true" />
 
         {/* ── Hero: logo, name and tagline ─────────────────────────────── */}
         <div
           className="bk-splash__hero"
           style={config.splashBackgroundUrl ? {
-            // The photo sits on the hero itself, so its opaque background does not hide it.
-            backgroundImage: `linear-gradient(to bottom, transparent 35%, hsl(var(--background) / 0.85) 100%), url("${config.splashBackgroundUrl}")`,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
+            // Full-width veil in the theme's background colour, fading in towards the
+            // sheet. It keeps the name and taglines readable in light and dark mode.
+            background: "linear-gradient(to bottom, hsl(var(--background) / 0) 30%, hsl(var(--background) / 0.8) 100%)",
           } : undefined}
         >
           <motion.div variants={logoIn} className="bk-splash__logo">
@@ -167,7 +183,12 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
             )}
           </motion.div>
 
-          <div className="bk-splash__brand">
+          <div
+            className="bk-splash__brand"
+            style={config.splashBackgroundUrl ? {
+              textShadow: "0 1px 10px hsl(var(--background) / 0.6)",
+            } : undefined}
+          >
             <motion.p variants={rise} className="bk-overline">
               {config.splashWelcomeLabel}
             </motion.p>

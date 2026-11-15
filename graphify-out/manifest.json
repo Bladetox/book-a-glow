@@ -90,9 +90,9 @@
     "semantic_hash": ""
   },
   "src/components/SplashScreen.tsx": {
-    "mtime": 1794753565.8249378,
-    "seen": 1794753745.0473814,
-    "ast_hash": "7cc57e041059be52b7a545c0d19f02b3",
+    "mtime": 1794755008.0957632,
+    "seen": 1794755121.1691594,
+    "ast_hash": "f14f46925a5155d9fa2a59b20c5ac213",
     "semantic_hash": ""
   },
   "src/components/StepIndicator.tsx": {
@@ -1074,9 +1074,9 @@
     "semantic_hash": ""
   },
   "src/hooks/useShellBackground.ts": {
-    "mtime": 1794753565.8249378,
-    "seen": 1794753745.04765,
-    "ast_hash": "acefd457e7c96054c7e74245fc533ec2",
+    "mtime": 1794754950.0117598,
+    "seen": 1794755121.1693857,
+    "ast_hash": "1bef929097862f7c18ceca16ed2d4214",
     "semantic_hash": ""
   },
   "src/hooks/useSlotHold.ts": {
@@ -3768,9 +3768,9 @@
     "semantic_hash": ""
   },
   "src/components/SplashScreen.test.tsx": {
-    "mtime": 1794753565.8249378,
-    "seen": 1794753745.0473788,
-    "ast_hash": "01b8c22ee9886dfd9f7bfbdd93a327c1",
+    "mtime": 1794754868.7077549,
+    "seen": 1794755121.169157,
+    "ast_hash": "a4541b2fcd1f9b6bfd6a391f299ec653",
     "semantic_hash": ""
   },
   "src/components/StepIndicator.test.tsx": {
