@@ -650,7 +650,9 @@ const ReviewStep = ({
           <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
           <p className="text-sm leading-snug text-foreground">
             <span className="sr-only">Location: </span>
-            {isCallOut ? (booking.address || "Your address") : (config.salonAddress || "Salon")}
+            {scheduleMode === "consultation"
+              ? "Video call. We contact you on WhatsApp on the day."
+              : isCallOut ? (booking.address || "Your address") : (config.salonAddress || "Salon")}
           </p>
         </div>
       </section>

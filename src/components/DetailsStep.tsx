@@ -12,6 +12,7 @@ import { usePublicTenant } from "@/contexts/PublicTenantContext";
 import { supabase } from "@/integrations/supabase/client";
 import { groupQuestionsBySection, isAnswered } from "@/lib/consultationSections";
 import StepHeading from "@/components/booking/StepHeading";
+import type { ScheduleMode } from "@/lib/videoConsultation";
 
 interface DetailsStepProps {
   booking: BookingState;
@@ -19,6 +20,8 @@ interface DetailsStepProps {
   onBlockedChange?: (blocked: boolean) => void;
   showRequiredErrors?: boolean;
   onConsultationQuestionsReady?: (ready: boolean) => void;
+  /** Video call bookings have no address (scope doc section 4.3). */
+  scheduleMode?: ScheduleMode;
 }
 
 const phoneCodes = [
@@ -248,6 +251,7 @@ const DetailsStep = ({
   onBlockedChange,
   showRequiredErrors = false,
   onConsultationQuestionsReady,
+  scheduleMode = "physical",
 }: DetailsStepProps) => {
   const config = usePublicBusinessConfig();
   const { tenantId } = usePublicTenant();
@@ -883,9 +887,9 @@ useEffect(() => {
           )}
         </div>
 
-        {/* Address */}
+        {/* Address: physical bookings only. Video calls never take call-out. */}
         <AnimatePresence initial={false}>
-          {mobileServiceEnabled && (
+          {mobileServiceEnabled && scheduleMode !== "consultation" && (
             <motion.div
               key="address-field"
               initial={{ height: 0, opacity: 0 }}

@@ -99,6 +99,11 @@ const Index = () => {
 
   useTenantHead({ name: config.name, logoUrl: config.logoUrl, loading: config.loading });
 
+  // Video call services use their own schedule (see scope doc section 4.3).
+  const scheduleMode: ScheduleMode = selectionScheduleMode(
+    booking.selectedTreatments.map((id) => treatments.find((t) => t.id === id)?.isVideoConsultation ?? false),
+  ) === "consultation" ? "consultation" : "physical";
+
   const canProceed = useCallback(() => {
     switch (step) {
       case 0:
@@ -118,7 +123,7 @@ const Index = () => {
           /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(booking.email) &&
           booking.isExistingClient !== null;
 
-        const mobileEnabled = config.mobileServiceEnabled === true;
+        const mobileEnabled = config.mobileServiceEnabled === true && scheduleMode === "physical";
         if (!mobileEnabled) return contactValid;
         return contactValid && booking.addressVerified === true;
       }
@@ -126,7 +131,7 @@ const Index = () => {
       default:
         return true;
     }
-  }, [step, booking, config, slotHold.holdId, slotHold.isHolding, consultationQuestionsReady]);
+  }, [step, booking, config, scheduleMode, slotHold.holdId, slotHold.isHolding, consultationQuestionsReady]);
 
   const handleNext = useCallback(() => {
     if (step === 2 && hasMissingRequiredQuestions) {
@@ -192,8 +197,6 @@ const Index = () => {
 
   // Video call services use their own schedule and cannot be mixed with physical services.
   const selectionFlags = selectedServices.map((s) => s.isVideoConsultation);
-  const scheduleMode: ScheduleMode =
-    selectionScheduleMode(selectionFlags) === "consultation" ? "consultation" : "physical";
   const guardedAddTreatment = (id: string) => {
     const svc = treatments.find((t) => t.id === id);
     if (svc && !canAddToSelection(selectionFlags, svc.isVideoConsultation)) {
@@ -244,7 +247,7 @@ const Index = () => {
       proceedHint = "Enter your mobile number";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(booking.email)) {
       proceedHint = "Enter your email address";
-    } else if (config.mobileServiceEnabled === true && booking.addressVerified !== true) {
+    } else if (config.mobileServiceEnabled === true && scheduleMode === "physical" && booking.addressVerified !== true) {
       proceedHint = "Choose your address from the list";
     } else if (booking.isExistingClient === null) {
       proceedHint = "Tell us if you've booked before";
@@ -373,6 +376,7 @@ const Index = () => {
                       onUpdate={updateBooking}
                       showRequiredErrors={showRequiredErrors}
                       onConsultationQuestionsReady={setConsultationQuestionsReady}
+                      scheduleMode={scheduleMode}
                     />
                   )}
                   {step === 3 && (

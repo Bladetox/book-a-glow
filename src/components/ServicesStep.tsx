@@ -171,12 +171,22 @@ const ServicesStep = ({ selectedTreatments, onAdd, onRemove }: ServicesStepProps
                       </p>
                     )}
 
+                    {t.isVideoConsultation && (
+                      <p className="mt-2 text-[13px] leading-snug text-muted-foreground">
+                        Delivered remotely. We contact you on WhatsApp on the day.
+                      </p>
+                    )}
                     <div className="mt-2.5 flex items-center justify-between gap-3">
                       <div className="flex min-w-0 items-center gap-2 text-[13px] text-muted-foreground">
                         {t.duration > 0 && (
                           <span className="inline-flex items-center gap-1.5">
                             <Clock className="h-3.5 w-3.5" aria-hidden="true" />
                             {formatDuration(t.duration)}
+                          </span>
+                        )}
+                        {t.isVideoConsultation && (
+                          <span className="bk-well rounded-full px-2 py-0.5 text-[11px] font-medium text-foreground">
+                            Video call
                           </span>
                         )}
                         {t.isAddon && (
