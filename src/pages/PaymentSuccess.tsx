@@ -21,6 +21,26 @@ interface BookingSummary {
   deposit_paid?: boolean;
   full_payment_received?: boolean;
   tenant_id?: string;
+  service_ids?: string | null;
+}
+
+/**
+ * True when the booking's services are video-call services. bookings.service_ids
+ * holds the service ids as a comma-separated list. Guests can read services but not
+ * booking_items, so the check is made against services. Bookings cannot mix video and
+ * physical services (enforced server-side), so any video service means a video booking.
+ * Archived services are not returned to guests; in that case this returns false and
+ * the standard wording is shown.
+ */
+async function isVideoBooking(serviceIds: string | null | undefined): Promise<boolean> {
+  const ids = (serviceIds ?? "").split(",").map((id) => id.trim()).filter(Boolean);
+  if (ids.length === 0) return false;
+  const { data, error } = await supabase
+    .from("services")
+    .select("is_video_consultation")
+    .in("id", ids);
+  if (error || !data) return false;
+  return data.some((row) => row.is_video_consultation === true);
 }
 
 const PaymentSuccess = () => {
@@ -63,6 +83,7 @@ const PaymentSuccess = () => {
 
   // ── State ─────────────────────────────────────────────────────────────────
   const [booking,    setBooking]    = useState<BookingSummary | null>(null);
+  const [isVideo,    setIsVideo]    = useState(false);
   const [reviewLink, setReviewLink] = useState<string>("");
   // isFinal flows start with loading=false — the guard `isFinal && isSuccess && !loading`
   // renders immediately. The poll still runs to enrich booking details progressively.
@@ -103,7 +124,8 @@ const PaymentSuccess = () => {
   }, [isCancelled, bookingId]);
 
   // Fixed-salon mode: show the salon address when mobile service is NOT enabled
-  const showSalonAddress = !config.mobileServiceEnabled && !!config.salonAddress;
+  // Video calls happen on WhatsApp, so there is no salon address to show for them.
+  const showSalonAddress = !isVideo && !config.mobileServiceEnabled && !!config.salonAddress;
   const mapsHref = showSalonAddress
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(config.salonAddress)}`
     : null;
@@ -129,11 +151,12 @@ const PaymentSuccess = () => {
       attempts++;
       const { data } = await supabase
         .from("bookings")
-        .select("id, booking_date, start_time, deposit_amount, total_amount, deposit_paid, full_payment_received, tenant_id")
+        .select("id, booking_date, start_time, deposit_amount, total_amount, deposit_paid, full_payment_received, tenant_id, service_ids")
         .eq("id", bookingId)
         .single();
       if (data) {
         setBooking(data);
+        setIsVideo(await isVideoBooking(data.service_ids));
         if (!isFinal) setLoading(false);
         const { data: settings } = await supabase
           .from("app_settings")
@@ -198,6 +221,12 @@ const PaymentSuccess = () => {
         <div className="flex justify-between gap-4 py-3 text-sm">
           <dt className="text-muted-foreground">Time</dt>
           <dd className="bk-num text-right font-medium text-foreground">{displayTime}</dd>
+        </div>
+      )}
+      {isVideo && (
+        <div className="flex justify-between gap-4 py-3 text-sm">
+          <dt className="text-muted-foreground">Appointment</dt>
+          <dd className="text-right font-medium text-foreground">Video call</dd>
         </div>
       )}
       {showSalonAddress && (
@@ -336,6 +365,9 @@ const PaymentSuccess = () => {
             ) : (
               <>
                 <p className="text-sm text-foreground leading-relaxed">Your balance is fully settled — nothing more is due.</p>
+                {isVideo && (
+                  <p className="text-sm text-muted-foreground leading-relaxed">We&apos;ll contact you on WhatsApp on the day to start your video call.</p>
+                )}
                 <p className="text-sm text-muted-foreground leading-relaxed">Thank you for your support. We look forward to seeing you.</p>
                 <p className="text-sm text-muted-foreground leading-relaxed">If you enjoyed your experience, we'd love it if you shared it on Google — it helps others find us.</p>
               </>
@@ -409,6 +441,9 @@ const PaymentSuccess = () => {
               <p className="text-sm text-muted-foreground">You're all confirmed.</p>
             </div>
 
+            {isVideo && (
+              <p className="text-sm text-muted-foreground leading-relaxed">We&apos;ll contact you on WhatsApp on the day to start your video call.</p>
+            )}
             {config.confirmationIntro && (
               <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">{config.confirmationIntro}</p>
             )}
