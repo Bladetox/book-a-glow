@@ -173,7 +173,10 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
       className="booking-app bk-stage bk-splash"
       // Extend under the browser's bottom toolbar, so the sheet's colour reaches the
       // bottom edge of the screen instead of the page background.
-      style={{ bottom: "-120px" }}
+      // iOS 26 Safari takes the top bar colour from the page background, and a fixed
+      // element with an opaque background overrides it. With a photo, the fixed
+      // layer must be transparent so the photo's colour reaches the top bar.
+      style={{ bottom: "-120px", background: config.splashBackgroundUrl ? "transparent" : undefined }}
     >
       <motion.div
         className="bk-splash__column"
@@ -186,7 +189,7 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
           // A veil in the theme's background colour, over the whole photo, so the
           // name and taglines are readable and the photo darkens or lightens evenly
           // down to the sheet, in light and dark mode alike.
-          backgroundImage: `linear-gradient(to bottom, hsl(var(--background) / 0) 25%, hsl(var(--background) / 0.75) 55%, hsl(var(--background) / 0.75) 100%), url("${config.splashBackgroundUrl}")`,
+          backgroundImage: `linear-gradient(to bottom, hsl(var(--background) / 0) 20%, hsl(var(--background) / 0.85) 50%, hsl(var(--background) / 0.9) 100%), url("${config.splashBackgroundUrl}")`,
           backgroundSize: "cover",
           backgroundPosition: "center 20%",
         } : undefined}
