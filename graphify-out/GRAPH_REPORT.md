@@ -1,7 +1,7 @@
 # Graph Report - book-a-glow  (2026-11-15)
 
 ## Corpus Check
-- 610 files · ~420,179 words
+- 610 files · ~420,464 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 17 file(s) not represented in the graph (top: .css 7, (none) 2, .example 1)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `36b6c27b`
+- Built from commit: `295509d1`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -218,16 +218,16 @@
 10. `profiles` - 36 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `Secondary Cause: Hardcoded Address` --references--> `usePublicBusinessConfig()`  [INFERRED]
-  docs/debugging-session-2026-03-11.md → src/hooks/usePublicBusinessConfig.ts
 - `2. Real-world proof arrives late in the homepage sequence` --references--> `CaseStudySection()`  [INFERRED]
   docs/marketing-website-phase-1-audit.md → src/components/home/CaseStudySection.tsx
 - `1. Add a homepage-only journey index` --references--> `Pricing()`  [INFERRED]
   docs/homepage-journey-interaction-map.md → src/pages/Pricing.tsx
-- `Cited Findings` --references--> `useVideoConsultationsEnabled()`  [INFERRED]
-  research_notes/Video consultation marketing for NextSlot/nextslot_positioning.md → src/hooks/useVideoConsultationsEnabled.ts
+- `Secondary Cause: Hardcoded Address` --references--> `usePublicBusinessConfig()`  [INFERRED]
+  docs/debugging-session-2026-03-11.md → src/hooks/usePublicBusinessConfig.ts
 - `Existing implementation findings` --references--> `HeatmapSection()`  [INFERRED]
   docs/homepage-journey-interaction-map.md → src/components/home/HeatmapSection.tsx
+- `Existing implementation findings` --references--> `SiteFooter()`  [INFERRED]
+  docs/homepage-journey-interaction-map.md → src/components/site/SiteFooter.tsx
 
 ## Import Cycles
 - None detected.
@@ -825,15 +825,15 @@ Nodes (4): Availability drafts (not applied), Booking drafts (not applied), Pend
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `react` connect `react` to `AdminSidebar.tsx`, `tokens.ts`, `lucide-react`, `loyaltyHelpers.ts`, `SATroubleshoot.tsx`, `popover.tsx`, `feature-flags/SAFeatureFlags.tsx`, `useTenant`, `dependencies`, `Onboarding.tsx`, `App.tsx`, `AdminCalendar.tsx`, `SABroadcast.tsx`, `Admin.tsx`, `ScheduleStep.tsx`, `usePayshapPayments.ts`, `AdminDashboard.tsx`, `package.json`, `IntegrationsGuidePanel.tsx`, `AdminSettings.tsx`, `DashboardViews.tsx`, `bookingFormat.ts`, `AdminCommunications.tsx`, `SuperAdminShell.tsx`, `SAGrowth.tsx`, `AdminMetricExplanation.tsx`, `tokens.ts`, `Resources.tsx`, `SARevenue.tsx`, `BusinessThemeProvider.tsx`, `SASystemHealth.tsx`, `DetailsStep.tsx`, `AdminIntegrations.tsx`, `client.ts`, `vitest`, `AdminBilling.tsx`, `use-toast.ts`, `ReviewStep.tsx`, `TenantContext.tsx`, `SAUsers.tsx`, `AdminConsultations.tsx`, `react`, `cn`, `SATenantHealth.tsx`, `useNextyInsights.ts`, `AdminMetricExplanation.tsx`, `RevenueTrendCard.tsx`, `SATenants.tsx`, `AdminServices.tsx`, `SACohortRetention.tsx`, `SABookings.tsx`, `SAFeatureAdoption.tsx`, `sheet.tsx`, `ServicesStep.tsx`, `AdminSharedUI.tsx`, `AdminAvailability.tsx`, `supabase`, `class-variance-authority`?**
-  _High betweenness centrality (0.086) - this node is a cross-community bridge._
+  _High betweenness centrality (0.100) - this node is a cross-community bridge._
 - **Should `AdminSidebar.tsx` be split into smaller, more focused modules?**
   _Cohesion score 0.09269162210338681 - nodes in this community are weakly interconnected._
 - **Why does `lucide-react` connect `AdminSharedUI.tsx` to `AdminSidebar.tsx`, `SATroubleshoot.tsx`, `lucide-react`, `loyaltyHelpers.ts`, `Onboarding.tsx`, `feature-flags/SAFeatureFlags.tsx`, `useTenant`, `dependencies`, `App.tsx`, `AdminCalendar.tsx`, `SABroadcast.tsx`, `Admin.tsx`, `ScheduleStep.tsx`, `usePayshapPayments.ts`, `AdminDashboard.tsx`, `package.json`, `IntegrationsGuidePanel.tsx`, `AdminSettings.tsx`, `DashboardViews.tsx`, `bookingFormat.ts`, `AdminCommunications.tsx`, `AdminMetricExplanation.tsx`, `DashboardPreview.tsx`, `AdminMetricExplanation.tsx`, `tokens.ts`, `Resources.tsx`, `SuperAdminShell.tsx`, `SAGrowth.tsx`, `SARevenue.tsx`, `SASystemHealth.tsx`, `DetailsStep.tsx`, `AdminIntegrations.tsx`, `client.ts`, `vitest`, `AdminBilling.tsx`, `use-toast.ts`, `ReviewStep.tsx`, `TenantContext.tsx`, `SAUsers.tsx`, `AdminConsultations.tsx`, `react`, `cn`, `SATenantHealth.tsx`, `AdminMetricExplanation.tsx`, `RevenueTrendCard.tsx`, `SATenants.tsx`, `AdminServices.tsx`, `SACohortRetention.tsx`, `react`, `SABookings.tsx`, `SAFeatureAdoption.tsx`, `sheet.tsx`, `ServicesStep.tsx`, `AdminAvailability.tsx`, `supabase`, `display-cards.tsx`?**
-  _High betweenness centrality (0.071) - this node is a cross-community bridge._
+  _High betweenness centrality (0.083) - this node is a cross-community bridge._
 - **Should `Risks and claims to avoid: marketing online consultations on NextSlot (South Africa)` be split into smaller, more focused modules?**
   _Cohesion score 0.058823529411764705 - nodes in this community are weakly interconnected._
-- **Why does `usePublicBusinessConfig()` connect `DetailsStep.tsx` to `ServicesStep.tsx`, `feature-flags/SAFeatureFlags.tsx`, `Book-a-Glow: Debugging Session — 11 March 2026`, `ReviewStep.tsx`, `ScheduleStep.tsx`, `react`?**
-  _High betweenness centrality (0.039) - this node is a cross-community bridge._
+- **Why does `supabase` connect `client.ts` to `SATroubleshoot.tsx`, `lucide-react`, `loyaltyHelpers.ts`, `Onboarding.tsx`, `feature-flags/SAFeatureFlags.tsx`, `useTenant`, `App.tsx`, `AdminCalendar.tsx`, `SABroadcast.tsx`, `Admin.tsx`, `ScheduleStep.tsx`, `useNextyInsights.ts`, `AdminDashboard.tsx`, `usePayshapPayments.ts`, `AdminSettings.tsx`, `AdminCommunications.tsx`, `SAGrowth.tsx`, `Resources.tsx`, `SARevenue.tsx`, `BusinessThemeProvider.tsx`, `SASystemHealth.tsx`, `DetailsStep.tsx`, `AdminIntegrations.tsx`, `AdminBilling.tsx`, `ReviewStep.tsx`, `TenantContext.tsx`, `SAUsers.tsx`, `AdminConsultations.tsx`, `react`, `SATenantHealth.tsx`, `SATenants.tsx`, `AdminServices.tsx`, `AdminAvailability.tsx`, `SACohortRetention.tsx`, `react`, `SABookings.tsx`, `SAFeatureAdoption.tsx`, `ServicesStep.tsx`, `AdminSharedUI.tsx`, `supabase`?**
+  _High betweenness centrality (0.030) - this node is a cross-community bridge._
 - **Should `ref_https` be split into smaller, more focused modules?**
   _Cohesion score 0.045454545454545456 - nodes in this community are weakly interconnected._
 - **Should `Onboarding.tsx` be split into smaller, more focused modules?**

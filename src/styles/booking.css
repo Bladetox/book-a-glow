@@ -953,28 +953,6 @@
   color: hsl(var(--foreground));
 }
 
-/* Optional tenant background photo, behind the hero. A light fade at the
-   bottom keeps the name and tagline readable over the image. */
-.booking-app .bk-splash__bg {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  background-size: cover;
-  background-position: center;
-  pointer-events: none;
-}
-
-.booking-app .bk-splash__bg::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    to bottom,
-    hsl(var(--background) / 0) 35%,
-    hsl(var(--background) / 0.85) 100%
-  );
-}
-
 /* Brand block, anchored to the bottom of the hero. */
 .booking-app .bk-splash__brand {
   position: absolute;

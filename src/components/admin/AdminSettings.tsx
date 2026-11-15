@@ -268,6 +268,8 @@ const AdminSettings = () => {
   const [saved, setSaved] = useState<string | null>(null);
   const [logoUploading, setLogoUploading] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const [splashBgUploading, setSplashBgUploading] = useState(false);
+  const splashBgInputRef = useRef<HTMLInputElement>(null);
   const [newPw, setNewPw] = useState("");
   const [confirmPw, setConfirmPw] = useState("");
   const [pwError, setPwError] = useState("");
@@ -442,6 +444,37 @@ const AdminSettings = () => {
     }
   };
 
+  const handleSplashBgUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setSplashBgUploading(true);
+    try {
+      const ext = file.name.split(".").pop() ?? "jpg";
+      const path = `${tenantId}/splash-background.${ext}`;
+      const { error: uploadError } = await supabase.storage.from("business-logos").upload(path, file, { upsert: true });
+      if (uploadError) throw uploadError;
+      const { data: urlData } = supabase.storage.from("business-logos").getPublicUrl(path);
+      update("splash_background_url", urlData.publicUrl);
+      upsertSetting.mutate({ splash_background_url: urlData.publicUrl }, {
+        onSuccess: () => { flash("splash"); toast.success("Splash background uploaded"); },
+        onError: (err: Error) => toast.error(err?.message ?? "Save failed"),
+      });
+    } catch (err) {
+      toast.error(err.message ?? "Splash background upload failed");
+    } finally {
+      setSplashBgUploading(false);
+      if (splashBgInputRef.current) splashBgInputRef.current.value = "";
+    }
+  };
+
+  const handleSplashBgRemove = () => {
+    update("splash_background_url", "");
+    upsertSetting.mutate({ splash_background_url: "" }, {
+      onSuccess: () => { flash("splash"); toast.success("Splash background removed"); },
+      onError: (err: Error) => toast.error(err?.message ?? "Save failed"),
+    });
+  };
+
   const handlePasswordChange = async () => {
     setPwError(""); setPwSuccess("");
     if (newPw.length < 6) { setPwError("Must be at least 6 characters"); return; }
@@ -585,6 +618,27 @@ const AdminSettings = () => {
             <SettingRow id="splash-tag1" label="Main Tagline" placeholder="The Future of Glow" value={draft.splash_tagline1} onChange={(v) => update("splash_tagline1", v)} />
             <SettingRow id="splash-tag2" label="Secondary Tagline" placeholder="Premium skincare services." value={draft.splash_tagline2} onChange={(v) => update("splash_tagline2", v)} />
             <SettingRow id="splash-cta" label="Button Label" placeholder="Book Your Session" value={draft.splash_cta_label} onChange={(v) => update("splash_cta_label", v)} />
+            <div className="flex flex-col gap-2">
+              <span className="text-xs font-medium text-white/60">Background photo</span>
+              <p className="text-xs text-white/35 leading-relaxed">Shown behind the name on your splash screen. Use a portrait photo at least 1080 px wide.</p>
+              {draft.splash_background_url && (
+                <img src={draft.splash_background_url} alt="Splash background" className="w-full max-w-[12rem] aspect-[3/4] rounded-2xl nexty-card object-cover" />
+              )}
+              <div className="flex items-center gap-3">
+                <button onClick={() => splashBgInputRef.current?.click()} disabled={splashBgUploading}
+                  className="min-h-[44px] px-4 py-2 rounded-xl nexty-card text-xs font-semibold text-white/80 hover:bg-white/[0.12] transition-colors flex items-center gap-1.5 disabled:opacity-50">
+                  {splashBgUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Plus className="w-3 h-3" />}
+                  {splashBgUploading ? "Uploading..." : draft.splash_background_url ? "Replace photo" : "Upload photo"}
+                </button>
+                {draft.splash_background_url && (
+                  <button onClick={handleSplashBgRemove} disabled={upsertSetting.isPending}
+                    className="min-h-[44px] px-4 py-2 rounded-xl text-xs font-semibold text-white/55 hover:text-white/80 transition-colors disabled:opacity-50">
+                    Remove
+                  </button>
+                )}
+              </div>
+              <input id="splash-bg-upload" name="splash-bg-upload" ref={splashBgInputRef} type="file" accept="image/*" className="hidden" onChange={handleSplashBgUpload} />
+            </div>
             <div className="flex items-center gap-3"><SaveBtn onClick={() => saveSettings("splash", ["splash_welcome_label", "splash_tagline1", "splash_tagline2", "splash_cta_label"])} loading={upsertSetting.isPending} /><SavedBadge section="splash" /></div>
           </SettingsCard>
           <SettingsCard title="Acquisition Channels" icon={Star} gradient="from-white/[0.05] to-white/[0.02]" collapsible>

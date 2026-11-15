@@ -146,16 +146,17 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
     <div className="booking-app bk-stage bk-splash">
       <motion.div className="bk-splash__column" initial="hidden" animate="show" variants={screen}>
         <div className="bk-splash__glow" aria-hidden="true" />
-        {config.splashBackgroundUrl && (
-          <div
-            className="bk-splash__bg"
-            style={{ backgroundImage: `url("${config.splashBackgroundUrl}")` }}
-            aria-hidden="true"
-          />
-        )}
 
         {/* ── Hero: logo, name and tagline ─────────────────────────────── */}
-        <div className="bk-splash__hero">
+        <div
+          className="bk-splash__hero"
+          style={config.splashBackgroundUrl ? {
+            // The photo sits on the hero itself, so its opaque background does not hide it.
+            backgroundImage: `linear-gradient(to bottom, transparent 35%, hsl(var(--background) / 0.85) 100%), url("${config.splashBackgroundUrl}")`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+          } : undefined}
+        >
           <motion.div variants={logoIn} className="bk-splash__logo">
             {config.logoUrl ? (
               <img src={config.logoUrl} alt={config.name} className="h-full w-full object-cover" />
