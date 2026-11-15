@@ -90,8 +90,8 @@
     "semantic_hash": ""
   },
   "src/components/SplashScreen.tsx": {
-    "mtime": 1794750989.5863693,
-    "seen": 1794751093.6411996,
+    "mtime": 1794753565.8249378,
+    "seen": 1794753745.0473814,
     "ast_hash": "7cc57e041059be52b7a545c0d19f02b3",
     "semantic_hash": ""
   },
@@ -1074,8 +1074,8 @@
     "semantic_hash": ""
   },
   "src/hooks/useShellBackground.ts": {
-    "mtime": 1794649689.747249,
-    "seen": 1794750291.654139,
+    "mtime": 1794753565.8249378,
+    "seen": 1794753745.04765,
     "ast_hash": "acefd457e7c96054c7e74245fc533ec2",
     "semantic_hash": ""
   },
@@ -1560,9 +1560,9 @@
     "semantic_hash": ""
   },
   "supabase/functions/manifest/index.ts": {
-    "mtime": 1794649689.756165,
-    "seen": 1794750291.6542618,
-    "ast_hash": "f341e31e1439c433bbb8e56a684f5618",
+    "mtime": 1794753714.4249465,
+    "seen": 1794753745.0477712,
+    "ast_hash": "4a4f6fc56d5eacb53875c0c712d101c2",
     "semantic_hash": ""
   },
   "supabase/functions/payfast-checkout/index.ts": {
@@ -3768,8 +3768,8 @@
     "semantic_hash": ""
   },
   "src/components/SplashScreen.test.tsx": {
-    "mtime": 1794738362.14098,
-    "seen": 1794750291.6538951,
+    "mtime": 1794753565.8249378,
+    "seen": 1794753745.0473788,
     "ast_hash": "01b8c22ee9886dfd9f7bfbdd93a327c1",
     "semantic_hash": ""
   },

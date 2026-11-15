@@ -5,6 +5,39 @@ const supabase = createClient(
   Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
 );
 
+// NextSlot shell palette (matches src/index.css).
+const MARKETING_BG = "#F5F0E7";
+const MARKETING_BLACK = "#000000";
+const ADMIN_BG = "#080808";
+
+// Background colour of each booking theme (matches src/data/themes.ts).
+// Keep in sync when a theme is added or changed.
+const TENANT_THEME_HSL: Record<string, string> = {
+  "makeup-artist": "35 45% 92%",
+  "beautician": "88 35% 90%",
+  "tattoo-artist": "0 0% 8%",
+  "lash-tech": "345 45% 90%",
+  "barber": "210 15% 15%",
+  "nail-tech": "330 40% 92%",
+  "standard": "0 0% 100%",
+};
+
+function hslToHex(hsl: string): string {
+  const [h, s, l] = hsl.split(/\s+/).map((part) => parseFloat(part));
+  const sat = s / 100;
+  const light = l / 100;
+  const k = (n: number) => (n + h / 30) % 12;
+  const a = sat * Math.min(light, 1 - light);
+  const f = (n: number) =>
+    light - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+  const toHex = (x: number) => Math.round(x * 255).toString(16).padStart(2, "0");
+  return `#${toHex(f(0))}${toHex(f(8))}${toHex(f(4))}`.toUpperCase();
+}
+
+const TENANT_THEME_BACKGROUNDS: Record<string, string> = Object.fromEntries(
+  Object.entries(TENANT_THEME_HSL).map(([id, hsl]) => [id, hslToHex(hsl)]),
+);
+
 Deno.serve(async (req) => {
   // CORS preflight
   if (req.method === "OPTIONS") {
@@ -33,15 +66,18 @@ Deno.serve(async (req) => {
     // ignore — tenantOrigin stays as nextslot.co.za fallback
   }
 
-  // Fetch tenant branding from app_settings
+  // Each shell keeps its own palette (see src/index.css and src/data/themes.ts).
+  // Marketing: warm cream with black. Admin: near-black. Tenant booking: the
+  // tenant's own theme background, so the home-screen app matches the booking page.
   let tenantName = "NextSlot";
-  let themeColor = "#1a0a2e";
   let logoUrl: string | null = null;
+  let shellColor = isAdmin ? ADMIN_BG : MARKETING_BG;
+  let themeColor = isAdmin ? ADMIN_BG : MARKETING_BLACK;
 
   if (subdomain) {
     const { data: tenant } = await supabase
       .from("tenants")
-      .select("id, name")
+      .select("id, name, theme_id")
       .eq("subdomain", subdomain)
       .single();
 
@@ -52,13 +88,18 @@ Deno.serve(async (req) => {
         .from("app_settings")
         .select("key, value")
         .eq("tenant_id", tenant.id)
-        .in("key", ["brand_color", "logo_url"]);
+        .in("key", ["logo_url"]);
 
       if (settings) {
         for (const s of settings) {
-          if (s.key === "brand_color" && s.value) themeColor = s.value;
           if (s.key === "logo_url" && s.value) logoUrl = s.value;
         }
+      }
+
+      if (!isAdmin) {
+        const palette = TENANT_THEME_BACKGROUNDS[tenant.theme_id ?? "standard"] ?? TENANT_THEME_BACKGROUNDS.standard;
+        shellColor = palette;
+        themeColor = palette;
       }
     }
   }
@@ -100,7 +141,7 @@ Deno.serve(async (req) => {
     start_url: startUrl,
     scope: scope,
     display: "standalone",
-    background_color: themeColor,
+    background_color: shellColor,
     theme_color: themeColor,
     orientation: "portrait",
     icons,
