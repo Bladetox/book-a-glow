@@ -1,7 +1,7 @@
 # Graph Report - book-a-glow  (2026-11-15)
 
 ## Corpus Check
-- 615 files · ~422,026 words
+- 615 files · ~422,067 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 17 file(s) not represented in the graph (top: .css 7, (none) 2, .example 1)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `4495e039`
+- Built from commit: `6063aeab`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -214,10 +214,10 @@
 10. `profiles` - 36 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `Secondary Cause: Hardcoded Address` --references--> `usePublicBusinessConfig()`  [INFERRED]
-  docs/debugging-session-2026-03-11.md → src/hooks/usePublicBusinessConfig.ts
 - `2. Real-world proof arrives late in the homepage sequence` --references--> `CaseStudySection()`  [INFERRED]
   docs/marketing-website-phase-1-audit.md → src/components/home/CaseStudySection.tsx
+- `Secondary Cause: Hardcoded Address` --references--> `usePublicBusinessConfig()`  [INFERRED]
+  docs/debugging-session-2026-03-11.md → src/hooks/usePublicBusinessConfig.ts
 - `Existing implementation findings` --references--> `HeatmapSection()`  [INFERRED]
   docs/homepage-journey-interaction-map.md → src/components/home/HeatmapSection.tsx
 - `1. Add a homepage-only journey index` --references--> `Pricing()`  [INFERRED]
@@ -821,15 +821,15 @@ Nodes (10): @radix-ui/react-dialog@^1.1.14, @radix-ui/react-dialog, SheetContent
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `react` connect `lucide-react` to `AdminSidebar.tsx`, `tokens.ts`, `LoyaltyBulkBar.tsx`, `lucide-react`, `Onboarding.tsx`, `feature-flags/SAFeatureFlags.tsx`, `useTenant`, `dependencies`, `App.tsx`, `react-router-dom`, `Admin.tsx`, `TenantContext.tsx`, `framer-motion`, `usePayshapPayments.ts`, `AdminDashboard.tsx`, `package.json`, `IntegrationsGuidePanel.tsx`, `AdminSettings.tsx`, `DashboardViews.tsx`, `SuperAdminShell.tsx`, `AdminCommunications.tsx`, `Book.tsx`, `AdminLoyalty.tsx`, `NotificationBell.tsx`, `Index.tsx`, `Login.tsx`, `Resources.tsx`, `SARevenue.tsx`, `BusinessThemeProvider.tsx`, `DetailsStep.tsx`, `AdminIntegrations.tsx`, `AdminHelp.tsx`, `AdminRecommendations.tsx`, `Pricing.tsx`, `AdminBilling.tsx`, `use-toast.ts`, `calendar.tsx`, `ReviewStep.tsx`, `types.ts`, `AdminConsultations.tsx`, `SplashScreen.tsx`, `cn`, `sheet.tsx`, `LoyaltyTenantCriteria.tsx`, `SATenantHealth.tsx`, `LoyaltyClientCard.tsx`, `RevenueTrendCard.tsx`, `SATenants.tsx`, `AdminServices.tsx`, `AdminAvailability.tsx`, `SACohortRetention.tsx`, `StockScanModal.tsx`, `SABookings.tsx`, `SAFeatureAdoption.tsx`, `SASystemHealth.tsx`, `useSupabaseDashboard.ts`, `SetupChecklistPaymentGate.tsx`, `ConsultationFormBuilder.tsx`, `supabase`, `class-variance-authority`, `SetupChecklist.tsx`, `ScheduleStep.tsx`?**
-  _High betweenness centrality (0.096) - this node is a cross-community bridge._
+  _High betweenness centrality (0.115) - this node is a cross-community bridge._
 - **Should `AdminSidebar.tsx` be split into smaller, more focused modules?**
   _Cohesion score 0.08392603129445235 - nodes in this community are weakly interconnected._
 - **Why does `lucide-react` connect `lucide-react` to `AdminSidebar.tsx`, `tokens.ts`, `LoyaltyBulkBar.tsx`, `lucide-react`, `Onboarding.tsx`, `feature-flags/SAFeatureFlags.tsx`, `useTenant`, `dependencies`, `App.tsx`, `react-router-dom`, `Admin.tsx`, `TenantContext.tsx`, `framer-motion`, `usePayshapPayments.ts`, `AdminDashboard.tsx`, `package.json`, `IntegrationsGuidePanel.tsx`, `AdminSettings.tsx`, `DashboardViews.tsx`, `SuperAdminShell.tsx`, `AdminCommunications.tsx`, `display-cards.tsx`, `AdminLoyalty.tsx`, `NotificationBell.tsx`, `Index.tsx`, `Login.tsx`, `Resources.tsx`, `SARevenue.tsx`, `DetailsStep.tsx`, `AdminIntegrations.tsx`, `AdminHelp.tsx`, `AdminRecommendations.tsx`, `Pricing.tsx`, `AdminBilling.tsx`, `DashboardPreview.tsx`, `use-toast.ts`, `calendar.tsx`, `BusinessHealthSection.tsx`, `ReviewStep.tsx`, `types.ts`, `AdminConsultations.tsx`, `SplashScreen.tsx`, `cn`, `sheet.tsx`, `LoyaltyTenantCriteria.tsx`, `SATenantHealth.tsx`, `LoyaltyClientCard.tsx`, `RevenueTrendCard.tsx`, `SATenants.tsx`, `AdminServices.tsx`, `AdminAvailability.tsx`, `SACohortRetention.tsx`, `StockScanModal.tsx`, `SABookings.tsx`, `SAFeatureAdoption.tsx`, `SASystemHealth.tsx`, `SetupChecklistPaymentGate.tsx`, `ConsultationFormBuilder.tsx`, `supabase`, `SetupChecklist.tsx`, `ScheduleStep.tsx`?**
-  _High betweenness centrality (0.070) - this node is a cross-community bridge._
+  _High betweenness centrality (0.080) - this node is a cross-community bridge._
 - **Should `tokens.ts` be split into smaller, more focused modules?**
   _Cohesion score 0.14022988505747128 - nodes in this community are weakly interconnected._
 - **Why does `supabase` connect `lucide-react` to `lucide-react`, `Onboarding.tsx`, `feature-flags/SAFeatureFlags.tsx`, `useTenant`, `App.tsx`, `Admin.tsx`, `useNextyInsights.ts`, `TenantContext.tsx`, `Book.tsx`, `usePayshapPayments.ts`, `AdminDashboard.tsx`, `AdminSettings.tsx`, `AdminCommunications.tsx`, `Login.tsx`, `AdminLoyalty.tsx`, `NotificationBell.tsx`, `SARevenue.tsx`, `BusinessThemeProvider.tsx`, `DetailsStep.tsx`, `AdminIntegrations.tsx`, `Pricing.tsx`, `AdminRecommendations.tsx`, `AdminBilling.tsx`, `ReviewStep.tsx`, `types.ts`, `AdminConsultations.tsx`, `SplashScreen.tsx`, `LoyaltyTenantCriteria.tsx`, `SATenantHealth.tsx`, `LoyaltyClientCard.tsx`, `SATenants.tsx`, `AdminServices.tsx`, `AdminAvailability.tsx`, `SACohortRetention.tsx`, `StockScanModal.tsx`, `SABookings.tsx`, `SAFeatureAdoption.tsx`, `SASystemHealth.tsx`, `useSupabaseDashboard.ts`, `SetupChecklistPaymentGate.tsx`, `ConsultationFormBuilder.tsx`, `supabase`, `SetupChecklist.tsx`, `ScheduleStep.tsx`?**
-  _High betweenness centrality (0.028) - this node is a cross-community bridge._
+  _High betweenness centrality (0.027) - this node is a cross-community bridge._
 - **Should `Risks and claims to avoid: marketing online consultations on NextSlot (South Africa)` be split into smaller, more focused modules?**
   _Cohesion score 0.058823529411764705 - nodes in this community are weakly interconnected._
 - **Should `ref_https` be split into smaller, more focused modules?**

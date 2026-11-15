@@ -1116,9 +1116,9 @@
     "semantic_hash": ""
   },
   "src/hooks/useSupabaseSettings.ts": {
-    "mtime": 1794649689.7483637,
-    "seen": 1794750291.6541495,
-    "ast_hash": "4ab25306fcadd6624aa2346605036ff6",
+    "mtime": 1794766307.085746,
+    "seen": 1794766391.5906868,
+    "ast_hash": "c95b193253c8e81c9a7ceb52e9b255f9",
     "semantic_hash": ""
   },
   "src/hooks/useTenantHead.ts": {

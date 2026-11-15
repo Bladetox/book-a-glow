@@ -31,6 +31,7 @@ const ALLOWED_APP_SETTING_KEYS = [
   "splash_tagline1",
   "splash_tagline2",
   "splash_cta_label",
+  "splash_background_url",
   "referral_options",
   "confirmation_subject",
   "confirmation_title",
@@ -172,9 +173,13 @@ export function useUpsertAppSetting() {
   return useMutation({
     mutationFn: async (settings: Record<string, string>) => {
       const rows = Object.entries(settings)
-        .filter(([key]) =>
-          (ALLOWED_APP_SETTING_KEYS as readonly string[]).includes(key)
-        )
+        .filter(([key]) => {
+          const allowed = (ALLOWED_APP_SETTING_KEYS as readonly string[]).includes(key);
+          // Never drop a save silently: a key missing from the allow-list would
+          // otherwise look saved while nothing is stored.
+          if (!allowed) console.warn(`Setting "${key}" is not on the allow-list and was not saved.`);
+          return allowed;
+        })
         .map(([key, value]) => ({ tenant_id: tenantId, key, value }));
 
       if (rows.length === 0) return;
