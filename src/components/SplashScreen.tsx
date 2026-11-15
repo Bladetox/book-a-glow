@@ -91,11 +91,8 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
   // the photo's top edge when there is a photo, otherwise the theme background.
   const photoTopColor = useImageEdgeColor(config.splashBackgroundUrl);
   const backgroundLightness = parseFloat(theme.colors.background.split(/\s+/)[2] ?? "50");
-  useShellBackground(
-    `hsl(${theme.colors.primary})`,
-    photoTopColor ?? `hsl(${theme.colors.background})`,
-    backgroundLightness < 50 ? "dark" : "light",
-  );
+  const topColor = photoTopColor ?? `hsl(${theme.colors.background})`;
+  useShellBackground(topColor, topColor, backgroundLightness < 50 ? "dark" : "light");
 
   // ── Brand font (sister-studios only; null + no-op for all other tenants) ──
   const brandFontFamily = useBrandFont(config.brandFontUrl ?? null);
@@ -156,7 +153,12 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
       Fixed to the viewport and never scrolls: the hero flexes to fill whatever
       height the acquisition sheet does not need.
     */
-    <div className="booking-app bk-stage bk-splash">
+    <div
+      className="booking-app bk-stage bk-splash"
+      // Extend under the browser's bottom toolbar, so the sheet's colour reaches the
+      // bottom edge of the screen instead of the page background.
+      style={{ bottom: "-120px" }}
+    >
       <motion.div
         className="bk-splash__column"
         initial="hidden"
@@ -167,7 +169,7 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
           // sheet overlays the image with no gap between them.
           backgroundImage: `url("${config.splashBackgroundUrl}")`,
           backgroundSize: "cover",
-          backgroundPosition: "center top",
+          backgroundPosition: "center 20%",
         } : undefined}
       >
         <div className="bk-splash__glow" aria-hidden="true" />
@@ -227,6 +229,7 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
         <motion.section
           variants={sheetIn}
           className={`bk-splash__panel ${showError ? "is-error" : ""}`}
+          style={{ paddingBottom: "calc(120px + max(env(safe-area-inset-bottom, 0px), 1.25rem))" }}
           aria-labelledby="referral-title"
         >
           <motion.div variants={panelContent} className="flex flex-col">

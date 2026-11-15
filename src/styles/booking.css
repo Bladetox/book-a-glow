@@ -932,7 +932,7 @@
 .booking-app .bk-splash__logo {
   position: absolute;
   top: max(env(safe-area-inset-top, 0px), 2.25rem);
-  right: 2.75rem;
+  left: 1.5rem;
   z-index: 1;
   display: grid;
   place-items: center;
