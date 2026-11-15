@@ -945,6 +945,15 @@
   box-shadow: 0 18px 40px -22px hsl(var(--foreground) / 0.45);
 }
 
+/* Logo inside the brand block, directly above the welcome label. */
+.booking-app .bk-splash__logo--inline {
+  position: relative;
+  top: auto;
+  left: auto;
+  right: auto;
+  margin-bottom: 1.25rem;
+}
+
 .booking-app .bk-splash__monogram {
   font-size: 3rem;
   font-weight: 700;

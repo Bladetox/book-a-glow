@@ -90,9 +90,9 @@
     "semantic_hash": ""
   },
   "src/components/SplashScreen.tsx": {
-    "mtime": 1794767203.3424375,
-    "seen": 1794767310.7080154,
-    "ast_hash": "b7843147d605816ee220c0ef3ac5c537",
+    "mtime": 1794767334.6824455,
+    "seen": 1794767451.707361,
+    "ast_hash": "e0e0800c9242d13067130d520f036128",
     "semantic_hash": ""
   },
   "src/components/StepIndicator.tsx": {

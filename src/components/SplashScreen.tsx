@@ -198,22 +198,23 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
           className="bk-splash__hero"
           style={config.splashBackgroundUrl ? { background: "transparent" } : undefined}
         >
-          <motion.div variants={logoIn} className="bk-splash__logo">
-            {config.logoUrl ? (
-              <img src={config.logoUrl} alt={config.name} className="h-full w-full object-cover" />
-            ) : (
-              <span className="bk-display bk-splash__monogram" aria-hidden="true">
-                {config.abbreviation}
-              </span>
-            )}
-          </motion.div>
-
           <div
             className="bk-splash__brand"
             style={config.splashBackgroundUrl ? {
               textShadow: "0 1px 10px hsl(var(--background) / 0.6)",
             } : undefined}
           >
+            {/* The logo sits directly above the wordmark, with space between them. */}
+            <motion.div variants={logoIn} className="bk-splash__logo bk-splash__logo--inline">
+              {config.logoUrl ? (
+                <img src={config.logoUrl} alt={config.name} className="h-full w-full object-cover" />
+              ) : (
+                <span className="bk-display bk-splash__monogram" aria-hidden="true">
+                  {config.abbreviation}
+                </span>
+              )}
+            </motion.div>
+
             <motion.p variants={rise} className="bk-overline">
               {config.splashWelcomeLabel}
             </motion.p>
