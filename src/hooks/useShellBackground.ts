@@ -10,7 +10,7 @@ import { useLayoutEffect } from "react";
  * so the top padding is zeroed here and the shell header adds the inset.
  * Everything is restored on unmount.
  */
-export function useShellBackground(color: string) {
+export function useShellBackground(color: string, themeColor: string = color) {
   useLayoutEffect(() => {
     const html = document.documentElement;
     const body = document.body;
@@ -31,7 +31,7 @@ export function useShellBackground(color: string) {
     body.style.setProperty("background", color, "important");
     body.style.paddingTop = "0px";
     body.style.transition = "none";
-    meta?.setAttribute("content", color);
+    meta?.setAttribute("content", themeColor);
 
     return () => {
       html.style.background = prev.htmlBg;
@@ -42,5 +42,5 @@ export function useShellBackground(color: string) {
       body.style.transition = prev.bodyTransition;
       if (meta && prev.meta !== null) meta.setAttribute("content", prev.meta);
     };
-  }, [color]);
+  }, [color, themeColor]);
 }

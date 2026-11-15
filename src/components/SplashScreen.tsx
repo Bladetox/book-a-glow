@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties, type ElementT
 import { CircleAlert, Facebook, Globe, Instagram, MoreHorizontal, Music2, Search, UserPlus } from "lucide-react";
 import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
 import { useBusinessTheme } from "@/contexts/BusinessThemeProvider";
+import { useShellBackground } from "@/hooks/useShellBackground";
 import { useBrandFont } from "@/hooks/useBrandFont";
 
 interface SplashScreenProps {
@@ -81,7 +82,10 @@ const sourceIcon = (label: string): ElementType | null => {
  */
 const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashScreenProps) => {
   const config = usePublicBusinessConfig();
-  const { loading: themeLoading } = useBusinessTheme();
+  const { loading: themeLoading, theme } = useBusinessTheme();
+  // Paint the page surface in the tenant's theme, so the area below the sheet
+  // and the browser chrome match the booking shell instead of showing white.
+  useShellBackground(`hsl(${theme.colors.primary})`, `hsl(${theme.colors.background})`);
   const [attempted, setAttempted] = useState(false);
 
   // ── Brand font (sister-studios only; null + no-op for all other tenants) ──
@@ -152,7 +156,7 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
           className="bk-splash__hero"
           style={config.splashBackgroundUrl ? {
             // The photo sits on the hero itself, so its opaque background does not hide it.
-            backgroundImage: `linear-gradient(to bottom, transparent 35%, hsl(var(--background) / 0.85) 100%), url("${config.splashBackgroundUrl}")`,
+            backgroundImage: `linear-gradient(to bottom, transparent 30%, hsl(var(--background) / 0.6) 62%, hsl(var(--background) / 0.95) 100%), url("${config.splashBackgroundUrl}")`,
             backgroundSize: "cover",
             backgroundPosition: "center",
           } : undefined}

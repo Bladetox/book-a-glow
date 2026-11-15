@@ -19,7 +19,10 @@ vi.mock("@/hooks/usePublicBusinessConfig", () => ({
   usePublicBusinessConfig: () => config,
 }));
 vi.mock("@/contexts/BusinessThemeProvider", () => ({
-  useBusinessTheme: () => ({ loading: false }),
+  useBusinessTheme: () => ({
+    loading: false,
+    theme: { colors: { primary: "0 0% 7%", background: "0 0% 100%" } },
+  }),
 }));
 vi.mock("@/hooks/useBrandFont", () => ({ useBrandFont: () => null }));
 

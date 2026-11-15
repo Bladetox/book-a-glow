@@ -1,17 +1,17 @@
 # Graph Report - book-a-glow  (2026-11-15)
 
 ## Corpus Check
-- 610 files · ~420,464 words
+- 610 files · ~420,524 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 17 file(s) not represented in the graph (top: .css 7, (none) 2, .example 1)
 
 ## Summary
-- 3281 nodes · 6582 edges · 330 communities (146 shown, 184 thin omitted)
+- 3281 nodes · 6585 edges · 330 communities (146 shown, 184 thin omitted)
 - Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 45 edges (avg confidence: 0.9)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `295509d1`
+- Built from commit: `b8595559`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -37,7 +37,7 @@
 - AdminDashboard.tsx
 - package.json
 - DashboardViews.tsx
-- AdminSettings.tsx
+- useTenant
 - SuperAdminShell.tsx
 - bookingFormat.ts
 - AdminCommunications.tsx
@@ -56,8 +56,8 @@
 - Competitor positioning: video and online consultations
 - DetailsStep.tsx
 - Phase 1: NextSlot Marketing Website Baseline Audit
-- AdminIntegrations.tsx
-- client.ts
+- SetupChecklistPaymentGate.tsx
+- ClientAlertsModal.tsx
 - vitest
 - send-billing-receipt/index.ts
 - AdminBilling.tsx
@@ -66,7 +66,7 @@
 - components.json
 - Homepage Journey Interaction Map
 - ReviewStep.tsx
-- TenantContext.tsx
+- react
 - SAUsers.tsx
 - vitest
 - AdminConsultations.tsx
@@ -91,7 +91,7 @@
 - AdminMetricExplanation.tsx
 - RevenueTrendCard.tsx
 - SATenants.tsx
-- AdminServices.tsx
+- SASettings.tsx
 - get-or-create-client/_shared/security.ts
 - initiate-deposit-checkout/_shared/security.ts
 - yoco-balance/_shared/security.ts
@@ -103,7 +103,7 @@
 - app_settings
 - planFeatureMap.ts
 - SACohortRetention.tsx
-- react
+- SuperAdmin.tsx
 - SABookings.tsx
 - SAFeatureAdoption.tsx
 - public.services
@@ -264,7 +264,7 @@ Nodes (42): FeatureToggleRow(), LifetimeBanner(), LoadingBlock(), PlanSections()
 
 ### Community 7 - "useTenant"
 Cohesion: 0.11
-Nodes (34): AddServiceModal(), AddServiceModalProps, BookingItem, Service, AdminBookings(), AdminBookingsProps, ConfirmDialog(), ConfirmDialogProps (+26 more)
+Nodes (29): sonner, AddServiceModal(), AddServiceModalProps, BookingItem, Service, AdminBookings(), AdminBookingsProps, ConfirmDialog() (+21 more)
 
 ### Community 8 - "dependencies"
 Cohesion: 0.05
@@ -295,8 +295,8 @@ Cohesion: 0.05
 Nodes (53): AttachRateRow, BasketTrendRow, ChannelRoiRow, DAY_NAMES, dayBefore(), formatRand(), formatRpm(), hourLabel() (+45 more)
 
 ### Community 15 - "Admin.tsx"
-Cohesion: 0.08
-Nodes (35): AdminLogin(), AdminLoginProps, getTenantSlugFromUrl(), View, AdminMobileNav(), ArrearsBanner(), Props, tiers (+27 more)
+Cohesion: 0.06
+Nodes (49): AdminDashboard(), AdminMobileNav(), AdminSidebar(), ActionType, AdminStock(), FormField(), RESTOCK_PILLS, StockItem (+41 more)
 
 ### Community 16 - "ScheduleStep.tsx"
 Cohesion: 0.17
@@ -318,9 +318,9 @@ Nodes (26): clsx@^2.1.1, @hcaptcha/react-hcaptcha@^1.11.0, @hookform/resolvers@^
 Cohesion: 0.13
 Nodes (27): allBookings, AvailabilityContent(), BookingsContent(), ConsultationsContent(), DashboardContent(), heatmapData, heatmapSlots, IntegrationsContent() (+19 more)
 
-### Community 21 - "AdminSettings.tsx"
-Cohesion: 0.15
-Nodes (20): AdminSettings(), Collapsible(), DEPOSIT_PRESETS, isAcquisitionChannel(), LEAD_TIME_PRESETS, MAX_DAYS_PRESETS, MIN_NOTICE_PRESETS, OVERRUN_PRESETS (+12 more)
+### Community 21 - "useTenant"
+Cohesion: 0.10
+Nodes (43): AdminServices(), EditingService, emptyService(), RuleEditor(), RuleEditorProps, ServiceOption, ServiceReorderRow(), ServiceReorderRowProps (+35 more)
 
 ### Community 22 - "SuperAdminShell.tsx"
 Cohesion: 0.13
@@ -331,8 +331,8 @@ Cohesion: 0.20
 Nodes (16): BookingBar(), BookingBarProps, HoldTimer(), StickyBottomBar(), StickyBottomBarProps, PublicService, isIOS(), useViewportFix() (+8 more)
 
 ### Community 24 - "AdminCommunications.tsx"
-Cohesion: 0.17
-Nodes (25): AdminCommunications(), PREVIEW_DATA, BulkBarProps, LoyaltyRow, buildDefaultWhatsAppMessage(), buildWhatsAppMessage(), clean(), DEFAULT_WHATSAPP_TONE (+17 more)
+Cohesion: 0.07
+Nodes (53): AdminCommunications(), PREVIEW_DATA, SavedBadge(), AddOccasionForm(), AdminSpecialOccasions(), daysUntil(), FILTER_CHIPS, FilterChip (+45 more)
 
 ### Community 25 - "AdminMetricExplanation.tsx"
 Cohesion: 0.21
@@ -394,13 +394,13 @@ Nodes (30): BookingConfirmation(), BookingConfirmationProps, ConsultationQRender
 Cohesion: 0.11
 Nodes (18): 1. Homepage does not answer all five questions, 2. Real-world proof arrives late in the homepage sequence, 3. Global navigation terminology differs from the agreed visitor language, 4. The five-question navigation needs a mobile-safe interaction design, 5. Audience breadth could be more explicit, 6. Pricing and trial statements should be consistent across pages, 7. Repeated final CTA patterns deserve a consistency pass, Brand and implementation guardrails (+10 more)
 
-### Community 40 - "AdminIntegrations.tsx"
-Cohesion: 0.09
-Nodes (34): AdminIntegrations(), Field(), FieldProps, GoogleCalendarCard(), GoogleCalendarCardProps, IntegrationCard(), IntegrationCardProps, isConfigured() (+26 more)
+### Community 40 - "SetupChecklistPaymentGate.tsx"
+Cohesion: 0.18
+Nodes (13): Props, SetupChecklistPaymentGate(), TenantPaymentFields, useTenantPaymentFields(), getPlanLabel(), getPlanPaymentFocus(), hasCompletedPaymentSetup(), isLifetimeFree() (+5 more)
 
-### Community 41 - "client.ts"
-Cohesion: 0.07
-Nodes (55): date-fns, @tanstack/react-query, AdminBlockedClients, AdminClientManagement(), AdminConsultations, AdminSpecialOccasions, AlertChip, AlertModalType (+47 more)
+### Community 41 - "ClientAlertsModal.tsx"
+Cohesion: 0.12
+Nodes (26): react-dom, AdminBlockedClients, AdminClientManagement(), AdminConsultations, AdminSpecialOccasions, AlertChip, AlertModalType, ProactiveAlertBanner() (+18 more)
 
 ### Community 42 - "vitest"
 Cohesion: 0.19
@@ -434,13 +434,13 @@ Nodes (9): 1. Add a homepage-only journey index, 2. Make the hero CTA initiate t
 Cohesion: 0.11
 Nodes (16): friendlyBookingError(), GatewayMark(), PaymentChoice, phaseLabel(), redirectToPayfast(), ReviewStep(), ReviewStepProps, SubmitPhase (+8 more)
 
-### Community 50 - "TenantContext.tsx"
-Cohesion: 0.13
-Nodes (16): react-dom, FALLBACK_CONFIG, NotificationBell(), SectionLabel(), TYPE_CONFIG, LOADING_CTX, resolveSubdomainTenantId(), TenantContext (+8 more)
+### Community 50 - "react"
+Cohesion: 0.08
+Nodes (33): date-fns, lucide-react, react, @tanstack/react-query, AdminLogin(), AdminLoginProps, getTenantSlugFromUrl(), View (+25 more)
 
 ### Community 51 - "SAUsers.tsx"
-Cohesion: 0.13
-Nodes (16): AppRole, EditRoleModal(), GlassCard(), Profile, ROLES, SAUsers(), TenantMap, CompositeTypes (+8 more)
+Cohesion: 0.32
+Nodes (7): AppRole, EditRoleModal(), GlassCard(), Profile, ROLES, SAUsers(), TenantMap
 
 ### Community 52 - "vitest"
 Cohesion: 0.15
@@ -534,9 +534,9 @@ Nodes (14): ADMIN_METRIC_DEFINITIONS, ADMIN_METRIC_INFO, AdminMetricDefinition, 
 Cohesion: 0.29
 Nodes (10): CreateForm, CreateModal(), DeleteModal(), EditModal(), EMPTY_FORM, fmtDate(), GlassCard(), SATenants() (+2 more)
 
-### Community 75 - "AdminServices.tsx"
-Cohesion: 0.18
-Nodes (22): AdminServices(), EditingService, emptyService(), RuleEditor(), RuleEditorProps, ServiceOption, ServiceReorderRow(), ServiceReorderRowProps (+14 more)
+### Community 75 - "SASettings.tsx"
+Cohesion: 0.38
+Nodes (6): ENV_INFO, GlassCard(), NOTIF_LABELS, NotifPrefs, SASettings(), SectionHeader()
 
 ### Community 76 - "get-or-create-client/_shared/security.ts"
 Cohesion: 0.25
@@ -582,9 +582,9 @@ Nodes (7): ALL_FLAGS, FeatureStatus, flagKeys, PLAN_GROUPS, PlanFeature, PlanGro
 Cohesion: 0.29
 Nodes (8): addMonths(), BookingRow, CohortMonth, labelForKey(), retentionColor(), SACohortRetention(), TenantRow, toYearMonth()
 
-### Community 87 - "react"
-Cohesion: 0.15
-Nodes (12): react, SuperAdmin, ChecklistCelebration(), fireConfetti(), loadConfetti(), Props, SuperAdminLogin(), GlassCard() (+4 more)
+### Community 87 - "SuperAdmin.tsx"
+Cohesion: 0.53
+Nodes (4): SuperAdmin, SuperAdminLogin(), useShellBackground(), SuperAdmin()
 
 ### Community 88 - "SABookings.tsx"
 Cohesion: 0.25
@@ -635,16 +635,16 @@ Cohesion: 0.20
 Nodes (5): public.is_super_admin(), public.sa_platform_billing_overview, platform_invoices_due_status_idx, platform_invoices_tenant_billing_month_uidx, public.platform_billing_config
 
 ### Community 100 - "AdminSharedUI.tsx"
-Cohesion: 0.06
-Nodes (54): framer-motion, lucide-react, sonner, AdminBlockedClients(), BlockedClientRow, AdminConsistencyPricing(), daysAgo(), GuestStatusRow (+46 more)
+Cohesion: 0.07
+Nodes (57): framer-motion, AdminBlockedClients(), BlockedClientRow, AdminConsistencyPricing(), daysAgo(), GuestStatusRow, NumberField(), ProgramRow (+49 more)
 
 ### Community 101 - "AdminAvailability.tsx"
 Cohesion: 0.24
 Nodes (8): Availability implementation consequences, ALL_SLOTS, DayConfig, normaliseSlot(), normaliseSlots(), DailyOverrides, DAY_NAMES, WeekAvailability
 
 ### Community 103 - "supabase"
-Cohesion: 0.15
-Nodes (17): ACTION_COLOR, ACTION_ICON, AuditLog, fmtDate(), SAAuditLog(), ENV_INFO, GlassCard(), NOTIF_LABELS (+9 more)
+Cohesion: 0.12
+Nodes (20): ACTION_COLOR, ACTION_ICON, AuditLog, fmtDate(), SAAuditLog(), GlassCard(), SAWebhookQueue(), TenantMap (+12 more)
 
 ### Community 104 - "class-variance-authority"
 Cohesion: 0.32
@@ -824,16 +824,16 @@ Nodes (4): Availability drafts (not applied), Booking drafts (not applied), Pend
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `react` connect `react` to `AdminSidebar.tsx`, `tokens.ts`, `lucide-react`, `loyaltyHelpers.ts`, `SATroubleshoot.tsx`, `popover.tsx`, `feature-flags/SAFeatureFlags.tsx`, `useTenant`, `dependencies`, `Onboarding.tsx`, `App.tsx`, `AdminCalendar.tsx`, `SABroadcast.tsx`, `Admin.tsx`, `ScheduleStep.tsx`, `usePayshapPayments.ts`, `AdminDashboard.tsx`, `package.json`, `IntegrationsGuidePanel.tsx`, `AdminSettings.tsx`, `DashboardViews.tsx`, `bookingFormat.ts`, `AdminCommunications.tsx`, `SuperAdminShell.tsx`, `SAGrowth.tsx`, `AdminMetricExplanation.tsx`, `tokens.ts`, `Resources.tsx`, `SARevenue.tsx`, `BusinessThemeProvider.tsx`, `SASystemHealth.tsx`, `DetailsStep.tsx`, `AdminIntegrations.tsx`, `client.ts`, `vitest`, `AdminBilling.tsx`, `use-toast.ts`, `ReviewStep.tsx`, `TenantContext.tsx`, `SAUsers.tsx`, `AdminConsultations.tsx`, `react`, `cn`, `SATenantHealth.tsx`, `useNextyInsights.ts`, `AdminMetricExplanation.tsx`, `RevenueTrendCard.tsx`, `SATenants.tsx`, `AdminServices.tsx`, `SACohortRetention.tsx`, `SABookings.tsx`, `SAFeatureAdoption.tsx`, `sheet.tsx`, `ServicesStep.tsx`, `AdminSharedUI.tsx`, `AdminAvailability.tsx`, `supabase`, `class-variance-authority`?**
-  _High betweenness centrality (0.100) - this node is a cross-community bridge._
+- **Why does `react` connect `react` to `AdminSidebar.tsx`, `tokens.ts`, `lucide-react`, `loyaltyHelpers.ts`, `SATroubleshoot.tsx`, `popover.tsx`, `feature-flags/SAFeatureFlags.tsx`, `useTenant`, `dependencies`, `Onboarding.tsx`, `App.tsx`, `AdminCalendar.tsx`, `SABroadcast.tsx`, `Admin.tsx`, `ScheduleStep.tsx`, `usePayshapPayments.ts`, `AdminDashboard.tsx`, `package.json`, `IntegrationsGuidePanel.tsx`, `useTenant`, `DashboardViews.tsx`, `bookingFormat.ts`, `AdminCommunications.tsx`, `SuperAdminShell.tsx`, `SAGrowth.tsx`, `AdminMetricExplanation.tsx`, `tokens.ts`, `Resources.tsx`, `SARevenue.tsx`, `BusinessThemeProvider.tsx`, `SASystemHealth.tsx`, `DetailsStep.tsx`, `SetupChecklistPaymentGate.tsx`, `ClientAlertsModal.tsx`, `vitest`, `AdminBilling.tsx`, `use-toast.ts`, `ReviewStep.tsx`, `SAUsers.tsx`, `AdminConsultations.tsx`, `react`, `cn`, `SATenantHealth.tsx`, `useNextyInsights.ts`, `AdminMetricExplanation.tsx`, `RevenueTrendCard.tsx`, `SATenants.tsx`, `SASettings.tsx`, `SACohortRetention.tsx`, `SuperAdmin.tsx`, `SABookings.tsx`, `SAFeatureAdoption.tsx`, `sheet.tsx`, `ServicesStep.tsx`, `AdminSharedUI.tsx`, `AdminAvailability.tsx`, `supabase`, `class-variance-authority`?**
+  _High betweenness centrality (0.109) - this node is a cross-community bridge._
 - **Should `AdminSidebar.tsx` be split into smaller, more focused modules?**
   _Cohesion score 0.09269162210338681 - nodes in this community are weakly interconnected._
-- **Why does `lucide-react` connect `AdminSharedUI.tsx` to `AdminSidebar.tsx`, `SATroubleshoot.tsx`, `lucide-react`, `loyaltyHelpers.ts`, `Onboarding.tsx`, `feature-flags/SAFeatureFlags.tsx`, `useTenant`, `dependencies`, `App.tsx`, `AdminCalendar.tsx`, `SABroadcast.tsx`, `Admin.tsx`, `ScheduleStep.tsx`, `usePayshapPayments.ts`, `AdminDashboard.tsx`, `package.json`, `IntegrationsGuidePanel.tsx`, `AdminSettings.tsx`, `DashboardViews.tsx`, `bookingFormat.ts`, `AdminCommunications.tsx`, `AdminMetricExplanation.tsx`, `DashboardPreview.tsx`, `AdminMetricExplanation.tsx`, `tokens.ts`, `Resources.tsx`, `SuperAdminShell.tsx`, `SAGrowth.tsx`, `SARevenue.tsx`, `SASystemHealth.tsx`, `DetailsStep.tsx`, `AdminIntegrations.tsx`, `client.ts`, `vitest`, `AdminBilling.tsx`, `use-toast.ts`, `ReviewStep.tsx`, `TenantContext.tsx`, `SAUsers.tsx`, `AdminConsultations.tsx`, `react`, `cn`, `SATenantHealth.tsx`, `AdminMetricExplanation.tsx`, `RevenueTrendCard.tsx`, `SATenants.tsx`, `AdminServices.tsx`, `SACohortRetention.tsx`, `react`, `SABookings.tsx`, `SAFeatureAdoption.tsx`, `sheet.tsx`, `ServicesStep.tsx`, `AdminAvailability.tsx`, `supabase`, `display-cards.tsx`?**
-  _High betweenness centrality (0.083) - this node is a cross-community bridge._
+- **Why does `lucide-react` connect `react` to `AdminSidebar.tsx`, `SATroubleshoot.tsx`, `lucide-react`, `loyaltyHelpers.ts`, `Onboarding.tsx`, `feature-flags/SAFeatureFlags.tsx`, `useTenant`, `dependencies`, `App.tsx`, `AdminCalendar.tsx`, `SABroadcast.tsx`, `Admin.tsx`, `ScheduleStep.tsx`, `usePayshapPayments.ts`, `AdminDashboard.tsx`, `package.json`, `IntegrationsGuidePanel.tsx`, `useTenant`, `DashboardViews.tsx`, `bookingFormat.ts`, `AdminCommunications.tsx`, `AdminMetricExplanation.tsx`, `DashboardPreview.tsx`, `AdminMetricExplanation.tsx`, `tokens.ts`, `Resources.tsx`, `SuperAdminShell.tsx`, `SAGrowth.tsx`, `SARevenue.tsx`, `SASystemHealth.tsx`, `DetailsStep.tsx`, `SetupChecklistPaymentGate.tsx`, `ClientAlertsModal.tsx`, `vitest`, `AdminBilling.tsx`, `use-toast.ts`, `ReviewStep.tsx`, `SAUsers.tsx`, `AdminConsultations.tsx`, `react`, `cn`, `SATenantHealth.tsx`, `AdminMetricExplanation.tsx`, `RevenueTrendCard.tsx`, `SATenants.tsx`, `SASettings.tsx`, `SACohortRetention.tsx`, `SuperAdmin.tsx`, `SABookings.tsx`, `SAFeatureAdoption.tsx`, `sheet.tsx`, `ServicesStep.tsx`, `AdminSharedUI.tsx`, `AdminAvailability.tsx`, `supabase`, `display-cards.tsx`?**
+  _High betweenness centrality (0.085) - this node is a cross-community bridge._
 - **Should `Risks and claims to avoid: marketing online consultations on NextSlot (South Africa)` be split into smaller, more focused modules?**
   _Cohesion score 0.058823529411764705 - nodes in this community are weakly interconnected._
-- **Why does `supabase` connect `client.ts` to `SATroubleshoot.tsx`, `lucide-react`, `loyaltyHelpers.ts`, `Onboarding.tsx`, `feature-flags/SAFeatureFlags.tsx`, `useTenant`, `App.tsx`, `AdminCalendar.tsx`, `SABroadcast.tsx`, `Admin.tsx`, `ScheduleStep.tsx`, `useNextyInsights.ts`, `AdminDashboard.tsx`, `usePayshapPayments.ts`, `AdminSettings.tsx`, `AdminCommunications.tsx`, `SAGrowth.tsx`, `Resources.tsx`, `SARevenue.tsx`, `BusinessThemeProvider.tsx`, `SASystemHealth.tsx`, `DetailsStep.tsx`, `AdminIntegrations.tsx`, `AdminBilling.tsx`, `ReviewStep.tsx`, `TenantContext.tsx`, `SAUsers.tsx`, `AdminConsultations.tsx`, `react`, `SATenantHealth.tsx`, `SATenants.tsx`, `AdminServices.tsx`, `AdminAvailability.tsx`, `SACohortRetention.tsx`, `react`, `SABookings.tsx`, `SAFeatureAdoption.tsx`, `ServicesStep.tsx`, `AdminSharedUI.tsx`, `supabase`?**
-  _High betweenness centrality (0.030) - this node is a cross-community bridge._
+- **Why does `supabase` connect `react` to `SATroubleshoot.tsx`, `lucide-react`, `loyaltyHelpers.ts`, `Onboarding.tsx`, `feature-flags/SAFeatureFlags.tsx`, `useTenant`, `App.tsx`, `AdminCalendar.tsx`, `SABroadcast.tsx`, `Admin.tsx`, `ScheduleStep.tsx`, `useNextyInsights.ts`, `AdminDashboard.tsx`, `usePayshapPayments.ts`, `useTenant`, `AdminCommunications.tsx`, `SAGrowth.tsx`, `Resources.tsx`, `SARevenue.tsx`, `BusinessThemeProvider.tsx`, `SASystemHealth.tsx`, `DetailsStep.tsx`, `SetupChecklistPaymentGate.tsx`, `ClientAlertsModal.tsx`, `AdminBilling.tsx`, `ReviewStep.tsx`, `SAUsers.tsx`, `AdminConsultations.tsx`, `react`, `SATenantHealth.tsx`, `SATenants.tsx`, `SASettings.tsx`, `AdminAvailability.tsx`, `SACohortRetention.tsx`, `SuperAdmin.tsx`, `SABookings.tsx`, `SAFeatureAdoption.tsx`, `ServicesStep.tsx`, `AdminSharedUI.tsx`, `supabase`?**
+  _High betweenness centrality (0.029) - this node is a cross-community bridge._
 - **Should `ref_https` be split into smaller, more focused modules?**
   _Cohesion score 0.045454545454545456 - nodes in this community are weakly interconnected._
 - **Should `Onboarding.tsx` be split into smaller, more focused modules?**
