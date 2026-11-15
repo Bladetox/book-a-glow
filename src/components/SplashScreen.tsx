@@ -5,7 +5,7 @@ import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
 import { useBusinessTheme } from "@/contexts/BusinessThemeProvider";
 import { useShellBackground } from "@/hooks/useShellBackground";
 import { useImageEdgeColor } from "@/hooks/useImageEdgeColor";
-import { hslStringToHex } from "@/lib/color";
+import { hslStringToHex, isLightHex } from "@/lib/color";
 import { useBrandFont } from "@/hooks/useBrandFont";
 
 interface SplashScreenProps {
@@ -104,10 +104,11 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
       if (previous !== null) meta.setAttribute("content", previous);
     };
   }, [config.splashBackgroundUrl]);
-  const backgroundLightness = parseFloat(theme.colors.background.split(/\s+/)[2] ?? "50");
   // Hex, not hsl(), so the browser's status bar and toolbar take the colour reliably.
   const topColor = config.splashTopColor ?? photoTopColor ?? hslStringToHex(theme.colors.background);
-  useShellBackground(topColor, topColor, backgroundLightness < 50 ? "dark" : "light");
+  // The browser's colour mode follows the colour it shows at the top, not the
+  // phone's setting. Otherwise a dark phone turns a pink top bar black.
+  useShellBackground(topColor, topColor, isLightHex(topColor) ? "light" : "dark");
 
   // ── Brand font (sister-studios only; null + no-op for all other tenants) ──
   const brandFontFamily = useBrandFont(config.brandFontUrl ?? null);

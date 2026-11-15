@@ -90,9 +90,9 @@
     "semantic_hash": ""
   },
   "src/components/SplashScreen.tsx": {
-    "mtime": 1794765311.6659288,
-    "seen": 1794765478.5828524,
-    "ast_hash": "494f6941021608513996e8277b40a08d",
+    "mtime": 1794767203.3424375,
+    "seen": 1794767310.7080154,
+    "ast_hash": "b7843147d605816ee220c0ef3ac5c537",
     "semantic_hash": ""
   },
   "src/components/StepIndicator.tsx": {
@@ -3876,15 +3876,15 @@
     "semantic_hash": ""
   },
   "src/lib/color.test.ts": {
-    "mtime": 1794764808.1178987,
-    "seen": 1794764930.966544,
-    "ast_hash": "254c45e5c1cf1438014b0bd6bc2b2b9a",
+    "mtime": 1794767194.1096418,
+    "seen": 1794767310.7084224,
+    "ast_hash": "03978c3c849b4ea685030e6f95fb8a66",
     "semantic_hash": ""
   },
   "src/lib/color.ts": {
-    "mtime": 1794764804.0058985,
-    "seen": 1794764930.9665475,
-    "ast_hash": "76fd64ae74f164806737fe249acbd34b",
+    "mtime": 1794767194.102437,
+    "seen": 1794767310.7084248,
+    "ast_hash": "5485b4354dfab865b70c141d0cee4095",
     "semantic_hash": ""
   },
   "src/lib/splash-background.test.ts": {
