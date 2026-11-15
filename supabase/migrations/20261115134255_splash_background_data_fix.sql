@@ -1,0 +1,2 @@
+-- Data-only change: sets the splash_background_url app setting for one tenant.
+-- Applied as a data change; no schema change.

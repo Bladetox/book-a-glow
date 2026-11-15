@@ -146,6 +146,13 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
     <div className="booking-app bk-stage bk-splash">
       <motion.div className="bk-splash__column" initial="hidden" animate="show" variants={screen}>
         <div className="bk-splash__glow" aria-hidden="true" />
+        {config.splashBackgroundUrl && (
+          <div
+            className="bk-splash__bg"
+            style={{ backgroundImage: `url("${config.splashBackgroundUrl}")` }}
+            aria-hidden="true"
+          />
+        )}
 
         {/* ── Hero: logo, name and tagline ─────────────────────────────── */}
         <div className="bk-splash__hero">

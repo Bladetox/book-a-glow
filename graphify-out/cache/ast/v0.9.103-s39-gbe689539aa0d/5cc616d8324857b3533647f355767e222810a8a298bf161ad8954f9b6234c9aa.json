@@ -1,0 +1,1 @@
+{"nodes": [{"id": "$graphify-root$_supabase_migrations_20261115134255_splash_background_data_fix_sql", "label": "20261115134255_splash_background_data_fix.sql", "file_type": "code", "source_file": "supabase/migrations/20261115134255_splash_background_data_fix.sql", "source_location": null}], "edges": []}
