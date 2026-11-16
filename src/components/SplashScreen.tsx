@@ -52,21 +52,27 @@ const sheetIn: Variants = {
   show: { y: "0%", transition: { duration: 0.4, ease: EASE, delay: 0 } },
 };
 
-// The sheet's text follows as the sheet settles. Its start already trails the
-// sheet through the parent's stagger, so it needs no extra delay of its own.
+// The sheet's text arrives after the sheet has landed and the hero text is in,
+// one line at a time, at an unhurried pace. It has its own, slower variants; the
+// hero keeps `rise`. The splash is meant to feel calm, not rushed.
 const panelContent: Variants = {
   hidden: {},
-  show: { transition: { delayChildren: 0, staggerChildren: 0.04 } },
+  show: { transition: { delayChildren: 0.25, staggerChildren: 0.14 } },
+};
+
+const sheetRise: Variants = {
+  hidden: { opacity: 0, y: 8 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.8, ease: EASE } },
 };
 
 const chipList: Variants = {
   hidden: {},
-  show: { transition: { staggerChildren: 0.03 } },
+  show: { transition: { staggerChildren: 0.06 } },
 };
 
 const chipIn: Variants = {
   hidden: { opacity: 0, y: 6 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: EASE } },
+  show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: EASE } },
 };
 
 /** Icon for the common lead sources. Tenants can configure any label, so unknown ones get none. */
@@ -156,7 +162,7 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
     const measure = () => setChipsScroll(el.scrollHeight > el.clientHeight + 4);
     // Measure only once the chips have settled: web fonts arriving and the end of
     // the entrance. Measuring mid-entrance would flash the scroll hint.
-    const settle = window.setTimeout(measure, 1100);
+    const settle = window.setTimeout(measure, 2200);
     void document.fonts?.ready.then(measure);
     const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(measure);
     observer?.observe(el);
@@ -266,12 +272,12 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
           aria-labelledby="referral-title"
         >
           <motion.div variants={panelContent} className="flex flex-col">
-            <motion.h2 variants={rise} id="referral-title" className="bk-splash__heading">
+            <motion.h2 variants={sheetRise} id="referral-title" className="bk-splash__heading">
               Where did you hear about us?
             </motion.h2>
 
             <motion.p
-              variants={rise}
+              variants={sheetRise}
               className={`bk-splash__subtitle ${showError ? "is-error" : ""}`}
               role={showError ? "alert" : undefined}
             >
@@ -335,7 +341,7 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
               missing, which a natively disabled button could not do.
             */}
             <motion.button
-              variants={rise}
+              variants={sheetRise}
               type="button"
               onClick={handleCta}
               aria-disabled={!isSelected}
@@ -357,7 +363,7 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
               <span className="relative">{config.splashCtaLabel}</span>
             </motion.button>
 
-            <motion.p variants={rise} className="bk-splash__footer">
+            <motion.p variants={sheetRise} className="bk-splash__footer">
               Powered by{" "}
               <a href="https://nextslot.co.za" target="_blank" rel="noopener noreferrer">
                 nextslot.co.za
