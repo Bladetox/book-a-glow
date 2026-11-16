@@ -42,15 +42,17 @@ const maskedLine: Variants = {
   show: { y: "0%", transition: { duration: 1.3, ease: EASE } },
 };
 
-// Critically damped: it arrives and stops, with no overshoot.
+// The sheet is in place from the first frame. The browser's bottom bar takes the
+// sheet's colour immediately, so a sheet that slid in later left the bar matching
+// nothing. Only its content is staged.
 const sheetIn: Variants = {
-  hidden: { y: "100%" },
-  show: { y: "0%", transition: { type: "spring", stiffness: 120, damping: 26, delay: 0.7 } },
+  hidden: {},
+  show: {},
 };
 
 const panelContent: Variants = {
   hidden: {},
-  show: { transition: { delayChildren: 1.0, staggerChildren: 0.14 } },
+  show: { transition: { delayChildren: 0.2, staggerChildren: 0.14 } },
 };
 
 const chipList: Variants = {
@@ -102,6 +104,19 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
   // Page background and theme-color (installed app, Android) follow the top colour.
   useShellBackground(topColor, topColor, isLightHex(topColor) ? "light" : "dark");
 
+  // The photo fades in once it has downloaded. Until then the column shows the
+  // photo's top colour, so the first frame already matches the top bar.
+  const [photoReady, setPhotoReady] = useState(false);
+  useEffect(() => {
+    setPhotoReady(false);
+    if (!config.splashBackgroundUrl) return;
+    let cancelled = false;
+    const img = new Image();
+    img.onload = () => { if (!cancelled) setPhotoReady(true); };
+    img.src = config.splashBackgroundUrl;
+    return () => { cancelled = true; };
+  }, [config.splashBackgroundUrl]);
+
   // ── Brand font (sister-studios only; null + no-op for all other tenants) ──
   const brandFontFamily = useBrandFont(config.brandFontUrl ?? null);
 
@@ -145,14 +160,14 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
       window.clearTimeout(settle);
       observer?.disconnect();
     };
-  }, [referralOptions.length, themeLoading]);
+  }, [referralOptions.length, themeLoading, config.loading]);
 
   const handleCta = () => {
     if (!isSelected) { setAttempted(true); return; }
     onComplete();
   };
 
-  if (themeLoading) {
+  if (themeLoading || config.loading) {
     // Not fixed: a fixed layer here would set the browser bar colours.
     return <div className="absolute inset-0 bg-background" />;
   }
@@ -178,14 +193,16 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
         initial="hidden"
         animate="show"
         variants={screen}
-        style={config.splashBackgroundUrl ? {
-          // The photo fills the whole column behind the hero and the sheet, so the
-          // sheet overlays the image with no gap between them.
-          backgroundImage: `url("${config.splashBackgroundUrl}")`,
-          backgroundSize: "cover",
-          backgroundPosition: "center 20%",
-        } : undefined}
+        style={config.splashBackgroundUrl ? { backgroundColor: topColor } : undefined}
       >
+        {/* The photo fills the whole column behind the hero and the sheet. */}
+        {config.splashBackgroundUrl && (
+          <div
+            className="bk-splash__photo"
+            style={{ backgroundImage: `url("${config.splashBackgroundUrl}")`, opacity: photoReady ? 1 : 0 }}
+            aria-hidden="true"
+          />
+        )}
         <div className="bk-splash__glow" aria-hidden="true" />
 
         {/* ── Hero: logo, name and tagline ─────────────────────────────── */}
@@ -236,6 +253,9 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
         </div>
 
         {/* ── Acquisition capture ──────────────────────────────────────── */}
+        {/* The wrap carries the veil behind the sheet's rounded corners, so the veil
+            runs from the brand block to the bottom of the screen in one piece. */}
+        <div className="bk-splash__sheet-wrap">
         <motion.section
           variants={sheetIn}
           className={`bk-splash__panel ${showError ? "is-error" : ""}`}
@@ -341,6 +361,7 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
             </motion.p>
           </motion.div>
         </motion.section>
+        </div>
       </motion.div>
     </div>
   );

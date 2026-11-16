@@ -1042,6 +1042,32 @@
   color: hsl(var(--muted-foreground));
 }
 
+/* The splash photo: its own layer, so it can fade in over the placeholder colour. */
+.booking-app .bk-splash__photo {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center 20%;
+  transition: opacity 0.6s ease;
+}
+
+/* The ambient glow is for the plain splash; over a photo it only muddies it. */
+.booking-app.bk-splash--photo .bk-splash__glow {
+  display: none;
+}
+
+/* Holds the sheet. With a photo it continues the veil behind the sheet's rounded
+   corners, at the same strength the scrim ends on, so the veil reads as one
+   surface from the brand block to the bottom of the screen. */
+.booking-app .bk-splash__sheet-wrap {
+  position: relative;
+  flex: none;
+}
+
+.booking-app.bk-splash--photo .bk-splash__sheet-wrap {
+  background: hsl(var(--background) / 0.92);
+}
+
 /* With a splash photo: a scrim in the theme's background colour behind the brand
    block, full width and down to the sheet. Text sits on at least 86% theme
    background, so it reads the same over any photo, in light and dark mode. */
