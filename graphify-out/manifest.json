@@ -90,9 +90,9 @@
     "semantic_hash": ""
   },
   "src/components/SplashScreen.tsx": {
-    "mtime": 1794770098.6333609,
-    "seen": 1794770222.1823382,
-    "ast_hash": "0b63bbba89332d725d37fefa9cb0d0d7",
+    "mtime": 1794809724.235295,
+    "seen": 1794809904.5706608,
+    "ast_hash": "b52651c673ca3ff12970bf6c24779242",
     "semantic_hash": ""
   },
   "src/components/StepIndicator.tsx": {
@@ -1266,9 +1266,9 @@
     "semantic_hash": ""
   },
   "src/pages/Book.tsx": {
-    "mtime": 1794759553.6538107,
-    "seen": 1794759646.3392181,
-    "ast_hash": "5920974c594645c8cb06745b0fa9b7c0",
+    "mtime": 1794809738.039296,
+    "seen": 1794809904.571123,
+    "ast_hash": "86d6ccdd17425bc7401094b99140244f",
     "semantic_hash": ""
   },
   "src/pages/BookingSoftwareSouthAfrica.tsx": {

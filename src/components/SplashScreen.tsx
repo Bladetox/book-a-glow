@@ -1,5 +1,6 @@
 import { motion, type Variants } from "framer-motion";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ElementType } from "react";
+import { createPortal } from "react-dom";
 import { CircleAlert, Facebook, Globe, Instagram, MoreHorizontal, Music2, Search, UserPlus } from "lucide-react";
 import { usePublicBusinessConfig } from "@/hooks/usePublicBusinessConfig";
 import { useBusinessTheme } from "@/contexts/BusinessThemeProvider";
@@ -87,27 +88,18 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
   const { loading: themeLoading, theme } = useBusinessTheme();
   const [attempted, setAttempted] = useState(false);
 
-  // Native-app chrome. The bottom edge and bottom toolbar match the acquisition
-  // tab (primary, in the active light or dark variant). The top bar blends into
-  // the photo's top edge when there is a photo, otherwise the theme background.
+  // ── Browser chrome (status bar and toolbar) ────────────────────────────────
+  // iOS 26 Safari ignores theme-color in a tab. It colours each bar from the
+  // background-color of a fixed element touching that edge, and falls back to
+  // the page background when there is none. So during the splash nothing fixed
+  // touches the edges except the two tint strips rendered below:
+  //   top    → the photo's top-edge colour, or the theme background
+  //   bottom → the acquisition tab's colour (primary, active light/dark variant)
+  // Hex, not hsl(), so every browser takes the colours.
   const photoTopColor = useImageEdgeColor(config.splashBackgroundUrl);
-
-  // With a photo, let it run under the iOS status bar (home-screen app only), so
-  // the top of the screen is the photo rather than a solid strip. Restored on exit.
-  useEffect(() => {
-    if (!config.splashBackgroundUrl) return;
-    const meta = document.querySelector<HTMLMetaElement>('meta[name="apple-mobile-web-app-status-bar-style"]');
-    if (!meta) return;
-    const previous = meta.getAttribute("content");
-    meta.setAttribute("content", "black-translucent");
-    return () => {
-      if (previous !== null) meta.setAttribute("content", previous);
-    };
-  }, [config.splashBackgroundUrl]);
-  // Hex, not hsl(), so the browser's status bar and toolbar take the colour reliably.
   const topColor = config.splashTopColor ?? photoTopColor ?? hslStringToHex(theme.colors.background);
-  // The browser's colour mode follows the colour it shows at the top, not the
-  // phone's setting. Otherwise a dark phone turns a pink top bar black.
+  const sheetColor = hslStringToHex(theme.colors.primary);
+  // Page background and theme-color (installed app, Android) follow the top colour.
   useShellBackground(topColor, topColor, isLightHex(topColor) ? "light" : "dark");
 
   // ── Brand font (sister-studios only; null + no-op for all other tenants) ──
@@ -161,35 +153,35 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
   };
 
   if (themeLoading) {
-    return <div className="fixed inset-0 z-[100] bg-background" />;
+    // Not fixed: a fixed layer here would set the browser bar colours.
+    return <div className="absolute inset-0 bg-background" />;
   }
 
   return (
     /*
-      Fixed to the viewport and never scrolls: the hero flexes to fill whatever
-      height the acquisition sheet does not need.
+      Fills its (viewport-sized) parent and never scrolls: the hero flexes to
+      fill whatever height the acquisition sheet does not need. Deliberately not
+      position: fixed, see the browser chrome note above.
     */
-    <div
-      className="booking-app bk-stage bk-splash"
-      // Extend under the browser's bottom toolbar, so the sheet's colour reaches the
-      // bottom edge of the screen instead of the page background.
-      // iOS 26 Safari takes the top bar colour from the page background, and a fixed
-      // element with an opaque background overrides it. With a photo, the fixed
-      // layer must be transparent so the photo's colour reaches the top bar.
-      style={{ bottom: "-120px", background: config.splashBackgroundUrl ? "transparent" : undefined }}
-    >
+    <div className={`booking-app bk-stage bk-splash ${config.splashBackgroundUrl ? "bk-splash--photo" : ""}`}>
+      {/* Tint strips: the only fixed elements at the screen edges during the splash. */}
+      {createPortal(
+        <>
+          <div className="bk-chrome-tint bk-chrome-tint--top" style={{ backgroundColor: topColor }} aria-hidden="true" />
+          <div className="bk-chrome-tint bk-chrome-tint--bottom" style={{ backgroundColor: sheetColor }} aria-hidden="true" />
+        </>,
+        document.body,
+      )}
+
       <motion.div
         className="bk-splash__column"
         initial="hidden"
         animate="show"
         variants={screen}
         style={config.splashBackgroundUrl ? {
-          // The photo fills the whole screen behind the hero and the sheet, so the
+          // The photo fills the whole column behind the hero and the sheet, so the
           // sheet overlays the image with no gap between them.
-          // A veil in the theme's background colour, over the whole photo, so the
-          // name and taglines are readable and the photo darkens or lightens evenly
-          // down to the sheet, in light and dark mode alike.
-          backgroundImage: `linear-gradient(to bottom, hsl(var(--background) / 0) 20%, hsl(var(--background) / 0.85) 50%, hsl(var(--background) / 0.9) 100%), url("${config.splashBackgroundUrl}")`,
+          backgroundImage: `url("${config.splashBackgroundUrl}")`,
           backgroundSize: "cover",
           backgroundPosition: "center 20%",
         } : undefined}
@@ -201,12 +193,11 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
           className="bk-splash__hero"
           style={config.splashBackgroundUrl ? { background: "transparent" } : undefined}
         >
-          <div
-            className="bk-splash__brand"
-            style={config.splashBackgroundUrl ? {
-              textShadow: "0 1px 10px hsl(var(--background) / 0.6)",
-            } : undefined}
-          >
+          <div className="bk-splash__brand">
+            {/* With a photo, a scrim in the theme background sits behind the text,
+                so it stays readable whatever image the tenant uploads. */}
+            {config.splashBackgroundUrl && <div className="bk-splash__scrim" aria-hidden="true" />}
+
             {/* The logo sits directly above the wordmark, with space between them. */}
             <motion.div variants={logoIn} className="bk-splash__logo bk-splash__logo--inline">
               {config.logoUrl ? (
@@ -248,7 +239,6 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
         <motion.section
           variants={sheetIn}
           className={`bk-splash__panel ${showError ? "is-error" : ""}`}
-          style={{ paddingBottom: "calc(120px + max(env(safe-area-inset-bottom, 0px), 1.25rem))" }}
           aria-labelledby="referral-title"
         >
           <motion.div variants={panelContent} className="flex flex-col">

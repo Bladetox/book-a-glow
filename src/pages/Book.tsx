@@ -415,7 +415,9 @@ const Index = () => {
             itself by the bar's measured height. The review step renders its
             own pay bar (see ReviewStep), so this one covers steps 0–2.
           */}
-          {step < 3 && (
+          {/* Not under the splash: a fixed bar there would tint the browser's
+              bottom toolbar with the page colour instead of the splash sheet's. */}
+          {step < 3 && !showSplash && (
             <StickyBottomBar
               step={step}
               totalPrice={totalPrice}
@@ -435,12 +437,17 @@ const Index = () => {
         </div>
       </div>
 
-      {/* ── SPLASH SCREEN — fixed inset-0 z-[100], unaffected by shell ── */}
+      {/*
+        ── SPLASH SCREEN ──
+        Covers the viewport without position: fixed. iOS 26 Safari colours its
+        top and bottom bars from fixed elements at the screen edges; the splash
+        renders its own tint strips for that (see SplashScreen).
+      */}
       <AnimatePresence>
         {showSplash && (
           <motion.div
             key="splash"
-            className="fixed inset-0 z-[100]"
+            className="absolute left-0 top-0 z-[100] h-dvh w-full"
             initial={{ opacity: 1 }}
             exit={{ opacity: 0, transition: { duration: 0.45, ease: [0.4, 0, 0.2, 1] } }}
           >

@@ -855,11 +855,41 @@
    the monogram tile top right, the name anchored to the bottom of the hero, and
    the lead-source question on a solid block of the tenant's primary colour. Motion is driven by framer-motion
    in SplashScreen.tsx; the only CSS animations here are the slow ambient glow. */
+/* Not position: fixed. iOS 26 Safari colours its top and bottom bars from any
+   fixed element touching that edge, so the splash fills its viewport-sized parent
+   instead and leaves the edges to the two tint strips below. */
 .booking-app.bk-splash {
-  position: fixed;
+  position: absolute;
   inset: 0;
   z-index: 100;
   overflow: hidden;
+}
+
+/* Tint strips for the browser's bars. Each is a fixed element with a solid
+   background-color at one screen edge, mostly off-screen (4px visible), which is
+   what iOS 26 Safari samples for the status bar (top) and toolbar (bottom).
+   Phones only: on wide screens the column is centred and the page background
+   is the right colour for the bars. */
+.bk-chrome-tint {
+  position: fixed;
+  left: 0;
+  right: 0;
+  height: 12px;
+  z-index: 101;
+}
+
+.bk-chrome-tint--top {
+  top: -8px;
+}
+
+.bk-chrome-tint--bottom {
+  bottom: -8px;
+}
+
+@media (min-width: 768px) {
+  .bk-chrome-tint {
+    display: none;
+  }
 }
 
 .booking-app .bk-splash__column {
@@ -1010,6 +1040,31 @@
   font-size: 0.9375rem;
   line-height: 1.35;
   color: hsl(var(--muted-foreground));
+}
+
+/* With a splash photo: a scrim in the theme's background colour behind the brand
+   block, full width and down to the sheet. Text sits on at least 86% theme
+   background, so it reads the same over any photo, in light and dark mode. */
+.booking-app .bk-splash__scrim {
+  position: absolute;
+  z-index: -1;
+  top: 0;
+  left: -1.5rem;
+  right: -1.5rem;
+  bottom: -1.75rem;
+  background: linear-gradient(
+    to bottom,
+    hsl(var(--background) / 0) 0,
+    hsl(var(--background) / 0.86) 5.5rem,
+    hsl(var(--background) / 0.92) 100%
+  );
+  pointer-events: none;
+}
+
+/* Over a photo the quieter lines use the full text colour, not the muted one. */
+.booking-app.bk-splash--photo .bk-splash__brand .bk-overline,
+.booking-app.bk-splash--photo .bk-splash__tagline2 {
+  color: hsl(var(--foreground) / 0.85);
 }
 
 /* The lead-source sheet. */
