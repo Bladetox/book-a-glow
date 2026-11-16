@@ -84,9 +84,9 @@
     "semantic_hash": ""
   },
   "src/components/ServicesStep.tsx": {
-    "mtime": 1794738362.14098,
-    "seen": 1794750291.6538928,
-    "ast_hash": "eefd26837020e0c30541138129c540ea",
+    "mtime": 1794832756.570555,
+    "seen": 1794832889.6371324,
+    "ast_hash": "46777a0cd8ad5e8a55347af84ba4cae9",
     "semantic_hash": ""
   },
   "src/components/SplashScreen.tsx": {

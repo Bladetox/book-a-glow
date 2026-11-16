@@ -166,7 +166,7 @@ const ServicesStep = ({ selectedTreatments, onAdd, onRemove }: ServicesStepProps
                     </div>
 
                     {t.description && (
-                      <p className="mt-1 line-clamp-2 text-[13px] leading-snug text-muted-foreground">
+                      <p className="mt-1 text-[13px] leading-snug text-muted-foreground">
                         {t.description}
                       </p>
                     )}
