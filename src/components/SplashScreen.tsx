@@ -21,48 +21,52 @@ interface SplashScreenProps {
 // shell in Book.tsx.
 const EASE = [0.16, 1, 0.3, 1] as const;
 
+// Entrance order: the sheet slides up from the bottom at once, then the text
+// follows. Everything is settled in about a second.
 const screen: Variants = {
   hidden: {},
-  show: { transition: { delayChildren: 0.25, staggerChildren: 0.16 } },
+  show: { transition: { delayChildren: 0.15, staggerChildren: 0.04 } },
 };
 
 const logoIn: Variants = {
   hidden: { opacity: 0 },
-  show: { opacity: 1, transition: { duration: 1.6, ease: EASE } },
+  show: { opacity: 1, transition: { duration: 0.4, ease: EASE } },
 };
 
 const rise: Variants = {
   hidden: { opacity: 0, y: 10 },
-  show: { opacity: 1, y: 0, transition: { duration: 1.2, ease: EASE } },
+  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: EASE } },
 };
 
 // The business name is revealed from a mask, not flown in.
 const maskedLine: Variants = {
   hidden: { y: "105%" },
-  show: { y: "0%", transition: { duration: 1.3, ease: EASE } },
+  show: { y: "0%", transition: { duration: 0.45, ease: EASE } },
 };
 
-// The sheet is in place from the first frame. The browser's bottom bar takes the
-// sheet's colour immediately, so a sheet that slid in later left the bar matching
-// nothing. Only its content is staged.
+// The sheet slides up from the bottom edge first, with no delay and no overshoot.
+// The explicit delay of 0 opts it out of the parent's stagger. The browser's
+// bottom bar already has the sheet's colour, so the sheet rises out of it.
 const sheetIn: Variants = {
-  hidden: {},
-  show: {},
+  hidden: { y: "100%" },
+  show: { y: "0%", transition: { duration: 0.4, ease: EASE, delay: 0 } },
 };
 
+// The sheet's text follows as the sheet settles. Its start already trails the
+// sheet through the parent's stagger, so it needs no extra delay of its own.
 const panelContent: Variants = {
   hidden: {},
-  show: { transition: { delayChildren: 0.2, staggerChildren: 0.14 } },
+  show: { transition: { delayChildren: 0, staggerChildren: 0.04 } },
 };
 
 const chipList: Variants = {
   hidden: {},
-  show: { transition: { staggerChildren: 0.08 } },
+  show: { transition: { staggerChildren: 0.03 } },
 };
 
 const chipIn: Variants = {
   hidden: { opacity: 0, y: 6 },
-  show: { opacity: 1, y: 0, transition: { duration: 0.9, ease: EASE } },
+  show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: EASE } },
 };
 
 /** Icon for the common lead sources. Tenants can configure any label, so unknown ones get none. */
@@ -152,7 +156,7 @@ const SplashScreen = ({ onComplete, referralSource, onReferralChange }: SplashSc
     const measure = () => setChipsScroll(el.scrollHeight > el.clientHeight + 4);
     // Measure only once the chips have settled: web fonts arriving and the end of
     // the entrance. Measuring mid-entrance would flash the scroll hint.
-    const settle = window.setTimeout(measure, 1600);
+    const settle = window.setTimeout(measure, 1100);
     void document.fonts?.ready.then(measure);
     const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(measure);
     observer?.observe(el);

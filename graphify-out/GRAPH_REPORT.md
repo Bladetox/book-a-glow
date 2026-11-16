@@ -1,7 +1,7 @@
 # Graph Report - book-a-glow  (2026-11-16)
 
 ## Corpus Check
-- 615 files · ~422,355 words
+- 615 files · ~422,431 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 17 file(s) not represented in the graph (top: .css 7, (none) 2, .example 1)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `c8203796`
+- Built from commit: `361af366`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
