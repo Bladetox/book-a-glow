@@ -1,0 +1,180 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>NextSlot ad · M · Know your numbers</title>
+<link rel="stylesheet" href="ad-core.css">
+<link rel="stylesheet" href="ad-kit.css">
+<style>
+/* Metric names are the dashboard's own (metricDefinitions.ts); all figures are illustrative.
+   "How did you hear about us?" options are the booking page defaults. */
+
+/* ── Hook: guesses ── */
+.guess { position: absolute; left: 50%; top: 640px; transform: translateX(-50%); display: flex; flex-direction: column; gap: 26px; width: 760px; }
+.guess div { display: flex; align-items: center; justify-content: space-between; padding: 30px 40px; border-radius: 34px; background: #2A221B; color: #F5F0E7;
+  font-size: 44px; font-weight: 700; opacity: 0; }
+.guess div span { font-size: 30px; color: rgba(245,240,231,.45); font-weight: 600; }
+.qmark { top: 1330px; font-size: 84px; color: #F5F0E7; padding: 0 70px; }
+.qmark span { color: var(--gold); }
+
+/* ── Clients tell you ── */
+.hear .opts { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 28px; }
+.hear .opts div { padding: 28px 0; border-radius: 24px; border: 3px solid #EFE7DB; text-align: center; font-size: 36px; font-weight: 700; }
+.hear .opts div.sel { border-color: var(--bronze); background: #FFF8EE; color: var(--bronze); }
+
+/* ── Acquisition chart ── */
+.acq .bar2 { margin-top: 26px; }
+.acq .bar2 .lbl { display: flex; justify-content: space-between; font-size: 34px; font-weight: 700; }
+.acq .bar2 .lbl span { font-family: Montserrat; font-weight: 800; }
+.acq .bar2 .trk { height: 34px; border-radius: 17px; background: #F3EDE4; margin-top: 12px; overflow: hidden; }
+.acq .bar2 .trk i { display: block; height: 100%; border-radius: 17px; background: var(--sand2); width: 0; }
+.acq .bar2.top .trk i { background: var(--bronze); }
+.surprise { position: absolute; left: 50%; top: 1400px; padding: 26px 48px; border-radius: 60px; background: var(--ink); color: #fff; font-size: 38px; font-weight: 700; white-space: nowrap; opacity: 0; }
+.surprise b { color: var(--gold); }
+
+/* ── Health metrics ── */
+.mgrid { position: absolute; left: 70px; right: 70px; top: 500px; display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+.met { padding: 40px 36px; border-radius: 40px; background: #fff; box-shadow: 0 16px 40px rgba(80,55,25,.10); opacity: 0; }
+.met .k-eyebrow { font-size: 22px; line-height: 1.35; }
+.met b { display: block; font-family: Montserrat; font-weight: 800; font-size: 82px; letter-spacing: -0.03em; margin-top: 16px; }
+.met .ring { margin-top: 10px; height: 14px; border-radius: 7px; background: #F3EDE4; overflow: hidden; }
+.met .ring i { display: block; height: 100%; background: var(--bronze); width: 0; }
+.trialnote { top: 1340px; font-size: 44px; font-weight: 700; color: var(--ink); padding: 0 90px; line-height: 1.3; }
+.trialnote span { color: var(--bronze); }
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+
+  <!-- 1. Hook -->
+  <div class="scene dark" id="s1">
+    <div class="center h k-hook" id="s1h">Where do your best clients <span>actually come from?</span></div>
+    <div class="guess" id="guess"><div>Instagram?<span>a guess</span></div><div>Word of mouth?<span>a guess</span></div><div>TikTok?<span>a guess</span></div></div>
+    <div class="center h qmark" id="qmark">If you're guessing, <span>you're spending blind.</span></div>
+  </div>
+
+  <div id="wipe"></div>
+  <div class="scene c-reveal" id="s2"></div>
+
+  <!-- 3. Clients tell you at booking -->
+  <div class="scene" id="s3">
+    <div class="center caption" style="top:170px" id="s3cap">
+      <div class="h" style="font-size:88px;padding:0 70px">Every booking <span class="bronze">tells you.</span></div>
+      <p>Clients answer one quick question when they book.</p>
+    </div>
+    <div class="k-card hear" style="top:640px" id="hear">
+      <div class="k-eyebrow">Glow Studio · Booking</div>
+      <div class="k-name" style="margin-top:20px">How did you hear about us?</div>
+      <div class="opts"><div id="otk">TikTok</div><div>Website</div><div>Google</div><div>Instagram</div><div>Facebook</div><div>Referral</div></div>
+    </div>
+    <div class="k-tap" id="tap3"></div>
+  </div>
+
+  <!-- 4. The answer -->
+  <div class="scene" id="s4">
+    <div class="center caption" style="top:170px" id="s4cap">
+      <div class="h" style="font-size:88px;padding:0 70px">Now you <span class="bronze">know.</span></div>
+    </div>
+    <div class="k-card acq" style="top:420px" id="acq">
+      <div class="k-eyebrow">Original Client Acquisition</div>
+      <div class="bar2 top" data-w="78"><div class="lbl">TikTok<span>38%</span></div><div class="trk"><i></i></div></div>
+      <div class="bar2" data-w="52"><div class="lbl">Instagram<span>25%</span></div><div class="trk"><i></i></div></div>
+      <div class="bar2" data-w="36"><div class="lbl">Referral<span>18%</span></div><div class="trk"><i></i></div></div>
+      <div class="bar2" data-w="22"><div class="lbl">Google<span>11%</span></div><div class="trk"><i></i></div></div>
+      <div class="bar2" data-w="16"><div class="lbl">Website<span>8%</span></div><div class="trk"><i></i></div></div>
+    </div>
+    <div class="surprise" id="surprise">Put your effort where clients <b>really</b> come from.</div>
+    <div class="k-note" style="top:1640px">Illustrative</div>
+  </div>
+
+  <!-- 5. The rest of the picture -->
+  <div class="scene" id="s5">
+    <div class="center caption" style="top:170px" id="s5cap">
+      <div class="h" style="font-size:84px;padding:0 70px">Your business, <span class="bronze">in numbers.</span></div>
+    </div>
+    <div class="mgrid">
+      <div class="met"><div class="k-eyebrow">Returning Client Share</div><b data-v="64" data-s="%">0%</b><div class="ring"><i data-w="64"></i></div></div>
+      <div class="met"><div class="k-eyebrow">Monthly Capacity Utilisation</div><b data-v="72" data-s="%">0%</b><div class="ring"><i data-w="72"></i></div></div>
+      <div class="met"><div class="k-eyebrow">Average Booking Value</div><b data-v="410" data-p="R">R0</b><div class="ring"><i data-w="55"></i></div></div>
+      <div class="met"><div class="k-eyebrow">Cancellation Rate</div><b data-v="4" data-s="%">0%</b><div class="ring"><i data-w="8"></i></div></div>
+    </div>
+    <div class="center trialnote" id="trialnote">Your free trial starts <span>building this picture</span> from day one.</div>
+    <div class="k-note" style="top:1660px">Illustrative</div>
+  </div>
+
+  <div class="scene c-who" id="s6"></div>
+  <div class="scene c-cta" id="s7"></div>
+</div>
+
+<script src="ad-core.js"></script>
+<script>
+mount("#s2", C.reveal({ tag: "Record. Understand. Grow." }));
+mount("#s6", C.who({ headline: "Run your business <span>on facts, not feelings.</span>" }));
+mount("#s7", C.cta());
+
+defineAd({
+  windows: { s1: [0, 3.3], s2: [3.25, 6.0], s3: [5.9, 9.0], s4: [8.9, 12.6], s5: [12.5, 16.0], s6: [15.9, 18.05], s7: [17.95, 20.1] },
+  render(t) {
+    // ── Hook: three guesses ──
+    if (t < 3.6) {
+      const out = eio(prog(t, 2.95, 3.3)), fade = 1 - out;
+      rise($("#s1h"), t, .1, .5);
+      $("#s1h").style.opacity *= fade;
+      $$("#guess div").forEach((d, i) => {
+        const a = .5 + i * .35, p = back(prog(t, a, a + .3));
+        const wob = Math.sin((t - a) * 6 + i) * 6 * cl(prog(t, a, a + .3));
+        d.style.opacity = cl(prog(t, a, a + .12)) * fade;
+        d.style.transform = `translateX(${wob}px) scale(${lerp(.75, 1, p)}) rotate(${(i - 1) * 1.5}deg)`;
+      });
+      const qp = back(prog(t, 1.9, 2.25));
+      $("#qmark").style.opacity = cl(prog(t, 1.9, 2.05)) * fade;
+      $("#qmark").style.transform = `scale(${lerp(.75, 1, qp)})`;
+    }
+    R.wipe(t, 3.05);
+    R.reveal(t, 3.25, "#s2");
+
+    // ── How did you hear about us? ──
+    const u = t - 5.9;
+    if (u > -.15 && u < 3.3) {
+      rise($("#s3cap"), u, .1, .5, 50);
+      const hp = eo(prog(u, .35, .8));
+      $("#hear").style.opacity = hp; $("#hear").style.transform = `translateY(${(1 - hp) * 110}px)`;
+      $("#otk").classList.toggle("sel", u > 1.55);
+      $("#otk").style.transform = `scale(${1 + Math.sin(prog(u, 1.55, 1.85) * Math.PI) * .08})`;
+      if (!tapFx($("#tap3"), u, 1.4, 326, 863)) $("#tap3").style.opacity = 0;
+    }
+
+    // ── Acquisition chart ──
+    const v = t - 8.9;
+    if (v > -.15 && v < 3.9) {
+      rise($("#s4cap"), v, .1, .45, 50);
+      const ap = eo(prog(v, .3, .7));
+      $("#acq").style.opacity = ap; $("#acq").style.transform = `translateY(${(1 - ap) * 110}px)`;
+      $$("#acq .bar2").forEach((b, i) => {
+        b.querySelector("i").style.width = (+b.dataset.w * eo(prog(v, .6 + i * .12, 1.3 + i * .12))) + "%";
+      });
+      const top = $("#acq .bar2.top");
+      top.style.transform = `scale(${1 + Math.sin(prog(v, 1.6, 2.0) * Math.PI) * .04})`;
+      pop($("#surprise"), v, 2.0, .4, .7, "translateX(-50%)");
+    }
+
+    // ── Health metrics ──
+    const w = t - 12.5;
+    if (w > -.15 && w < 3.55) {
+      rise($("#s5cap"), w, .1, .45, 50);
+      $$(".met").forEach((m, i) => {
+        const a = .35 + i * .18;
+        rise(m, w, a, .4, 50);
+        const p = eo(prog(w, a + .2, a + 1.1)), b = m.querySelector("b");
+        b.textContent = (b.dataset.p || "") + Math.round(+b.dataset.v * p) + (b.dataset.s || "");
+        m.querySelector(".ring i").style.width = (+m.querySelector(".ring i").dataset.w * p) + "%";
+      });
+      rise($("#trialnote"), w, 1.8, .45, 30);
+    }
+    R.who(t, 15.9, "#s6");
+    R.cta(t, 17.95);
+  },
+});
+</script>
+</body>
+</html>

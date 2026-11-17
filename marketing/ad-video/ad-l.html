@@ -1,0 +1,203 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>NextSlot ad · L · Live in 10 minutes</title>
+<link rel="stylesheet" href="ad-core.css">
+<link rel="stylesheet" href="ad-kit.css">
+<style>
+/* Steps and wording follow the real sign-up flow (src/pages/Onboarding.tsx). */
+
+/* ── Hook: the setup you're dreading ── */
+.todo { position: absolute; left: 100px; right: 100px; top: 520px; }
+.todo div { display: flex; align-items: center; gap: 28px; padding: 30px 0; border-bottom: 2px solid rgba(255,255,255,.08); font-size: 42px; color: #F5F0E7; opacity: 0; }
+.todo div i { width: 44px; height: 44px; border-radius: 12px; border: 4px solid rgba(245,240,231,.3); flex: none; }
+.weekend { top: 1420px; font-size: 80px; color: #F5F0E7; padding: 0 70px; }
+.weekend span { color: var(--red); }
+
+/* ── Timer and steps ── */
+.timer { position: absolute; left: 50%; top: 440px; transform: translateX(-50%); display: flex; align-items: center; gap: 22px; padding: 18px 40px; border-radius: 60px;
+  background: var(--ink); color: #fff; font-family: Montserrat; font-weight: 800; font-size: 56px; white-space: nowrap; }
+.timer svg { flex: none; }
+.dots { position: absolute; left: 0; right: 0; top: 590px; display: flex; justify-content: center; gap: 14px; }
+.dots i { width: 70px; height: 12px; border-radius: 6px; background: #E5DACB; }
+.dots i.on { background: var(--bronze); }
+.stepc { top: 660px; height: 900px; opacity: 0; }
+.stepc .q { font-family: Montserrat; font-weight: 800; font-size: 50px; line-height: 1.15; }
+.stepc .hint { font-size: 30px; color: var(--muted); margin-top: 12px; line-height: 1.4; }
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 34px; }
+.tiles div { padding: 30px 0; border-radius: 24px; border: 3px solid #EFE7DB; text-align: center; font-size: 34px; font-weight: 700; }
+.tiles div.sel { border-color: var(--bronze); background: #FFF8EE; color: var(--bronze); }
+.field { margin-top: 30px; padding: 26px 30px; border-radius: 22px; border: 3px solid #E5DACB; font-size: 38px; font-weight: 600; min-height: 98px; }
+.field small { display: block; font-size: 24px; color: var(--muted); font-weight: 600; margin-bottom: 6px; }
+.svcrow { display: flex; justify-content: space-between; margin-top: 18px; padding: 26px 30px; border-radius: 22px; background: #FBF6EE; font-size: 36px; font-weight: 600; opacity: 0; }
+.svcrow b { font-family: Montserrat; font-weight: 800; }
+.sched { display: flex; gap: 14px; margin-top: 18px; }
+.sched div { flex: 1; padding: 20px 10px; border-radius: 20px; border: 3px solid #EFE7DB; text-align: center; font-size: 26px; font-weight: 700; }
+.sched div small { display: block; font-size: 21px; color: var(--muted); font-weight: 600; margin-top: 4px; }
+.sched div.sel { border-color: var(--bronze); background: #FFF8EE; }
+.live { margin-top: 36px; padding: 28px 30px; border-radius: 24px; background: #E6F2EA; color: var(--green); font-size: 32px; font-weight: 700; line-height: 1.35; opacity: 0; }
+.nocharge { margin-top: 24px; font-size: 30px; color: var(--muted); font-weight: 600; }
+
+/* ── Live ── */
+.golive { position: absolute; left: 50%; top: 560px; padding: 40px 56px; border-radius: 70px; background: var(--ink); color: #F5F0E7;
+  font-family: Montserrat; font-weight: 800; font-size: 46px; white-space: nowrap; box-shadow: 0 26px 56px rgba(30,20,10,.28); }
+.golive span { color: var(--gold); }
+.livedot { display: inline-block; width: 22px; height: 22px; border-radius: 50%; background: #3DDC84; margin-right: 18px; vertical-align: 2px; }
+.firstbk { top: 800px; }
+.firstbk .k-row { justify-content: flex-start; gap: 30px; }
+.stamp2 { top: 1240px; font-family: Montserrat; font-weight: 800; font-size: 150px; color: var(--bronze); letter-spacing: -0.03em; line-height: 1; }
+.stamp2-sub { top: 1410px; font-size: 40px; color: var(--ink2); font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+
+  <!-- 1. Hook -->
+  <div class="scene dark" id="s1">
+    <div class="center h k-hook" id="s1h">Want online bookings, but dreading <span>the setup?</span></div>
+    <div class="todo" id="todo">
+      <div><i></i>Build a website</div><div><i></i>Hire a developer</div><div><i></i>Learn new software</div><div><i></i>Connect payments</div><div><i></i>Lose a weekend</div>
+    </div>
+    <div class="center h weekend" id="weekend">It doesn't need to take <span>a weekend.</span></div>
+  </div>
+
+  <div id="wipe"></div>
+  <div class="scene c-reveal" id="s2"></div>
+
+  <!-- 3. The real sign-up, against the clock -->
+  <div class="scene" id="s3">
+    <div class="center caption" style="top:170px" id="s3cap">
+      <div class="h" style="font-size:92px">Four steps. <span class="bronze">About ten minutes.</span></div>
+    </div>
+    <div class="timer" id="timer"><svg width="52" height="52" viewBox="0 0 24 24"><circle cx="12" cy="13" r="8" fill="none" stroke="#D4A574" stroke-width="2.4"/><path d="M12 9v4l3 2M9 2h6" stroke="#D4A574" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg><span id="clock">00:00</span></div>
+    <div class="dots" id="dots"><i></i><i></i><i></i><i></i></div>
+
+    <div class="k-card stepc" id="st1">
+      <div class="q">What kind of business are you?</div>
+      <div class="hint">We'll personalise your booking page based on your category.</div>
+      <div class="tiles"><div>Makeup Artist</div><div>Beautician</div><div id="lt">Lash Tech</div><div>Nail Tech</div><div>Barber</div><div>Tattoo Artist</div></div>
+      <div class="field"><small>Business name</small><span id="bn"></span></div>
+    </div>
+    <div class="k-card stepc" id="st2">
+      <div class="q">Your services</div>
+      <div class="hint">Add the services you offer. You can always edit these later.</div>
+      <div class="svcrow">Classic Full Set<b>R650</b></div><div class="svcrow">Lash Fill<b>R350</b></div><div class="svcrow">Lash Lift &amp; Tint<b>R450</b></div>
+      <div class="q" style="font-size:38px;margin-top:40px">Working hours</div>
+      <div class="sched"><div id="sw">Standard Work Week<small>Mon-Fri, 09:00-17:00</small></div><div>Weekend Business<small>Thu-Sun, 09:00-18:00</small></div><div>Custom Schedule<small>Set your own hours</small></div></div>
+    </div>
+    <div class="k-card stepc" id="st3">
+      <div class="q">Create your account</div>
+      <div class="field"><small>Email address</small><span id="em"></span></div>
+      <div class="field"><small>Password</small><span id="pw"></span></div>
+      <div class="live" id="live">✓ Your booking page will be live the moment you confirm your email.</div>
+    </div>
+    <div class="k-card stepc" id="st4">
+      <div class="q">Choose your plan</div>
+      <div class="svcrow" style="opacity:1">Starter<b>R99/mo</b></div>
+      <div class="svcrow" style="opacity:1;border:3px solid var(--bronze);background:#FFF8EE">Flow<b>R399/mo</b></div>
+      <div class="svcrow" style="opacity:1">Professional<b>R699/mo</b></div>
+      <div class="nocharge">You won't be charged until your free trial ends.</div>
+    </div>
+    <div class="k-tap" id="tap3"></div>
+  </div>
+
+  <!-- 4. Live -->
+  <div class="scene" id="s4">
+    <div class="center caption" style="top:190px" id="s4cap">
+      <div class="h" style="font-size:104px">You're <span class="bronze">live.</span></div>
+      <p>Share your link. Bookings can start today.</p>
+    </div>
+    <div class="golive" id="golive"><span class="livedot"></span>glowstudio<span>.nextslot.co.za</span></div>
+    <div class="k-card firstbk" id="firstbk">
+      <div class="k-eyebrow">New booking</div>
+      <div class="k-row" style="margin-top:24px"><div class="k-avatar">A</div><div><div class="k-name">Amahle D.</div><div class="k-sub">Lash Fill · Thu 26 Nov, 11:00</div></div></div>
+    </div>
+    <div class="center stamp2" id="stamp2">10 min</div>
+    <div class="center stamp2-sub" id="stamp2sub">not a weekend.</div>
+    <div class="k-note" style="top:1640px">Illustrative. Setup time depends on how many services you add.</div>
+  </div>
+
+  <div class="scene c-pay" id="s5"></div>
+  <div class="scene c-who" id="s6"></div>
+  <div class="scene c-cta" id="s7"></div>
+</div>
+
+<script src="ad-core.js"></script>
+<script>
+mount("#s2", C.reveal({ tag: "Your booking page is 10 minutes away." }));
+mount("#s5", C.pay({ line1: "Payments built in.", line2: "No developer needed." }) + '<div class="k-note" style="top:1640px">PayShap on Starter. Cards on Flow and up.</div>');
+mount("#s6", C.who({ headline: "No website? <span>No problem.</span>" }));
+mount("#s7", C.cta());
+
+// Scene-time windows for each sign-up step, and the clock they map to.
+const STEPS = [[.55, 1.4], [1.4, 2.35], [2.35, 3.25], [3.25, 4.2]];
+const clockAt = u => Math.round(lerp(0, 9 * 60 + 42, eio(prog(u, .55, 4.05))));
+
+defineAd({
+  windows: { s1: [0, 3.3], s2: [3.25, 6.0], s3: [5.9, 10.3], s4: [10.2, 13.1], s5: [13.0, 16.0], s6: [15.9, 18.05], s7: [17.95, 20.1] },
+  render(t) {
+    // ── Hook: the to-do list you've been putting off ──
+    if (t < 3.6) {
+      const out = eio(prog(t, 2.95, 3.3)), fade = 1 - out;
+      rise($("#s1h"), t, .1, .5);
+      $("#s1h").style.opacity *= fade;
+      $$("#todo div").forEach((d, i) => {
+        const a = .45 + i * .22, p = eo(prog(t, a, a + .3));
+        d.style.opacity = p * fade * (t > 2.1 ? .45 : 1);
+        d.style.transform = `translateX(${(1 - p) * -60}px)`;
+        d.style.textDecoration = t > 2.1 + i * .05 ? "line-through" : "none";
+      });
+      const wp = back(prog(t, 2.2, 2.55));
+      $("#weekend").style.opacity = cl(prog(t, 2.2, 2.35)) * fade;
+      $("#weekend").style.transform = `scale(${lerp(.75, 1, wp)})`;
+    }
+    R.wipe(t, 3.05);
+    R.reveal(t, 3.25, "#s2");
+
+    // ── Sign-up, step by step ──
+    const u = t - 5.9;
+    if (u > -.15 && u < 4.55) {
+      rise($("#s3cap"), u, .1, .5, 50);
+      pop($("#timer"), u, .25, .35, .6, "translateX(-50%)");
+      const sec = clockAt(u);
+      $("#clock").textContent = `${String(Math.floor(sec / 60)).padStart(2, "0")}:${String(sec % 60).padStart(2, "0")}`;
+      const cur = STEPS.findIndex(([a, b]) => u < b);
+      $$("#dots i").forEach((d, i) => d.classList.toggle("on", i <= (cur < 0 ? 3 : cur) && u > .5));
+      STEPS.forEach(([a, b], i) => {
+        const el = $("#st" + (i + 1));
+        const inn = eo(prog(u, a, a + .25)), outp = i === 3 ? 0 : eio(prog(u, b - .15, b + .05));
+        el.style.opacity = inn * (1 - outp);
+        el.style.transform = `translateX(${(1 - inn) * 120 - outp * 120}px)`;
+      });
+      $("#lt").classList.toggle("sel", u > .8);
+      $("#bn").textContent = typed("Glow Studio", prog(u, .9, 1.25));
+      $$("#st2 .svcrow").forEach((r, i) => rise(r, u, 1.55 + i * .14, .25, 20));
+      $("#sw").classList.toggle("sel", u > 2.05);
+      $("#em").textContent = typed("hello@glowstudio.co.za", prog(u, 2.45, 2.8));
+      $("#pw").textContent = "•".repeat(Math.round(10 * prog(u, 2.8, 2.95)));
+      $("#live").style.opacity = eo(prog(u, 2.95, 3.15));
+      let tp = false;
+      for (const [at, x, y] of [[.7, 760, 1012], [1.95, 270, 1342], [3.6, 540, 990]]) if (!tp) tp = tapFx($("#tap3"), u, at, x, y);
+      if (!tp) $("#tap3").style.opacity = 0;
+    }
+
+    // ── Live, and the first booking ──
+    const v = t - 10.2;
+    if (v > -.15 && v < 3.05) {
+      rise($("#s4cap"), v, .1, .5, 50);
+      pop($("#golive"), v, .35, .4, .6, "translateX(-50%)");
+      const bp = back(prog(v, .9, 1.3));
+      $("#firstbk").style.opacity = cl(prog(v, .9, 1.05));
+      $("#firstbk").style.transform = `translateY(${(1 - bp) * -80}px)`;
+      pop($("#stamp2"), v, 1.5, .4, .6);
+      rise($("#stamp2sub"), v, 1.7, .4, 30);
+    }
+    R.pay(t, 13.0);
+    R.who(t, 15.9, "#s6");
+    R.cta(t, 17.95);
+  },
+});
+</script>
+</body>
+</html>

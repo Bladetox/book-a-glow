@@ -1,0 +1,244 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>NextSlot ad · K · Video calls</title>
+<link rel="stylesheet" href="ad-core.css">
+<link rel="stylesheet" href="ad-kit.css">
+<style>
+/* Copy follows the video-consultation marketing research: NextSlot takes the booking and
+   payment, the provider runs the call on their own WhatsApp. No "join link", "secure video",
+   health or advice wording. App strings are quoted exactly as they ship. */
+
+/* ── Hook ── */
+.free { top: 1560px; font-size: 84px; color: #F5F0E7; }
+.free span { color: var(--red); }
+
+/* ── Booking page (phone) ── */
+.vs { margin: 0 32px 16px; padding: 24px 28px; border-radius: 26px; background: #fff; border: 3px solid #EFE7DB; }
+.vs .r { display: flex; justify-content: space-between; align-items: center; }
+.vs b { font-size: 30px; font-weight: 600; display: block; }
+.vs span.m { font-size: 23px; color: var(--muted); }
+.vs .pr { font-family: Montserrat; font-weight: 700; font-size: 30px; }
+.vs.video { border-color: #CFE3F7; background: #F4F9FE; }
+.vs.video.sel { border-color: #2F6FB3; }
+.vbadge { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 10px; padding: 6px 14px; border-radius: 12px; background: #2F6FB3; color: #fff; font-size: 21px; font-weight: 700; }
+.vs .help { margin-top: 12px; font-size: 22px; color: #2F6FB3; font-weight: 600; }
+.vdone p { max-width: 460px; }
+.vtag { margin-top: 26px; display: inline-flex; align-items: center; gap: 10px; padding: 12px 24px; border-radius: 18px; background: #2F6FB3; color: #fff; font-size: 26px; font-weight: 700; }
+
+/* ── Separate hours ── */
+.seg { display: flex; padding: 8px; border-radius: 26px; background: #F3EDE4; margin-top: 26px; }
+.seg div { flex: 1; text-align: center; padding: 20px 0; border-radius: 20px; font-size: 34px; font-weight: 700; color: var(--muted); }
+.seg div.on { background: var(--ink); color: #fff; }
+.wk { position: relative; margin-top: 26px; height: 560px; }
+.wk .list { position: absolute; inset: 0; }
+.wk .row { display: flex; justify-content: space-between; align-items: center; padding: 22px 6px; border-bottom: 3px solid #F1EADF; font-size: 36px; font-weight: 600; }
+.wk .row span { font-family: Montserrat; font-weight: 700; font-size: 34px; }
+.wk .row span.off { color: #C9BFB1; font-family: Inter; font-weight: 600; font-size: 30px; }
+.wk .row span.vid { color: #2F6FB3; }
+
+/* ── On the day ── */
+.bk .k-row .k-pill { background: #2F6FB3; color: #fff; }
+.wbtn { margin-top: 30px; padding: 30px 0; border-radius: 30px; background: #1FAF55; color: #fff; text-align: center; font-size: 36px; font-weight: 700; }
+.wa { position: absolute; left: 80px; right: 80px; top: 1010px; border-radius: 44px; overflow: hidden; background: #EFE7DE; box-shadow: 0 30px 70px rgba(30,20,10,.25); opacity: 0; }
+.wa .bar { display: flex; align-items: center; gap: 22px; padding: 28px 34px; background: #075E54; color: #fff; }
+.wa .bar .k-avatar { width: 76px; height: 76px; font-size: 32px; }
+.wa .bar b { font-size: 36px; display: block; }
+.wa .bar small { font-size: 24px; opacity: .8; }
+.wa .cam { margin-left: auto; width: 84px; height: 84px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+.wa .body { height: 240px; display: flex; align-items: center; justify-content: center; }
+.calling { display: flex; align-items: center; gap: 22px; padding: 24px 40px; border-radius: 60px; background: #fff; font-size: 34px; font-weight: 700; color: #075E54; opacity: 0; }
+.calling i { width: 20px; height: 20px; border-radius: 50%; background: #1FAF55; }
+.roles { position: absolute; left: 90px; right: 90px; top: 1440px; text-align: center; font-size: 30px; line-height: 1.45; color: var(--ink2); font-weight: 500; }
+.roles b { color: var(--ink); }
+</style>
+</head>
+<body>
+<div class="stage" id="stage">
+
+  <!-- 1. Hook -->
+  <div class="scene dark" id="s1">
+    <div class="center h k-hook" id="s1h">Clients keep asking for <span>a quick call.</span></div>
+    <div class="k-bubble" style="left:80px;top:520px" data-at="0.45">Can we do a quick call about my wedding look first? 💍<small>21:14</small></div>
+    <div class="k-bubble" style="left:250px;top:770px" data-at="0.9">Can you check my brows on video before I book?<small>08:02</small></div>
+    <div class="k-bubble" style="left:110px;top:1020px" data-at="1.35">Quick chat about which lashes suit me? 🙏<small>13:47</small></div>
+    <div class="k-bubble me" style="left:420px;top:1260px" data-at="1.8">Sure, call me tonight 😊<small>13:50</small></div>
+    <div class="center h free" id="free">And you do them <span>for free.</span></div>
+  </div>
+
+  <div id="wipe"></div>
+  <div class="scene c-reveal" id="s2"></div>
+
+  <!-- 3. A video call, booked and paid -->
+  <div class="scene" id="s3">
+    <div class="center caption" style="top:150px" id="s3cap">
+      <div class="h" style="font-size:78px;padding:0 70px">Sell your time by the call, <span class="bronze">not just the chair.</span></div>
+    </div>
+    <div class="phone" id="kphone">
+      <div class="screen">
+        <div class="notch"></div>
+        <div class="biz"><div class="avatar">G</div><div class="name">Glow Studio</div><div class="url">glowstudio.nextslot.co.za</div></div>
+        <div id="kp1">
+          <div class="step-label">Choose a service</div>
+          <div class="vs"><div class="r"><div><b>Bridal Makeup Trial</b><span class="m">90 min</span></div><div class="pr">R850</div></div></div>
+          <div class="vs video" id="vsvc"><span class="vbadge">📹 Video call</span>
+            <div class="r"><div><b>Bridal Look Consultation</b><span class="m">30 min</span></div><div class="pr">R250</div></div>
+            <div class="help">Video call. We contact you on WhatsApp on the day.</div></div>
+        </div>
+        <div id="kp2" style="position:absolute;left:0;right:0;top:330px;">
+          <div class="step-label">Video call times · Tue 24 Nov</div>
+          <div class="times">
+            <div class="time">17:30</div><div class="time" id="k1830">18:30</div>
+            <div class="time gone">19:00</div><div class="time">19:30</div>
+          </div>
+        </div>
+        <div class="paybtn" id="kpay">Pay R250</div>
+        <div class="done vdone" id="kdone">
+          <div class="check"><svg width="110" height="110" viewBox="0 0 24 24"><path id="ktick" d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="24" stroke-dashoffset="24"/></svg></div>
+          <h3>You're booked!</h3>
+          <div class="vtag">📹 Video call</div>
+          <p>We'll contact you on WhatsApp on the day to start your video call.</p>
+        </div>
+        <div class="tap" id="ktap"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Separate video hours -->
+  <div class="scene" id="s4">
+    <div class="center caption" style="top:170px" id="s4cap">
+      <div class="h" style="font-size:76px;padding:0 70px">Your video hours, <span class="bronze">separate from your studio hours.</span></div>
+    </div>
+    <div class="k-card" style="top:600px" id="hours">
+      <div class="k-eyebrow">Availability</div>
+      <div class="seg"><div id="segA" class="on">Services</div><div id="segB">Video calls</div></div>
+      <div class="wk">
+        <div class="list" id="listA">
+          <div class="row">Mon<span class="off">Closed</span></div><div class="row">Tue<span>09:00 – 17:00</span></div>
+          <div class="row">Wed<span>09:00 – 17:00</span></div><div class="row">Thu<span>09:00 – 17:00</span></div>
+          <div class="row">Fri<span>09:00 – 17:00</span></div><div class="row" style="border:0">Sat<span>08:00 – 14:00</span></div>
+        </div>
+        <div class="list" id="listB">
+          <div class="row">Mon<span class="vid">18:00 – 20:00</span></div><div class="row">Tue<span class="vid">17:30 – 20:00</span></div>
+          <div class="row">Wed<span class="off">No calls</span></div><div class="row">Thu<span class="vid">18:00 – 20:00</span></div>
+          <div class="row">Fri<span class="off">No calls</span></div><div class="row" style="border:0">Sat<span class="off">No calls</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="k-tap" id="tap4"></div>
+  </div>
+
+  <!-- 5. On the day: WhatsApp -->
+  <div class="scene" id="s5">
+    <div class="center caption" style="top:170px" id="s5cap">
+      <div class="h" style="font-size:84px;padding:0 70px">On the day, you call <span class="bronze">on WhatsApp.</span></div>
+    </div>
+    <div class="k-dark bk" style="top:520px" id="bk">
+      <div class="k-row"><div><div class="k-name">Lerato K.</div><div class="k-sub">Bridal Look Consultation · Today 18:30</div></div><span class="k-pill">📹 Video call</span></div>
+      <div class="wbtn" id="wbtn">WhatsApp client</div>
+    </div>
+    <div class="wa" id="wa">
+      <div class="bar"><div class="k-avatar">L</div><div><b>Lerato K.</b><small>online</small></div>
+        <div class="cam" id="cam"><svg width="52" height="52" viewBox="0 0 24 24"><path d="M3 7h12v10H3z M15 10l6-3v10l-6-3z" fill="#fff"/></svg></div></div>
+      <div class="body"><div class="calling" id="calling"><i></i>Video calling Lerato…</div></div>
+    </div>
+    <div class="roles" id="roles"><b>NextSlot takes the booking and payment.</b> The call happens on your own WhatsApp. NextSlot doesn't host or record calls.</div>
+    <div class="k-tap" id="tap5"></div>
+  </div>
+
+  <div class="scene c-who" id="s6"></div>
+  <div class="scene c-cta" id="s7"></div>
+</div>
+
+<script src="ad-core.js"></script>
+<script>
+mount("#s2", C.reveal({ tag: "Now clients can book and pay for a video call." }));
+mount("#s6", C.who({ headline: "For services that start <span>with a conversation.</span>", items: [
+  ["beautician.jpg", "Bridal &amp; Makeup"], ["barber.jpg", "Hair &amp; Grooming"],
+  ["professional-photographer-at-work.webp", "Shoot Planning"], ["consulting.webp", "Check-in Calls"] ] }));
+mount("#s7", C.cta({ sub: "<b>Video calls: Professional plan</b><br>Free trial · Ask us to switch them on" }));
+
+defineAd({
+  windows: { s1: [0, 3.3], s2: [3.25, 6.0], s3: [5.9, 10.05], s4: [9.95, 12.85], s5: [12.75, 16.0], s6: [15.9, 18.05], s7: [17.95, 20.1] },
+  render(t) {
+    // ── Hook: requests for "a quick call" ──
+    if (t < 3.6) {
+      const out = eio(prog(t, 2.95, 3.3)), fade = 1 - out;
+      rise($("#s1h"), t, .1, .5);
+      $("#s1h").style.opacity *= fade;
+      $$("#s1 .k-bubble").forEach(b => {
+        const a = +b.dataset.at, p = back(prog(t, a, a + .32));
+        b.style.opacity = cl(prog(t, a, a + .12)) * fade;
+        b.style.transform = `translateY(${(1 - p) * 40 + out * 70}px) scale(${lerp(.7, 1, p)})`;
+        b.style.filter = `blur(${out * 8}px)`;
+      });
+      const fp = back(prog(t, 2.25, 2.6));
+      $("#free").style.opacity = cl(prog(t, 2.25, 2.4)) * fade;
+      $("#free").style.transform = `scale(${lerp(.7, 1, fp)})`;
+    }
+    R.wipe(t, 3.05);
+    R.reveal(t, 3.25, "#s2");
+
+    // ── Booking a video call ──
+    const u = t - 5.9;
+    if (u > -.15 && u < 4.3) {
+      rise($("#s3cap"), u, .1, .5, 50);
+      const ph = eo(prog(u, .05, .65));
+      $("#kphone").style.transform = `translateY(${(1 - ph) * 500}px)`;
+      $("#vsvc").classList.toggle("sel", u > .95);
+      const sl = eio(prog(u, 1.3, 1.7));
+      $("#kp1").style.transform = `translateX(${-sl * 640}px)`; $("#kp1").style.opacity = 1 - sl;
+      $("#kp2").style.transform = `translateX(${(1 - sl) * 640}px)`; $("#kp2").style.opacity = sl;
+      $("#k1830").classList.toggle("sel", u > 2.15);
+      $("#kpay").style.opacity = cl(prog(u, 2.3, 2.55));
+      $("#kpay").style.background = u > 2.85 ? "#94672F" : "";
+      $("#kpay").style.transform = `scale(${1 - Math.sin(prog(u, 2.75, 2.95) * Math.PI) * .05})`;
+      const dn = eo(prog(u, 3.0, 3.3));
+      $("#kdone").style.opacity = dn; $("#kdone").style.transform = `scale(${lerp(1.05, 1, dn)})`;
+      $("#ktick").style.strokeDashoffset = 24 * (1 - eo(prog(u, 3.15, 3.5)));
+      const tp = [[.85, 300, 560], [2.05, 450, 470], [2.75, 300, 1185]]
+        .map(([a, x, y]) => ({ x, y, p: prog(u, a, a + .35) })).find(o => o.p > 0 && o.p < 1);
+      const tap = $("#ktap");
+      if (tp) { tap.style.left = tp.x + "px"; tap.style.top = tp.y + "px"; tap.style.opacity = 1 - tp.p; tap.style.transform = `scale(${lerp(.5, 1.6, tp.p)})`; }
+      else tap.style.opacity = 0;
+    }
+
+    // ── Separate video hours ──
+    const v = t - 9.95;
+    if (v > -.15 && v < 3.05) {
+      rise($("#s4cap"), v, .1, .5, 50);
+      const hp = eo(prog(v, .3, .75));
+      $("#hours").style.opacity = hp; $("#hours").style.transform = `translateY(${(1 - hp) * 110}px)`;
+      const sw = eio(prog(v, 1.3, 1.6)), on = v > 1.3;
+      $("#segA").classList.toggle("on", !on); $("#segB").classList.toggle("on", on);
+      $("#segB").style.background = on ? "#2F6FB3" : "";
+      $("#listA").style.opacity = 1 - sw; $("#listA").style.transform = `translateX(${-sw * 80}px)`;
+      $("#listB").style.opacity = sw; $("#listB").style.transform = `translateX(${(1 - sw) * 80}px)`;
+      $$("#listB .row").forEach((r, i) => rise(r, v, 1.45 + i * .07, .3, 20));
+      if (!tapFx($("#tap4"), v, 1.15, 735, 813)) $("#tap4").style.opacity = 0;
+    }
+
+    // ── On the day: tap WhatsApp, start the video call ──
+    const w = t - 12.75;
+    if (w > -.15 && w < 3.45) {
+      rise($("#s5cap"), w, .1, .5, 50);
+      const bp = eo(prog(w, .3, .7));
+      $("#bk").style.opacity = bp; $("#bk").style.transform = `translateY(${(1 - bp) * 110}px)`;
+      $("#wbtn").style.transform = `scale(${1 - Math.sin(prog(w, .95, 1.15) * Math.PI) * .05})`;
+      const wp = back(prog(w, 1.15, 1.55));
+      $("#wa").style.opacity = cl(prog(w, 1.15, 1.3));
+      $("#wa").style.transform = `translateY(${(1 - wp) * 140}px)`;
+      const ring = w > 1.9 ? (Math.sin((w - 1.9) * 9) + 1) / 2 : 0;
+      $("#cam").style.background = w > 1.85 ? `rgba(255,255,255,${.12 + ring * .2})` : "";
+      pop($("#calling"), w, 1.95, .35, .7);
+      rise($("#roles"), w, 2.2, .45, 30);
+      if (!tapFx($("#tap5"), w, .9, 540, 870) && !tapFx($("#tap5"), w, 1.75, 878, 1080)) $("#tap5").style.opacity = 0;
+    }
+    R.who(t, 15.9, "#s6");
+    R.cta(t, 17.95);
+  },
+});
+</script>
+</body>
+</html>

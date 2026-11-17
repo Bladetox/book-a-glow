@@ -416,8 +416,80 @@ elif VARIANT == "j":
     photo_cuts(15.9)
     outro()
 
+elif VARIANT == "k":
+    # ── K · Video calls: chat pops for each "quick call" request, a WhatsApp-style ring later ──
+    add(pad([note(m) for m in (45, 52, 57, 60)], 3.4 * S), 0, 0.09)
+    for i, at in enumerate((0.45, 0.9, 1.35, 1.8)):
+        add(pop(660 + i * 60), at, 0.3, pan=(-0.4, 0.4)[i % 2])
+    add(thud(), 2.25, 0.6)
+    add(whoosh(0.5), 2.95, 0.5)
+    groove(3.35)
+    add(thud(), 3.35, 0.5)
+    add(bell(note(84)), 3.4, 0.18)
+    transitions(SCENES)
+    for at in (0.85, 2.05, 2.75):             # pick the video service, a time, pay
+        add(click(), 5.9 + at, 0.45)
+    for k, m in enumerate((76, 79, 84)):
+        add(bell(note(m), 1.0), 5.9 + 3.05 + k * 0.08, 0.2)
+    add(click(), 9.95 + 1.15, 0.45)           # switch to video hours
+    add(whoosh(0.3), 9.95 + 1.3, 0.18)
+    add(click(), 12.75 + 0.9, 0.45)           # WhatsApp client
+    add(click(), 12.75 + 1.75, 0.4)           # video call button
+    for k in range(3):                        # ringing
+        add(bell(note(83), 0.35), 12.75 + 1.95 + k * 0.32, 0.12)
+        add(bell(note(79), 0.35), 12.75 + 2.07 + k * 0.32, 0.1)
+    photo_cuts(15.9)
+    outro()
+
+elif VARIANT == "l":
+    # ── L · Live in 10 minutes: a stopwatch tick under the whole sign-up ──
+    add(pad([note(m) for m in (43, 50, 55, 58)], 3.4 * S), 0, 0.09)
+    for i in range(5):                        # to-do items
+        add(pop(560 + i * 40), 0.45 + i * 0.22, 0.24)
+    add(thud(), 2.2, 0.55)
+    add(whoosh(0.5), 2.95, 0.5)
+    groove(3.35)
+    add(thud(), 3.35, 0.5)
+    add(bell(note(84)), 3.4, 0.18)
+    transitions((5.9, 10.2, 13.0, 15.9, 17.95))
+    for i in range(16):                       # stopwatch
+        add(hat(0.6, 80), 5.9 + 0.55 + i * 0.22, 0.12, pan=0.25 if i % 2 else -0.25)
+    for at in (0.7, 1.95, 3.6):               # taps
+        add(click(), 5.9 + at, 0.42)
+    for i, at in enumerate((1.4, 2.35, 3.25)):   # each step done
+        add(bell(note(76 + i * 3), 0.7), 5.9 + at, 0.13)
+    add(pop(900), 10.2 + 0.35, 0.3)           # live link
+    add(bell(note(88), 0.8), 10.2 + 0.9, 0.16)   # first booking
+    for k, m in enumerate((79, 84, 88)):
+        add(bell(note(m), 1.0), 10.2 + 1.5 + k * 0.08, 0.18)
+    add(bell(note(88), 0.8), 13.0 + 1.47, 0.16)  # deposit toast
+    photo_cuts(15.9)
+    outro()
+
+elif VARIANT == "m":
+    # ── M · Know your numbers: uncertain wobble, then data clicks into place ──
+    add(pad([note(m) for m in (44, 51, 56, 59)], 3.4 * S), 0, 0.09)
+    for i in range(3):                        # guesses
+        add(pop(620 + i * 80), 0.5 + i * 0.35, 0.3, pan=(-0.4, 0, 0.4)[i])
+    add(thud(), 1.9, 0.55)
+    add(whoosh(0.5), 2.95, 0.5)
+    groove(3.35)
+    add(thud(), 3.35, 0.5)
+    add(bell(note(84)), 3.4, 0.18)
+    transitions((5.9, 8.9, 12.5, 15.9, 17.95))
+    add(click(), 5.9 + 1.4, 0.45)             # answer the question
+    add(bell(note(84), 0.8), 5.9 + 1.55, 0.14)
+    for i in range(5):                        # chart bars
+        add(pop(600 + i * 90), 8.9 + 0.6 + i * 0.12, 0.2)
+    add(bell(note(88), 0.9), 8.9 + 2.0, 0.16)
+    for i in range(4):                        # metric cards
+        add(hat(0.6, 60), 12.5 + 0.35 + i * 0.18, 0.14)
+        add(bell(note(76 + i * 3), 0.6), 12.5 + 1.0 + i * 0.18, 0.08)
+    photo_cuts(15.9)
+    outro()
+
 else:
-    sys.exit(f"unknown variant {VARIANT!r}; use a to j")
+    sys.exit(f"unknown variant {VARIANT!r}; use a to m")
 
 # ── master ──
 mix = np.stack([L, R], axis=1)

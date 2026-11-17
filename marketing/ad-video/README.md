@@ -1,4 +1,4 @@
-# NextSlot ads: ten variants for A/B testing
+# NextSlot ads: thirteen variants for A/B testing
 
 Vertical (1080×1920, 30 fps) motion-graphics ads aimed at independent service
 providers, for Reels, TikTok, YouTube Shorts and WhatsApp Status. Each variant
@@ -23,6 +23,9 @@ message.
 | **H** · Link in bio | Identity: look professional | A polished social profile: "Your work looks premium. 'DM to book' doesn't." |
 | **I** · Origin story | Proof: a real business | "NextSlot wasn't built in a boardroom." The PhenomeBeauty story and figures |
 | **J** · December rush | Urgency: seasonal | "December is coming. Is your diary ready?" A calendar filling up |
+| **K** · Video calls | New feature: earn from calls you give away | "Clients keep asking for a quick call… and you do them for free." |
+| **L** · Live in 10 minutes | Ease: the setup objection | A to-do list you've been dreading, then the real four-step sign-up against a timer |
+| **M** · Know your numbers | Curiosity: insight from your own data | "Where do your best clients actually come from?" |
 
 Suggested setup: start with a first round of four or five ads, not all ten, so
 each gets enough budget to produce a clear result. Same audience, budget split
@@ -36,6 +39,13 @@ Targeting notes:
 
 - **F** is for mobile and call-out businesses; run it to that audience, not broadly.
 - **J** is seasonal. Run it from now until mid-December, then retire it.
+- **K** advertises video calls, a Professional feature that NextSlot switches
+  on per business. Its copy follows the video-consultation research
+  (`reports/Video consultation marketing for NextSlot.md` on `main`): NextSlot
+  takes the booking and payment, the provider runs the call on their own
+  WhatsApp, and there is no health, advice or "secure video" wording. That
+  research recommends legal review and the PhenomeBeauty pilot before any
+  public video campaign, so hold K until those are done.
 - **I** features a real person (Shu-meez of PhenomeBeauty) using the quote,
   photo and figures already published on the marketing site. Confirm she is
   happy to appear in paid advertising before it runs.
@@ -82,6 +92,23 @@ days and what the data showed → "this was built for you" → CTA.
 **J · December rush**: a December calendar filling up → logo → booking page
 open 24/7 → two clients, one slot, no double-booking → public holidays blocked
 in a tap, "Your booking page is 10 minutes away" → who it's for → CTA.
+
+**K · Video calls**: "a quick call?" requests, done for free → logo → a
+"Video call" service booked and paid on the booking page, with the app's own
+wording ("Video call. We contact you on WhatsApp on the day.") → separate
+"Video calls" hours → on the day, "WhatsApp client" and a WhatsApp video call,
+with the roles line "NextSlot doesn't host or record calls" → who it's for → CTA.
+
+**L · Live in 10 minutes**: the setup to-do list → logo, "Your booking page is
+10 minutes away" → the real four sign-up steps (business type and name,
+services and working hours, account, plan) with a timer → live link and a first
+booking → payments built in → who it's for → CTA.
+
+**M · Know your numbers**: three guesses about where clients come from → logo,
+"Record. Understand. Grow." → "How did you hear about us?" at booking → the
+dashboard's Original Client Acquisition chart → Returning Client Share,
+Monthly Capacity Utilisation, Average Booking Value, Cancellation Rate → who
+it's for → CTA.
 
 ## Claims
 
