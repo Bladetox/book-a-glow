@@ -1,0 +1,58 @@
+[
+ {
+  "id": "v01",
+  "text": "Quick question.",
+  "voice": "af_heart",
+  "speed": 1.0,
+  "sub": "Quick question."
+ },
+ {
+  "id": "v02",
+  "text": "Which service made you the most money last month?",
+  "voice": "af_heart",
+  "speed": 1.0,
+  "sub": "Which service made you the most money last month?"
+ },
+ {
+  "id": "v03",
+  "text": "The answer exists.",
+  "voice": "af_heart",
+  "speed": 1.0,
+  "sub": "The answer exists."
+ },
+ {
+  "id": "v04",
+  "text": "It's scattered across your chats, your diary and your banking app.",
+  "voice": "af_heart",
+  "speed": 1.0,
+  "sub": "It's scattered across your chats, your diary and your banking app."
+ },
+ {
+  "id": "v05",
+  "text": "So you guess.",
+  "voice": "af_heart",
+  "speed": 1.0,
+  "sub": "So you guess."
+ },
+ {
+  "id": "v06",
+  "text": "When every booking happens in one place, it keeps its details.",
+  "voice": "af_heart",
+  "speed": 1.0,
+  "sub": "When every booking happens in one place, it keeps its details."
+ },
+ {
+  "id": "v07",
+  "text": "The service. The price. The day. Where the client found you.",
+  "voice": "af_heart",
+  "speed": 1.0,
+  "sub": "The service. The price. The day. Where the client found you."
+ },
+ {
+  "id": "v08",
+  "text": "Next Slot. Your numbers, added up for you.",
+  "voice": "af_heart",
+  "speed": 1.0,
+  "sub": "NextSlot. Your numbers, added up for you."
+ }
+]

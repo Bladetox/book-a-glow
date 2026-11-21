@@ -1,0 +1,58 @@
+[
+ {
+  "id": "v01",
+  "text": "Your busiest service.",
+  "voice": "af_heart",
+  "speed": 1.0,
+  "sub": "Your busiest service."
+ },
+ {
+  "id": "v02",
+  "text": "And the one that pays you best.",
+  "voice": "af_heart",
+  "speed": 1.0,
+  "sub": "And the one that pays you best."
+ },
+ {
+  "id": "v03",
+  "text": "Most owners think they're the same.",
+  "voice": "af_heart",
+  "speed": 1.0,
+  "sub": "Most owners think they're the same."
+ },
+ {
+  "id": "v04",
+  "text": "A gel overlay: sixty minutes, three hundred and twenty rand.",
+  "voice": "af_heart",
+  "speed": 1.0,
+  "sub": "Gel overlay: 60 min, R320."
+ },
+ {
+  "id": "v05",
+  "text": "A lash lift: forty-five minutes, four hundred and fifty.",
+  "voice": "af_heart",
+  "speed": 1.0,
+  "sub": "Lash lift: 45 min, R450."
+ },
+ {
+  "id": "v06",
+  "text": "Per minute, the lash lift earns almost double.",
+  "voice": "af_heart",
+  "speed": 1.0,
+  "sub": "Per minute, the lash lift earns almost double."
+ },
+ {
+  "id": "v07",
+  "text": "So which one is filling your week?",
+  "voice": "af_heart",
+  "speed": 1.0,
+  "sub": "So which one is filling your week?"
+ },
+ {
+  "id": "v08",
+  "text": "Next Slot shows what every service earns, per minute.",
+  "voice": "af_heart",
+  "speed": 1.0,
+  "sub": "NextSlot shows what every service earns, per minute."
+ }
+]

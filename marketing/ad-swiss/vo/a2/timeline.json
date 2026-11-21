@@ -1,0 +1,62 @@
+{
+ "dur": 30.0,
+ "end": 25.6,
+ "lines": [
+  {
+   "id": "v01",
+   "t0": 0.5,
+   "t1": 1.43,
+   "sub": "Quick question.",
+   "hold": 2.3
+  },
+  {
+   "id": "v02",
+   "t0": 2.42,
+   "t1": 4.587,
+   "sub": "Which service made you the most money last month?",
+   "hold": 5.367
+  },
+  {
+   "id": "v03",
+   "t0": 5.487,
+   "t1": 6.682,
+   "sub": "The answer exists.",
+   "hold": 7.562
+  },
+  {
+   "id": "v04",
+   "t0": 7.682,
+   "t1": 10.969,
+   "sub": "It's scattered across your chats, your diary and your banking app.",
+   "hold": 11.569
+  },
+  {
+   "id": "v05",
+   "t0": 11.689,
+   "t1": 12.529,
+   "sub": "So you guess.",
+   "hold": 13.909
+  },
+  {
+   "id": "v06",
+   "t0": 14.029,
+   "t1": 17.455,
+   "sub": "When every booking happens in one place, it keeps its details.",
+   "hold": 18.135
+  },
+  {
+   "id": "v07",
+   "t0": 18.255,
+   "t1": 21.671,
+   "sub": "The service. The price. The day. Where the client found you.",
+   "hold": 22.271
+  },
+  {
+   "id": "v08",
+   "t0": 22.391,
+   "t1": 24.823,
+   "sub": "NextSlot. Your numbers, added up for you.",
+   "hold": 30.0
+  }
+ ]
+}

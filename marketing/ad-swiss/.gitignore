@@ -1,0 +1,3 @@
+out/
+vo/*/*.wav
+vo/*/words.json

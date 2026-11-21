@@ -1,0 +1,62 @@
+{
+ "dur": 30.0,
+ "end": 25.6,
+ "lines": [
+  {
+   "id": "v01",
+   "t0": 0.5,
+   "t1": 1.748,
+   "sub": "Your busiest service.",
+   "hold": 2.348
+  },
+  {
+   "id": "v02",
+   "t0": 2.468,
+   "t1": 3.917,
+   "sub": "And the one that pays you best.",
+   "hold": 4.517
+  },
+  {
+   "id": "v03",
+   "t0": 4.637,
+   "t1": 6.38,
+   "sub": "Most owners think they're the same.",
+   "hold": 7.36
+  },
+  {
+   "id": "v04",
+   "t0": 7.48,
+   "t1": 11.098,
+   "sub": "Gel overlay: 60 min, R320.",
+   "hold": 11.698
+  },
+  {
+   "id": "v05",
+   "t0": 11.818,
+   "t1": 15.076,
+   "sub": "Lash lift: 45 min, R450.",
+   "hold": 15.856
+  },
+  {
+   "id": "v06",
+   "t0": 15.976,
+   "t1": 18.332,
+   "sub": "Per minute, the lash lift earns almost double.",
+   "hold": 19.612
+  },
+  {
+   "id": "v07",
+   "t0": 19.732,
+   "t1": 21.213,
+   "sub": "So which one is filling your week?",
+   "hold": 22.093
+  },
+  {
+   "id": "v08",
+   "t0": 22.213,
+   "t1": 24.999,
+   "sub": "NextSlot shows what every service earns, per minute.",
+   "hold": 30.0
+  }
+ ]
+}

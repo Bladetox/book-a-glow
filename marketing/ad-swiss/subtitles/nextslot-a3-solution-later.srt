@@ -1,0 +1,31 @@
+1
+00:00:00,380 --> 00:00:03,231
+“I'll get a proper system when I'm busier.”
+
+2
+00:00:03,311 --> 00:00:05,521
+Here's the problem with later.
+
+3
+00:00:05,601 --> 00:00:10,131
+Every month you run on chats is a month of data you can't get back.
+
+4
+00:00:10,131 --> 00:00:13,687
+Who came back. Who didn't. Which days stay empty.
+
+5
+00:00:14,167 --> 00:00:17,193
+A booking system shouldn't just hold appointments.
+
+6
+00:00:17,193 --> 00:00:19,353
+It should tell you what they mean.
+
+7
+00:00:19,533 --> 00:00:23,133
+NextSlot keeps the record from your very first booking.
+
+8
+00:00:23,313 --> 00:00:26,769
+Your future self will want the data. Start it now.

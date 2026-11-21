@@ -1,0 +1,58 @@
+[
+ {
+  "id": "v01",
+  "text": "You've seen Next Slot. Is it for you?",
+  "voice": "af_heart",
+  "speed": 1.0,
+  "sub": "You've seen NextSlot. Is it for you?"
+ },
+ {
+  "id": "v02",
+  "text": "I work alone.",
+  "voice": "af_heart",
+  "speed": 1.0,
+  "sub": "\u201cI work alone.\u201d"
+ },
+ {
+  "id": "v03",
+  "text": "Built for solo pros and small teams.",
+  "voice": "af_heart",
+  "speed": 1.0,
+  "sub": "Built for solo pros and small teams."
+ },
+ {
+  "id": "v04",
+  "text": "My clients live on WhatsApp.",
+  "voice": "af_heart",
+  "speed": 1.0,
+  "sub": "\u201cMy clients live on WhatsApp.\u201d"
+ },
+ {
+  "id": "v05",
+  "text": "They book from one link. No app, no account.",
+  "voice": "af_heart",
+  "speed": 1.0,
+  "sub": "They book from one link. No app, no account."
+ },
+ {
+  "id": "v06",
+  "text": "My numbers are too small to matter.",
+  "voice": "af_heart",
+  "speed": 1.0,
+  "sub": "\u201cMy numbers are too small to matter.\u201d"
+ },
+ {
+  "id": "v07",
+  "text": "Small numbers are still your numbers.",
+  "voice": "af_heart",
+  "speed": 1.0,
+  "sub": "Small numbers are still your numbers."
+ },
+ {
+  "id": "v08",
+  "text": "If you take bookings, it's for you.",
+  "voice": "af_heart",
+  "speed": 1.0,
+  "sub": "If you take bookings, it's for you."
+ }
+]

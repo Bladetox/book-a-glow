@@ -1,0 +1,31 @@
+1
+00:00:00,380 --> 00:00:02,300
+Quick question.
+
+2
+00:00:02,300 --> 00:00:05,187
+Which service made you the most money last month?
+
+3
+00:00:05,367 --> 00:00:07,287
+The answer exists.
+
+4
+00:00:07,562 --> 00:00:11,569
+It's scattered across your chats, your diary and your banking app.
+
+5
+00:00:11,569 --> 00:00:13,489
+So you guess.
+
+6
+00:00:13,909 --> 00:00:18,055
+When every booking happens in one place, it keeps its details.
+
+7
+00:00:18,135 --> 00:00:22,271
+The service. The price. The day. Where the client found you.
+
+8
+00:00:22,271 --> 00:00:25,423
+NextSlot. Your numbers, added up for you.

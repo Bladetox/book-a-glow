@@ -1,0 +1,62 @@
+{
+ "dur": 30.0,
+ "end": 25.6,
+ "lines": [
+  {
+   "id": "v01",
+   "t0": 0.5,
+   "t1": 2.555,
+   "sub": "You've seen NextSlot. Is it for you?",
+   "hold": 3.535
+  },
+  {
+   "id": "v02",
+   "t0": 3.655,
+   "t1": 4.522,
+   "sub": "“I work alone.”",
+   "hold": 5.455
+  },
+  {
+   "id": "v03",
+   "t0": 5.575,
+   "t1": 7.733,
+   "sub": "Built for solo pros and small teams.",
+   "hold": 8.913
+  },
+  {
+   "id": "v04",
+   "t0": 9.033,
+   "t1": 10.594,
+   "sub": "“My clients live on WhatsApp.”",
+   "hold": 11.194
+  },
+  {
+   "id": "v05",
+   "t0": 11.314,
+   "t1": 13.847,
+   "sub": "They book from one link. No app, no account.",
+   "hold": 15.027
+  },
+  {
+   "id": "v06",
+   "t0": 15.147,
+   "t1": 16.956,
+   "sub": "“My numbers are too small to matter.”",
+   "hold": 17.556
+  },
+  {
+   "id": "v07",
+   "t0": 17.676,
+   "t1": 19.452,
+   "sub": "Small numbers are still your numbers.",
+   "hold": 20.932
+  },
+  {
+   "id": "v08",
+   "t0": 21.052,
+   "t1": 22.917,
+   "sub": "If you take bookings, it's for you.",
+   "hold": 30.0
+  }
+ ]
+}

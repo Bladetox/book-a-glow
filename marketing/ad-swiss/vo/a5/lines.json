@@ -1,0 +1,51 @@
+[
+ {
+  "id": "v01",
+  "text": "You know what Next Slot does. Here's the deal.",
+  "voice": "af_heart",
+  "speed": 1.0,
+  "sub": "You know what NextSlot does. Here's the deal."
+ },
+ {
+  "id": "v02",
+  "text": "No payment to start.",
+  "voice": "af_heart",
+  "speed": 1.0,
+  "sub": "No payment to start."
+ },
+ {
+  "id": "v03",
+  "text": "Starter: ninety-nine rand a month, seven days free.",
+  "voice": "af_heart",
+  "speed": 1.0,
+  "sub": "Starter: R99 a month, 7 days free."
+ },
+ {
+  "id": "v04",
+  "text": "Flow, Professional and Studio: thirty days free.",
+  "voice": "af_heart",
+  "speed": 1.0,
+  "sub": "Flow, Professional and Studio: 30 days free."
+ },
+ {
+  "id": "v05",
+  "text": "In those thirty days, Next Slot learns how your business runs.",
+  "voice": "af_heart",
+  "speed": 1.0,
+  "sub": "In those 30 days, NextSlot learns how your business runs."
+ },
+ {
+  "id": "v06",
+  "text": "No contract. Cancel any time.",
+  "voice": "af_heart",
+  "speed": 1.0,
+  "sub": "No contract. Cancel any time."
+ },
+ {
+  "id": "v07",
+  "text": "Start free at nextslot dot co dot za.",
+  "voice": "af_heart",
+  "speed": 1.0,
+  "sub": "Start free at nextslot.co.za"
+ }
+]

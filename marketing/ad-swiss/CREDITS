@@ -1,0 +1,12 @@
+NextSlot · "Levels of awareness" ads (Swiss Motion Graphics), five films, vertical 1080×1920, 30 s each
+
+Style: Swiss Motion Graphics from the Lemo-Opuscar library (github.com/lemomo-ai/lemo-opuscar, MIT). src/ease.js is the style demo's
+easing module (MIT). Everything else in src/ and audio/ was written for these ads; audio/mix.py is adapted from the library's demo (MIT).
+Renderer, reading-time check, TTS wrapper, sampler and procedural foley helpers: the library's core/ (MIT), not copied here.
+
+Fonts (SIL Open Font License 1.1): Inter (all type), Montserrat (the NextSlot wordmark only).
+Voice-over: Kokoro-82M (Apache-2.0), voice af_heart (American English), offline.
+Music samples (CC0 1.0): VS Chamber Orchestra: Community Edition and the Versilian Community Sample Library (Versilian Studios):
+  marimba, vibraphone, glockenspiel, contrabass, contrabass pizz, cellos, violas, shaker. Kick and all foley synthesised in code.
+Brand: the NextSlot gear-clock icon (nextslot-icon.png) and wordmark belong to NextSlot.
+Fictional: every service figure, booking, count and percentage shown is illustrative and labelled as such on screen.

@@ -1,0 +1,58 @@
+[
+ {
+  "id": "v01",
+  "text": "I'll get a proper system when I'm busier.",
+  "voice": "af_heart",
+  "speed": 1.0,
+  "sub": "\u201cI'll get a proper system when I'm busier.\u201d"
+ },
+ {
+  "id": "v02",
+  "text": "Here's the problem with later.",
+  "voice": "af_heart",
+  "speed": 1.0,
+  "sub": "Here's the problem with later."
+ },
+ {
+  "id": "v03",
+  "text": "Every month you run on chats is a month of data you can't get back.",
+  "voice": "af_heart",
+  "speed": 1.0,
+  "sub": "Every month you run on chats is a month of data you can't get back."
+ },
+ {
+  "id": "v04",
+  "text": "Who came back. Who didn't. Which days stay empty.",
+  "voice": "af_heart",
+  "speed": 1.0,
+  "sub": "Who came back. Who didn't. Which days stay empty."
+ },
+ {
+  "id": "v05",
+  "text": "A booking system shouldn't just hold appointments.",
+  "voice": "af_heart",
+  "speed": 1.0,
+  "sub": "A booking system shouldn't just hold appointments."
+ },
+ {
+  "id": "v06",
+  "text": "It should tell you what they mean.",
+  "voice": "af_heart",
+  "speed": 1.0,
+  "sub": "It should tell you what they mean."
+ },
+ {
+  "id": "v07",
+  "text": "Next Slot keeps the record from your very first booking.",
+  "voice": "af_heart",
+  "speed": 1.0,
+  "sub": "NextSlot keeps the record from your very first booking."
+ },
+ {
+  "id": "v08",
+  "text": "Your future self will want the data. Start it now.",
+  "voice": "af_heart",
+  "speed": 1.0,
+  "sub": "Your future self will want the data. Start it now."
+ }
+]
