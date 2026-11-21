@@ -1,0 +1,27 @@
+1
+00:00:00,380 --> 00:00:04,180
+11 pm. A new client finds your booking page.
+
+2
+00:00:04,180 --> 00:00:06,330
+She picks a service and a time.
+
+3
+00:00:06,330 --> 00:00:08,180
+The slot is held, just for her.
+
+4
+00:00:08,180 --> 00:00:10,852
+She pays the deposit, right there.
+
+5
+00:00:13,080 --> 00:00:15,394
+You get the booking. Paid.
+
+6
+00:00:16,430 --> 00:00:19,089
+It lands in your diary, confirmed.
+
+7
+00:00:23,230 --> 00:00:27,201
+NextSlot. Start free at nextslot.co.za

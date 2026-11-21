@@ -1,0 +1,4 @@
+out/
+music/
+vo/*.wav
+vo/words.json

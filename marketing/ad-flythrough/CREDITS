@@ -1,0 +1,20 @@
+NextSlot · "11 pm" — a Tabletop App Flythrough film (vertical 1080×1920, 30 fps, 30 s)
+
+Engine: the Tabletop App Flythrough style of the Lemo-Opuscar library (github.com/lemomo-ai/lemo-opuscar, MIT).
+  src/world.js, cards.js, voxel.js, anim.js, camera.js, post.js, main.js, captions.js, tools/camspeed.mjs and audio/mix.py, audio/foley.py are
+  adapted from the style's demo (re-laid out for a vertical frame, NextSlot palette, English-only subtitles, no sign-off).
+  The renderer, reading-time check, TTS wrapper, sampler and procedural foley helpers are the library's core/ (MIT), not copied here.
+  src/film.js, src/shots.js, audio/compose.py, audio/vo_timeline.py, tools/master.sh and tools/srt.py were written for this film.
+three.js (MIT), loaded from the library's node_modules.
+
+Fonts (SIL Open Font License 1.1): Montserrat and Inter (fonts/, same files as marketing/ad-video/fonts).
+
+Voice-over: Kokoro-82M text-to-speech (Apache-2.0), voice af_heart (American English), run offline through the library's core/tts/tts.py.
+
+Music samples (CC0 1.0, no attribution required; acknowledged): VS Chamber Orchestra: Community Edition and the Versilian Community
+  Sample Library (Versilian Studios). Instruments: marimba, vibraphone, glockenspiel, contrabass, contrabass pizz, cellos, cellos pizz,
+  violas, horn, timpani, suspended cymbal, claps, shaker. Kick drum, room tone and all foley: synthesised in code.
+
+Brand: the NextSlot gear-clock icon (nextslot-icon.png) and wordmark belong to NextSlot.
+Everything else on screen (phone screens, cards, the client and the bell in voxels, desk props, wood and paper) is drawn in code.
+Fictional: Glow Studio, its client, its services and prices, the diary. No photographs, no generated images, no real client data.
