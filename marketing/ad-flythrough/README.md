@@ -14,7 +14,7 @@ subtitles; `subtitles_en.srt` carries the same cues for platforms that take a se
 The story in order: at 11 pm a new client finds Glow Studio's booking page, picks a
 service and a time (the slot is held for 10 minutes), pays the R225 deposit; the payment
 runs across the desk to the owner's phone, the "New Booking - Deposit received" email
-lands, and the booking drops into Saturday's diary as paid. Title: NextSlot, "Start free at
+lands, and the booking drops into Saturday in the owner's calendar as paid. Title: NextSlot, "Start free at
 nextslot.co.za". Glow Studio, its client and its prices are fictional.
 
 Claims: the booking page, the 10-minute slot hold, deposits at booking and the owner's

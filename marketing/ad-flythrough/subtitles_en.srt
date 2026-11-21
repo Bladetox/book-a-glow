@@ -19,8 +19,8 @@ She pays the deposit, right there.
 You get the booking. Paid.
 
 6
-00:00:16,430 --> 00:00:19,089
-It lands in your diary, confirmed.
+00:00:16,430 --> 00:00:19,138
+It lands in your calendar, confirmed.
 
 7
 00:00:23,230 --> 00:00:27,201

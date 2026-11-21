@@ -4,6 +4,6 @@
  {"id": "v03", "text": "The slot is held, just for her.", "voice": "af_heart", "speed": 1.0},
  {"id": "v04", "text": "She pays the deposit, right there.", "voice": "af_heart", "speed": 1.0},
  {"id": "v05", "text": "You get the booking. Paid.", "voice": "af_heart", "speed": 1.0},
- {"id": "v06", "text": "It lands in your diary, confirmed.", "voice": "af_heart", "speed": 1.0},
+ {"id": "v06", "text": "It lands in your calendar, confirmed.", "voice": "af_heart", "speed": 1.0},
  {"id": "v07", "text": "Next Slot. Start free at nextslot dot co dot za.", "voice": "af_heart", "speed": 0.95, "asr": "Next Slot. Start free at nextslot.co.za.", "sub": "NextSlot. Start free at nextslot.co.za"}
 ]

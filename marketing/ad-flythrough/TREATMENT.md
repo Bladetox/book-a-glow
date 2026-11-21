@@ -4,7 +4,7 @@
 
 ## 1. Three candidate structures
 
-1. **One booking, card to card.** A new client sticker pops up on the studio's booking page at 11 pm, picks a service, takes a slot, pays the deposit; the deposit runs across the desk to the owner's phone, a bell flies over with the "New Booking" email, and the booking drops into Saturday on the diary card. Pull back over the whole desk.
+1. **One booking, card to card.** A new client sticker pops up on the studio's booking page at 11 pm, picks a service, takes a slot, pays the deposit; the deposit runs across the desk to the owner's phone, a bell flies over with the "New Booking" email, and the booking drops into Saturday on the calendar card. Pull back over the whole desk.
 2. **Two halves of the desk.** Left: a chat card buried in message bubbles, a paper diary, a "proof of payment?" slip; right: the same booking flowing through NextSlot. Slow against fast.
 3. **A countdown.** A timer card counts thirty seconds while one booking completes before it runs out.
 
@@ -12,13 +12,13 @@
 
 ## 2. Logline and arc
 
-At 11 pm a new client books, holds and pays for a Saturday slot on a studio's NextSlot page, and by the time the camera pulls back the owner's diary is filled and paid, without anyone typing a message.
+At 11 pm a new client books, holds and pays for a Saturday slot on a studio's NextSlot page, and by the time the camera pulls back the owner's calendar is filled and paid, without anyone typing a message.
 
 - **Setup (0–5 s):** night on the desk; a client sticker pops up on the booking page.
 - **Turn (5–19 s):** service → time (held) → deposit paid; the payment runs to the owner's phone and a bell delivers the booking.
 - **Ending (19–30 s):** the booking lands in Saturday; pull back over the whole desk; the title card drops: NextSlot, start free.
 
-The ending echoes the opening: the same client sticker, first standing alone on an empty page, finally lies printed into a full diary.
+The ending echoes the opening: the same client sticker, first standing alone on an empty page, finally lies printed into a full calendar.
 
 ## 3. Benchmark
 
@@ -35,7 +35,7 @@ The ending echoes the opening: the same client sticker, first standing alone on 
 | 4 | 8.6–11.4 | Close on the pay button | Push in | The deposit is the turn: "Pay R225 deposit", press, ring |
 | 5 | 11.4–14.0 | Low, behind the bronze coin cubes | Ride along as the data run crosses the desk | Payment travelling to the owner is the medium's native move |
 | 6 | 14.0–17.4 | Medium on the owner phone | Whip, then hold with a small shake as the bell taps twice | The notification lands; impact |
-| 7 | 17.4–21.6 | 60° down over the diary card | Crane and settle | Read "SAT 10:30 · Lash Lift · PAID" as the client reverse-pops into it |
+| 7 | 17.4–21.6 | 60° down over the calendar card | Crane and settle | Read "SAT 10:30 · Lash Lift · PAID" as the client reverse-pops into it |
 | 8 | 21.6–30.0 | Whole desk, 65° down | Pull back; curtain call; title card drops in open space | Recap the system; CTA held over 4 s |
 
 Camera moves used: fall, orbit, crane, push, ride-along, whip, pull-back, shake.
@@ -56,8 +56,8 @@ Camera moves used: fall, orbit, crane, push, ride-along, whip, pull-back, shake.
 | 10.9–12.4 | Bronze coin cubes hop along the route; the camera rides with them | |
 | 12.4–13.55 | A bell pops out, flies onto your phone, taps twice | "You get the booking. Paid." (13.2) |
 | 13.7 | Email banner: "New Booking", "Deposit received", "Lash Lift & Tint · Sat 10:30" | |
-| 16.75–17.65 | Whip forward: she hops across to the diary | "It lands in your diary, confirmed." (16.55) |
-| 17.8–18.5 | She lies down into Saturday 10:30; the row prints "Lash Lift & Tint", then "PAID" (green) | |
+| 16.75–17.65 | Whip forward: she hops across to the calendar | "It lands in your calendar, confirmed." (16.55) |
+| 17.8–18.5 | She lies down into Saturday 10:30 in the calendar; the row prints "Lash Lift & Tint", then "PAID" (green) | |
 | 19.4–21.2 | Pull back over the whole desk; name plates; each card hops (20.5) | |
 | 22.5–23.0 | Near-silence; the title card falls | |
 | 23.0 | Title lands: gear-clock icon, NextSlot, "Start free at nextslot.co.za"; the hour tent folds away | "NextSlot. Start free at nextslot dot co dot za." / *NextSlot. Start free at nextslot.co.za* |
@@ -70,7 +70,7 @@ Camera moves used: fall, orbit, crane, push, ride-along, whip, pull-back, shake.
 - Bars 3–6: marimba ostinato, plucked bass, shaker; ducked under the voice.
 - Bar 6 beat 2 (10.5 s): the stamp; a near-silence on the half beat before it (the voice line ends, the bed drops out).
 - Bars 6–8: claps join for the data run and the bell.
-- Bars 9–11: the diary landing; the melody resolves.
+- Bars 9–11: the calendar landing; the melody resolves.
 - Bars 12–15: the full mallet theme in the gap after the last line; final chord to the last half-second.
 
 ## 7. Sound design
@@ -81,7 +81,7 @@ Camera moves used: fall, orbit, crane, push, ride-along, whip, pull-back, shake.
 | Booking (5–10) | room tone | soft ticks on hops, a two-note ding for the hold | marimba, bass, shaker, ducked |
 | Payment (10–14) | room tone | stamp (low thump + crumble), ring, cube ticks on 16ths | near-silence, then claps join |
 | Notification (14–17) | room tone | whip whoosh, bell flight, two taps, banner drop | full groove, ducked |
-| Diary (17–21) | room tone | hop, reverse-pop (down-sweep), felt thump | melody resolves |
+| Calendar (17–21) | room tone | hop, reverse-pop (down-sweep), felt thump | melody resolves |
 | Curtain call (21–30) | room tone | one hop per stop left to right, title card thump | full theme, final chord |
 
 The two near-silences: before the stamp (10.15–10.5) and before the title card drop (22.5–23.0).

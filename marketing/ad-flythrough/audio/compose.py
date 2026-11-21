@@ -1,7 +1,7 @@
 """Score for NextSlot · "11 pm" (Tabletop App Flythrough). 30 s, 120 BPM, F major, a bar = 2 s from 0.0, 15 bars.
 Cue map (TREATMENT.md §6): bars 1–2 night (vibraphone and pad only); the client pops at 2.5 and the marimba enters; plucked bass and
 shaker under the booking; the bed drops out for the half beat before the stamp (10.15–10.5); claps join for the payment run and the bell;
-the melody resolves over the diary; a second near-silence before the title card (22.5–23.0); the full mallet theme and the final chord
+the melody resolves over the calendar; a second near-silence before the title card (22.5–23.0); the full mallet theme and the final chord
 over the title. Run from the library root:  .venv/bin/python -I <film>/audio/compose.py"""
 import sys, os, json
 HERE = os.path.dirname(os.path.abspath(__file__)); ROOT = os.path.abspath(os.path.join(HERE, '..')); LIB = os.environ['LIB']

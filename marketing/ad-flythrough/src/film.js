@@ -1,6 +1,6 @@
 // NextSlot · "11 pm" — a Tabletop App Flythrough film, vertical 1080×1920, 30 s. One take over a dotted paper mat on an oak desk.
 // At 11 pm a new client finds a studio's booking page, picks a service and a time (the slot is held), pays the deposit; the payment runs
-// across the desk to the owner's phone, a bell delivers the "New Booking - Deposit received" email, and the client lands in Saturday's diary.
+// across the desk to the owner's phone, a bell delivers the "New Booking - Deposit received" email, and the client lands in Saturday in the calendar.
 // The voice-over clock is in vo.js; every action below is cued to its words. Glow Studio and its client are fictional.
 import * as THREE from 'three';
 import { card, dotPatch, pill, rbox } from './world.js';
@@ -30,7 +30,7 @@ export const MAT = [1.8, 2.16];
 export const CARDS = {
   phoneC: { c: V(-.27, 0, .42), w: .30, h: .56, yaw: .06 },    // the client's phone: the studio's booking page
   phoneO: { c: V(.17, 0, -.52), w: .30, h: .56, yaw: -.07 },   // the owner's phone
-  diary: { c: V(.28, 0, .45), w: .36, h: .5, yaw: -.05 },        // the owner's Saturday
+  diary: { c: V(.28, 0, .45), w: .36, h: .5, yaw: -.05 },        // the owner's calendar, Saturday
 };
 export const at = (n, u, v, y = TOP) => { const d = CARDS[n]; return V(u / 1000 - d.w / 2, y, v / 1000 - d.h / 2).applyAxisAngle(YAX, d.yaw).add(d.c); };
 
@@ -134,16 +134,19 @@ function drawOwner(c, st) {
   for (const x of [56, 244]) { c.fillStyle = '#2c2620'; c.beginPath(); c.arc(x, 500, 22, 0, 7); c.fill(); }
 }
 
-// ── the diary: Saturday, with the 10:30 gap ──
+// ── the calendar: Saturday's day view, with the 10:30 gap ──
 const DROWS = [['08:00', 'Brow Shape'], ['09:00', 'Gel Overlay'], ['10:30', null], ['12:00', 'Lash Fill'], ['13:30', 'Brow Tint'], ['15:00', 'Gel Overlay']];
 const DROW = k => 128 + k * 60;           // top of diary row k
 function drawDiary(c, st) {
   const w = 360, h = 500;
   K.cardBase(c, w, h, null, null);
+  // calendar header: the label, the day, and a week strip with Saturday picked
   c.fillStyle = C.accent; c.fillRect(24, 26, 15, 15);
-  K.txt(c, 'SATURDAY', 50, 34, { size: 17, wt: 800, col: C.ink, ls: 3 });
-  K.txt(c, '28 Nov', 50, 66, { size: 26, wt: 800, font: K.SANS });
-  K.txt(c, 'DIARY', 336, 34, { size: 13, wt: 700, col: C.mute, ls: 2, align: 'right' });
+  K.txt(c, 'CALENDAR', 50, 34, { size: 17, wt: 800, col: C.ink, ls: 3 });
+  K.txt(c, 'Sat 28 Nov', 26, 70, { size: 23, wt: 800, font: K.SANS });
+  ['M', 'T', 'W', 'T', 'F', 'S', 'S'].forEach((d, i) => { const x = 200 + i * 21, on = i === 5;
+    if (on) { c.fillStyle = C.accent; c.beginPath(); c.arc(x, 70, 12, 0, 7); c.fill(); }
+    K.txt(c, d, x, 71, { size: 14, wt: 800, font: K.BODY, col: on ? '#fff' : C.mute, align: 'center' }); });
   c.fillStyle = C.line; c.fillRect(20, 100, w - 40, 2);
   DROWS.forEach(([tm, n], k) => {
     const y = DROW(k);
@@ -175,7 +178,7 @@ export function build(ctx) {
     const m = new THREE.Mesh(new THREE.PlaneGeometry(.3, .05), new THREE.MeshStandardMaterial({ map: world.tex(c), transparent: true, roughness: .9 })); m.rotation.set(-Math.PI / 2, 0, yaw); m.position.copy(p); m.position.y = .0004; scene.add(m); plates.push(m); };
   plate('CLIENT', at('phoneC', 10, 610, 0), -CARDS.phoneC.yaw);
   plate('YOU', at('phoneO', 10, -60, 0), -CARDS.phoneO.yaw);
-  plate('YOUR DIARY', at('diary', 10, 550, 0), -CARDS.diary.yaw);
+  plate('YOUR CALENDAR', at('diary', 10, 550, 0), -CARDS.diary.yaw);
 
   // the tent card behind the client's phone: the hour
   const tent = new THREE.Group(); scene.add(tent);
@@ -318,7 +321,7 @@ export function build(ctx) {
     // the held pill rises over the phone when the time is taken; leaves before the push-in
     { const p = back(seg(t, T.held, T.held + .25), 2.2), out = ss(seg(t, 9.15, 9.4)); held.visible = t >= T.held && out < 1; held.scale.setScalar(Math.max(.001, p * (1 - out))); held.position.copy(at('phoneC', 150, 150, .05)); held.face(ctx.camera); }
 
-    // the client: a sticker on the page → pops up → hops service, time, pay → stamps → hops across to the diary → lies down into Saturday 10:30
+    // the client: a sticker on the page → pops up → hops service, time, pay → stamps → hops across to the calendar → lies down into Saturday 10:30
     {
       const P0 = pop(t, T.pop, .45, .05), h = hops(t, clientHops, PL.popC);
       const pos = h.pos.clone(); pos.y += P0.y;
