@@ -1073,6 +1073,30 @@ Deno.serve(async (req) => {
     const depositAmount = `R${rawDeposit.toFixed(2)}`;
     const balanceDue    = `R${rawBalance.toFixed(2)}`;
     const isFullPayment = rawDeposit >= rawTotal;
+    const isFullyPaidBooking =
+      (booking as any).full_payment_received === true ||
+      (booking as any).final_payment_paid === true ||
+      isFullPayment;
+    const isPhenomeBeauty = booking.tenant_id === "phenomebeauty";
+
+    // Client-facing explainer link is deliberately limited to PhenomeBeauty.
+    // This is email presentation only; it does not participate in payment state.
+    const phenomeBeautyNextStepsHtml = isPhenomeBeauty
+      ? `
+        <tr><td style="padding:0 36px 26px;">
+          <div style="background:#f7f7f7;border-radius:10px;border:1px solid #e0e0e0;padding:18px 20px;">
+            <p class="tm" style="margin:0 0 8px;font-size:15px;font-weight:700;color:#111;line-height:1.4;">What happens next?</p>
+            <p class="tl" style="margin:0 0 14px;font-size:13px;color:#555;line-height:1.7;">
+              ${isFullyPaidBooking
+                ? `Nothing more is due. See you on ${formattedDate}!`
+                : "Once your service is complete, we'll send you a request for the outstanding balance to settle your appointment."}
+            </p>
+            <a href="https://vt.tiktok.com/ZSsYHAQLR/" target="_blank" style="display:inline-block;color:#111;font-size:13px;font-weight:700;text-decoration:underline;line-height:1.5;">
+              Watch what to expect after booking &rarr;
+            </a>
+          </div>
+        </td></tr>`
+      : "";
 
     // Consistency program context (only resolved when an active program is
     // configured for this tenant and at least one booked service qualifies).
@@ -1403,6 +1427,7 @@ ${ownerWhatsAppHtml ? `<tr><td style="padding:0 28px 6px;">${ownerWhatsAppHtml}<
             locationRow
           )}
         </td></tr>
+        ${phenomeBeautyNextStepsHtml}
         ${videoNextStepsHtml}
         <tr><td style="padding:0 36px 26px;text-align:center;">
           ${calendarButton(gcalBookingLink)}
@@ -1525,8 +1550,9 @@ ${ownerWhatsAppHtml ? `<tr><td style="padding:0 28px 6px;">${ownerWhatsAppHtml}<
             ${detailTable(
               detailRow("Total Paid", `${totalAmount} &#10003;`, true)
             )}
-            <p class="tl" style="margin:8px 0 0;font-size:11px;color:#888;line-height:1.5;">Nothing more is due. See you on ${formattedDate}!</p>
+            ${isPhenomeBeauty ? "" : `<p class="tl" style="margin:8px 0 0;font-size:11px;color:#888;line-height:1.5;">Nothing more is due. See you on ${formattedDate}!</p>`}
           </td></tr>
+          ${phenomeBeautyNextStepsHtml}
           ${consistencyEmailSection}
           <tr><td style="padding:0 36px 26px;">
             ${calendarButton(gcalBookingLink)}
