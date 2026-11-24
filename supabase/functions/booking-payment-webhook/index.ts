@@ -392,7 +392,34 @@ Deno.serve(async (req) => {
 
   // ── Build booking update ─────────────────────────────────────────────────────
   // If booking is cancelled, record payment but DO NOT flip status back.
-  const isCancelled = booking.status === "cancelled";
+  let isCancelled = booking.status === "cancelled";
+
+  // SMART RE-CONFIRMATION: If booking is cancelled but payment succeeded,
+  // check if the slot is still available. If yes, this is a legitimate payment
+  // that arrived after auto-cancellation (race condition recovery).
+  // Only restore if: (1) payment just succeeded, (2) slot is still free, (3) amount matches.
+  if (isCancelled && event === "payment.succeeded") {
+    try {
+      const { data: slotTaken } = await supabase
+        .from("bookings")
+        .select("id")
+        .eq("staff_id", booking.staff_id)
+        .eq("booking_date", booking.booking_date)
+        .eq("start_time", booking.start_time)
+        .eq("status", "confirmed")
+        .neq("id", bookingId)
+        .maybeSingle();
+
+      if (!slotTaken) {
+        console.log("booking-payment-webhook: slot still available for cancelled booking", bookingId, "— re-confirming with valid payment");
+        isCancelled = false;
+      }
+    } catch (slotCheckErr) {
+      console.error("booking-payment-webhook: slot availability check failed, keeping cancelled", bookingId, slotCheckErr);
+      // On error, keep isCancelled=true (conservative)
+    }
+  }
+
   let bookingUpdate: Record<string, unknown> = {
     updated_at: new Date().toISOString(),
     payment_provider: "yoco",
@@ -437,8 +464,10 @@ Deno.serve(async (req) => {
     emailType = isCancelled ? "payment_received_cancelled" : "full_payment_confirmed";
   }
 
-  if (isCancelled) {
-    console.warn("booking-payment-webhook: booking", bookingId, "is cancelled — recording payment but NOT changing status");
+  if (booking.status === "cancelled" && !isCancelled) {
+    console.log("booking-payment-webhook: booking", bookingId, "was auto-cancelled but re-confirmed due to valid payment arrival (race condition recovery)");
+  } else if (booking.status === "cancelled") {
+    console.warn("booking-payment-webhook: booking", bookingId, "is cancelled — recording payment but NOT changing status (slot unavailable or error in re-confirmation check)");
   }
 
   // ── Insert payments row ───────────────────────────────────────────────────────
