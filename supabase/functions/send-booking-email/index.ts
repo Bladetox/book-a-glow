@@ -1488,6 +1488,7 @@ ${ownerWhatsAppHtml ? `<tr><td style="padding:0 28px 6px;">${ownerWhatsAppHtml}<
       ${row("Service", escapeHtml(serviceNames))}
       ${row("Date", escapeHtml(formattedDate))}
       ${row("Time", escapeHtml(formattedTime))}
+      ${row("Location", escapeHtml(tenantLocationDisplay || "—"))}
       ${row("Total", totalAmount)}
       ${row("Deposit received", depositAmount, true)}
       ${row("Balance due", balanceDue, true)}
